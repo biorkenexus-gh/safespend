@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E3A8A"/>
+      <stop offset="100%" style="stop-color:#3B82F6"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.95"/>
+      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:0.95"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded rect -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- Wallet body -->
+  <rect x="90" y="192" width="332" height="214" rx="32" fill="url(#shield)"/>
+  <!-- Wallet flap -->
+  <rect x="90" y="148" width="332" height="86" rx="28" fill="white" opacity="0.9"/>
+  <!-- Card slot line -->
+  <rect x="90" y="214" width="332" height="8" fill="#C7D2FE" opacity="0.6"/>
+
+  <!-- Coin pocket -->
+  <rect x="316" y="244" width="74" height="80" rx="22" fill="#1E3A8A" opacity="0.15"/>
+  <circle cx="353" cy="284" r="24" fill="#1E3A8A" opacity="0.22"/>
+
+  <!-- SafeSpend label -->
+  <text x="256" y="136" text-anchor="middle"
+        font-family="Georgia, serif" font-weight="700"
+        font-size="68" fill="#1E3A8A" opacity="0.85">SafeSpend</text>
+
+  <!-- $ symbol on wallet -->
+  <text x="194" y="330" text-anchor="middle"
+        font-family="Georgia, serif" font-weight="900"
+        font-size="92" fill="#1E3A8A">$</text>
+</svg>
