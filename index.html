@@ -13,6 +13,10 @@
     <meta name="apple-mobile-web-app-title" content="SafeSpend">
     <link rel="apple-touch-icon" href="icon-192.svg">
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -120,6 +124,62 @@
 <body class="font-sans antialiased">
 
     <!-- ============================================================
+         LOGIN OVERLAY (shown when not authenticated)
+    ============================================================ -->
+    <div id="login-overlay" class="fixed inset-0 z-[300] bg-gradient-to-br from-blue-900 via-blue-800 to-purple-900 flex flex-col items-center justify-center p-6">
+        <!-- Logo -->
+        <div class="text-center text-white mb-10">
+            <div class="w-24 h-24 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl">
+                <i class="fas fa-wallet text-5xl text-white"></i>
+            </div>
+            <h1 class="text-4xl font-display font-bold tracking-tight">SafeSpend</h1>
+            <p class="text-blue-200 mt-1 text-sm">Track. Save. Thrive.</p>
+        </div>
+
+        <!-- Auth card -->
+        <div class="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl">
+            <!-- Loading state -->
+            <div id="login-loading" class="flex flex-col items-center py-4">
+                <div class="w-10 h-10 border-4 border-blue-100 border-t-primary rounded-full animate-spin mb-3"></div>
+                <p class="text-sm text-gray-500">Checking your account…</p>
+            </div>
+
+            <!-- Sign-in content (hidden while loading) -->
+            <div id="login-content" class="hidden">
+                <h2 class="text-xl font-display font-bold text-gray-800 mb-1">Welcome back</h2>
+                <p class="text-sm text-gray-500 mb-6">Sign in to manage your weekly budget</p>
+
+                <!-- Error banner -->
+                <div id="login-error" class="hidden bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 flex items-start gap-2">
+                    <i class="fas fa-exclamation-circle text-danger mt-0.5 shrink-0"></i>
+                    <p id="login-error-msg" class="text-sm text-danger"></p>
+                </div>
+
+                <!-- Google Sign-In button -->
+                <button onclick="signInWithGoogle()" id="google-btn"
+                    class="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:scale-95 text-gray-700 font-semibold py-3.5 rounded-2xl shadow-sm transition transform">
+                    <!-- Google logo SVG -->
+                    <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                        <path fill="none" d="M0 0h48v48H0z"/>
+                    </svg>
+                    <span>Continue with Google</span>
+                </button>
+
+                <p class="text-xs text-gray-400 text-center mt-5">
+                    By signing in you agree to SafeSpend's terms. Your data stays on your device.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden profile image file input -->
+    <input type="file" id="profile-img-input" accept="image/*" class="hidden" onchange="handleProfileImageUpload(event)">
+
+    <!-- ============================================================
          ONBOARDING OVERLAY (shown on first launch)
     ============================================================ -->
     <div id="onboard-overlay" class="fixed inset-0 z-[200] bg-gradient-to-br from-blue-900 via-blue-800 to-purple-900 flex flex-col items-center justify-center p-6 hidden">
@@ -133,11 +193,21 @@
 
         <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4">
             <div>
-                <h2 class="text-xl font-display font-bold text-gray-800">Welcome! Let's get set up</h2>
-                <p class="text-sm text-gray-500 mt-1">Takes less than a minute</p>
+                <h2 class="text-xl font-display font-bold text-gray-800" id="onboard-heading">One last step!</h2>
+                <p class="text-sm text-gray-500 mt-1">Set your currency and weekly budget</p>
             </div>
 
-            <div>
+            <!-- Google welcome (shown when name comes from Google) -->
+            <div id="onboard-google-welcome" class="hidden flex items-center gap-3 bg-blue-50 rounded-xl p-3">
+                <img id="onboard-google-avatar" src="" alt="" class="w-10 h-10 rounded-full object-cover">
+                <div>
+                    <p class="text-sm font-semibold text-gray-800" id="onboard-google-name"></p>
+                    <p class="text-xs text-gray-500" id="onboard-google-email"></p>
+                </div>
+            </div>
+
+            <!-- Name field (hidden when signed in with Google) -->
+            <div id="onboard-name-field">
                 <label class="text-gray-700 font-medium text-sm mb-1.5 block">Your Name</label>
                 <input type="text" id="onboard-name"
                     class="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-blue-600 outline-none transition"
@@ -190,8 +260,13 @@
                     <button onclick="showScreen('settings')" class="p-2 hover:bg-blue-800 rounded-full transition">
                         <i class="fas fa-cog"></i>
                     </button>
-                    <div onclick="showScreen('settings')"
-                        class="user-initials w-9 h-9 bg-blue-400 rounded-full flex items-center justify-center font-semibold text-sm cursor-pointer select-none">??</div>
+                    <!-- Avatar: shows photo when available, falls back to initials -->
+                    <div class="relative w-9 h-9 cursor-pointer" onclick="showScreen('profile')">
+                        <img id="header-avatar" src="" alt="Profile"
+                            class="w-9 h-9 rounded-full object-cover border-2 border-blue-300 hidden">
+                        <div id="header-initials"
+                            class="user-initials w-9 h-9 bg-blue-400 rounded-full flex items-center justify-center font-semibold text-sm select-none">??</div>
+                    </div>
                 </div>
             </div>
         </header>
@@ -393,6 +468,78 @@
                         </button>
                     </div>
                 </div>
+            </div>
+
+            <!-- ==================== PROFILE SCREEN ==================== -->
+            <div id="profile-screen" class="screen p-4">
+                <div class="flex items-center mb-6">
+                    <button onclick="showScreen('settings')" class="mr-4 text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-2xl font-display font-bold text-gray-800">My Profile</h2>
+                </div>
+
+                <!-- Avatar section -->
+                <div class="flex flex-col items-center mb-6">
+                    <div class="relative">
+                        <img id="profile-photo-large" src="" alt="Profile"
+                            class="w-28 h-28 rounded-full object-cover border-4 border-white shadow-lg hidden">
+                        <div id="profile-initials-large"
+                            class="w-28 h-28 rounded-full bg-primary flex items-center justify-center text-white text-4xl font-bold border-4 border-white shadow-lg">??</div>
+                        <!-- Camera overlay -->
+                        <button onclick="document.getElementById('profile-img-input').click()"
+                            class="absolute bottom-1 right-1 w-9 h-9 bg-primary text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-800 transition border-2 border-white">
+                            <i class="fas fa-camera text-sm"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-3">Tap the camera to change your photo</p>
+                </div>
+
+                <!-- Profile info card -->
+                <div class="bg-white rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100 mb-4">
+                    <!-- Name -->
+                    <div class="p-4">
+                        <label class="text-xs text-gray-400 font-medium uppercase tracking-wide block mb-1">Display Name</label>
+                        <div id="profile-name-display-row" class="flex items-center justify-between">
+                            <p class="font-semibold text-gray-800" id="profile-name-text">—</p>
+                            <button onclick="editProfileName()" class="text-primary text-sm hover:underline">Edit</button>
+                        </div>
+                        <div id="profile-name-edit-row" class="hidden">
+                            <input type="text" id="profile-name-input"
+                                class="w-full border-b-2 border-primary outline-none text-gray-800 font-semibold pb-1 bg-transparent"
+                                placeholder="Your name">
+                            <div class="flex gap-3 mt-2">
+                                <button onclick="saveProfileName()" class="text-sm font-semibold text-primary hover:underline">Save</button>
+                                <button onclick="cancelProfileName()" class="text-sm text-gray-400 hover:underline">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="p-4">
+                        <label class="text-xs text-gray-400 font-medium uppercase tracking-wide block mb-1">Email Address</label>
+                        <p class="font-semibold text-gray-800" id="profile-email-text">—</p>
+                    </div>
+
+                    <!-- Google badge -->
+                    <div class="p-4 flex items-center gap-3">
+                        <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                        </svg>
+                        <span class="text-sm text-gray-600">Signed in with Google</span>
+                        <span class="ml-auto text-xs bg-green-100 text-safe px-2 py-1 rounded-full font-medium">Verified</span>
+                    </div>
+                </div>
+
+                <!-- Sign out -->
+                <button onclick="signOut()"
+                    class="w-full flex items-center justify-center gap-2 bg-red-50 text-danger border border-red-200 font-semibold py-3.5 rounded-2xl hover:bg-red-100 transition">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Sign Out
+                </button>
             </div>
 
             <!-- ==================== PAYMENT / FUND BUDGET ==================== -->
@@ -747,25 +894,20 @@
                 </div>
 
                 <div class="space-y-4">
-                    <!-- Profile Card -->
-                    <div class="bg-white rounded-2xl p-4 shadow-sm">
+                    <!-- Profile Card — taps through to profile screen -->
+                    <div class="bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:bg-gray-50 transition" onclick="showScreen('profile')">
                         <div class="flex items-center gap-4">
-                            <div class="user-initials w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold shrink-0">??</div>
-                            <div class="flex-1 min-w-0">
-                                <div id="profile-display">
-                                    <h3 class="font-bold text-gray-800 truncate" id="settings-name-display">Loading…</h3>
-                                    <button onclick="editProfile()" class="text-primary text-sm hover:underline">Edit name</button>
-                                </div>
-                                <div id="profile-edit" class="hidden">
-                                    <input type="text" id="settings-name-input"
-                                        class="w-full border-b-2 border-primary outline-none text-gray-800 font-bold pb-0.5 bg-transparent"
-                                        placeholder="Your name">
-                                    <div class="flex gap-3 mt-1">
-                                        <button onclick="saveProfile()" class="text-primary text-xs font-medium hover:underline">Save</button>
-                                        <button onclick="cancelEditProfile()" class="text-gray-400 text-xs hover:underline">Cancel</button>
-                                    </div>
-                                </div>
+                            <div class="relative shrink-0">
+                                <img id="settings-avatar-img" src="" alt="Profile"
+                                    class="w-16 h-16 rounded-full object-cover border-2 border-gray-200 hidden">
+                                <div id="settings-avatar-initials"
+                                    class="user-initials w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold">??</div>
                             </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-gray-800 truncate" id="settings-name-display">Loading…</h3>
+                                <p class="text-xs text-gray-500 mt-0.5" id="settings-email-display">Tap to edit profile</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400 shrink-0"></i>
                         </div>
                     </div>
 
@@ -1006,25 +1148,229 @@
         localStorage.setItem(HISTORY_KEY, JSON.stringify(weekHistory));
     }
 
-    // ── Init ──────────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', () => {
-        loadData();
+    // ================================================================
+    //  FIREBASE AUTH
+    // ================================================================
+    const firebaseConfig = {
+        apiKey:            "AIzaSyDr9bx5MqPnRFThcrUq0tPKtZf00aL5rm0",
+        authDomain:        "safespend-80121.firebaseapp.com",
+        databaseURL:       "https://safespend-80121-default-rtdb.firebaseio.com",
+        projectId:         "safespend-80121",
+        storageBucket:     "safespend-80121.firebasestorage.app",
+        messagingSenderId: "322336925924",
+        appId:             "PASTE_YOUR_WEB_APP_ID_HERE"
+    };
 
-        if (!localStorage.getItem(PROFILE_KEY)) {
-            document.getElementById('onboard-overlay').classList.remove('hidden');
-        } else {
+    let firebaseReady = false;
+    try {
+        if (firebaseConfig.appId === "PASTE_YOUR_WEB_APP_ID_HERE") throw new Error("appId not set");
+        firebase.initializeApp(firebaseConfig);
+        firebaseReady = true;
+    } catch (e) {
+        console.warn("Firebase init skipped:", e.message);
+    }
+
+    // ── Auth state drives the entire app startup ──────────────────
+    if (firebaseReady) {
+        firebase.auth().onAuthStateChanged(user => _boot(user));
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            _showLoginContent();
+            showLoginError("Firebase not configured. Paste your Web App ID into firebaseConfig.appId.");
+        });
+    }
+
+    function _boot(user) {
+        if (user) {
+            loadData();
+            // Merge Google profile (don't overwrite custom name if already saved)
+            profile.name     = profile.name     || user.displayName || '';
+            profile.email    = user.email        || '';
+            profile.photoURL = user.photoURL     || '';
+            profile.uid      = user.uid;
+            saveData();
+
+            document.getElementById('login-overlay').classList.add('hidden');
             applySettings();
-            updateUI();
-            showScreen('home');
-        }
+            updateProfilePhoto();
 
-        document.getElementById('expense-date').valueAsDate = new Date();
-        updateDateRange();
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js').catch(() => {});
+            const hasSetup = profile.currency && localStorage.getItem(DATA_KEY);
+            if (!hasSetup) {
+                _showOnboarding();
+            } else {
+                updateUI();
+                updateDateRange();
+                showScreen('home');
+            }
+            document.getElementById('expense-date').valueAsDate = new Date();
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('service-worker.js').catch(() => {});
+            }
+        } else {
+            _showLoginContent();
+            document.getElementById('login-overlay').classList.remove('hidden');
         }
-    });
+    }
+
+    function _showLoginContent() {
+        document.getElementById('login-loading').classList.add('hidden');
+        document.getElementById('login-content').classList.remove('hidden');
+    }
+
+    function _showOnboarding() {
+        document.getElementById('onboard-overlay').classList.remove('hidden');
+        if (profile.name) {
+            document.getElementById('onboard-name-field').classList.add('hidden');
+            const welcome = document.getElementById('onboard-google-welcome');
+            welcome.classList.remove('hidden');
+            welcome.classList.add('flex');
+            setText('onboard-google-name',  profile.name);
+            setText('onboard-google-email', profile.email || '');
+            const av = document.getElementById('onboard-google-avatar');
+            if (av && profile.photoURL) av.src = profile.photoURL;
+        }
+    }
+
+    // ── Google sign-in ────────────────────────────────────────────
+    async function signInWithGoogle() {
+        hideLoginError();
+        const btn = document.getElementById('google-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<div class="w-5 h-5 border-2 border-gray-200 border-t-primary rounded-full animate-spin"></div><span>Signing in…</span>';
+
+        try {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            await firebase.auth().signInWithPopup(provider);
+        } catch (err) {
+            btn.disabled = false;
+            btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><span>Continue with Google</span>`;
+
+            if (['auth/popup-closed-by-user', 'auth/cancelled-popup-request'].includes(err.code)) return;
+            const msgs = {
+                'auth/popup-blocked':          'Popups are blocked — allow popups for this site in your browser.',
+                'auth/network-request-failed': 'Connection failed. Check your internet.',
+                'auth/too-many-requests':      'Too many attempts. Try again later.',
+            };
+            showLoginError(msgs[err.code] || 'Sign-in failed. Please try again.');
+        }
+    }
+
+    function showLoginError(msg) {
+        const el = document.getElementById('login-error');
+        const m  = document.getElementById('login-error-msg');
+        if (el && m) { m.textContent = msg; el.classList.remove('hidden'); }
+    }
+    function hideLoginError() {
+        document.getElementById('login-error')?.classList.add('hidden');
+    }
+
+    // ── Sign out ──────────────────────────────────────────────────
+    async function signOut() {
+        if (!confirm('Sign out of SafeSpend?')) return;
+        try {
+            await firebase.auth().signOut();
+            profile.email       = '';
+            profile.photoURL    = '';
+            profile.customPhoto = '';
+            delete profile.uid;
+            saveData();
+        } catch (e) { showPayToast('Sign out failed. Try again.'); }
+    }
+
+    // ── Profile photo ─────────────────────────────────────────────
+    function updateProfilePhoto() {
+        const src = profile.customPhoto || profile.photoURL || '';
+
+        const pairs = [
+            ['header-avatar',           'header-initials'],
+            ['settings-avatar-img',     'settings-avatar-initials'],
+            ['profile-photo-large',     'profile-initials-large'],
+        ];
+        pairs.forEach(([imgId, initId]) => {
+            const img  = document.getElementById(imgId);
+            const init = document.getElementById(initId);
+            if (src) {
+                if (img)  { img.src = src; img.classList.remove('hidden'); }
+                if (init) init.classList.add('hidden');
+            } else {
+                if (img)  img.classList.add('hidden');
+                if (init) init.classList.remove('hidden');
+            }
+        });
+
+        const initials = getInitials(profile.name);
+        document.querySelectorAll('.user-initials').forEach(el => el.textContent = initials);
+        const pi = document.getElementById('profile-initials-large');
+        if (pi) pi.textContent = initials;
+
+        setText('profile-name-text',     profile.name  || 'User');
+        setText('profile-email-text',    profile.email || '—');
+        setText('settings-name-display', profile.name  || 'User');
+        setText('settings-email-display', profile.email || 'Tap to edit profile');
+        setText('user-greeting',  `${profile.name || 'User'} 👋`);
+        setText('greeting-time',  timeOfDayGreeting());
+    }
+
+    // ── Profile image upload ──────────────────────────────────────
+    function handleProfileImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) { showPayToast('Image must be under 5MB'); event.target.value = ''; return; }
+
+        resizeImage(file, 300, 0.85,
+            dataUrl => {
+                profile.customPhoto = dataUrl;
+                saveData();
+                updateProfilePhoto();
+                showPayToast('Profile photo updated!');
+            },
+            () => showPayToast('Could not read image. Try another file.')
+        );
+        event.target.value = '';
+    }
+
+    function resizeImage(file, maxPx, quality, onSuccess, onError) {
+        const reader = new FileReader();
+        reader.onerror = onError;
+        reader.onload  = e => {
+            const img   = new Image();
+            img.onerror = onError;
+            img.onload  = () => {
+                try {
+                    const scale  = Math.min(maxPx / img.width, maxPx / img.height, 1);
+                    const canvas = document.createElement('canvas');
+                    canvas.width  = Math.round(img.width  * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    onSuccess(canvas.toDataURL('image/jpeg', quality));
+                } catch (err) { onError(err); }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // ── Profile name editing (profile screen) ─────────────────────
+    function editProfileName() {
+        document.getElementById('profile-name-display-row').classList.add('hidden');
+        const row = document.getElementById('profile-name-edit-row');
+        row.classList.remove('hidden');
+        const input = document.getElementById('profile-name-input');
+        input.value = profile.name || '';
+        input.focus();
+    }
+    function saveProfileName() {
+        const name = (document.getElementById('profile-name-input').value || '').trim();
+        if (!name) { showPayToast('Name cannot be empty'); return; }
+        profile.name = name;
+        saveData();
+        cancelProfileName();
+        updateProfilePhoto();
+    }
+    function cancelProfileName() {
+        document.getElementById('profile-name-display-row').classList.remove('hidden');
+        document.getElementById('profile-name-edit-row').classList.add('hidden');
+    }
 
     // ── Onboarding ────────────────────────────────────────────────
     function updateOnboardSymbol(currency) {
@@ -1092,14 +1438,11 @@
     }
 
     function updateProfileDisplay() {
-        const initials = getInitials(profile.name);
-        document.querySelectorAll('.user-initials').forEach(el => el.textContent = initials);
-        const nameEl = document.getElementById('settings-name-display');
-        if (nameEl) nameEl.textContent = profile.name || 'User';
         const greetEl = document.getElementById('user-greeting');
         if (greetEl) greetEl.textContent = `${profile.name || 'User'} 👋`;
         const greetTime = document.getElementById('greeting-time');
         if (greetTime) greetTime.textContent = timeOfDayGreeting();
+        updateProfilePhoto();
     }
 
     // ── Screen navigation ─────────────────────────────────────────
@@ -1608,7 +1951,7 @@
         saveData();
     }
 
-    function editProfile() {
+    function _editProfile_removed() {
         document.getElementById('profile-display').classList.add('hidden');
         const editEl = document.getElementById('profile-edit');
         editEl.classList.remove('hidden');
@@ -1617,19 +1960,6 @@
         input.focus();
     }
 
-    function saveProfile() {
-        const newName = document.getElementById('settings-name-input').value.trim();
-        if (!newName) { alert('Name cannot be empty.'); return; }
-        profile.name = newName;
-        saveData();
-        cancelEditProfile();
-        updateProfileDisplay();
-    }
-
-    function cancelEditProfile() {
-        document.getElementById('profile-display').classList.remove('hidden');
-        document.getElementById('profile-edit').classList.add('hidden');
-    }
 
     function resetData() {
         if (!confirm('Reset all data? This cannot be undone.')) return;
@@ -1637,11 +1967,12 @@
         localStorage.removeItem(DATA_KEY);
         localStorage.removeItem(HISTORY_KEY);
         document.body.classList.remove('dark-mode');
-        document.getElementById('onboard-overlay').classList.remove('hidden');
-        showScreen('home');
         profile     = { name: '', currency: 'USD', settings: { darkMode: false, notifications: false, carryOver: true, notifTime: '20:00' } };
         appState    = { budget: 500, spent: 0, transactions: [], weekId: getWeekId(new Date()) };
         weekHistory = [];
+        firebase.auth().signOut().catch(() => {});
+        document.getElementById('app-container').classList.add('hidden');
+        document.getElementById('login-overlay').classList.remove('hidden');
     }
 
     // ── Notifications via service worker ─────────────────────────
