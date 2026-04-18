@@ -747,6 +747,9 @@
                         <h3 class="text-xl font-display font-bold text-gray-800">Enter OTP</h3>
                         <p class="text-sm text-gray-500 mt-1">A 6-digit code was sent to <span id="otp-phone-display" class="font-semibold text-gray-700"></span></p>
                     </div>
+                    <!-- Demo OTP banner (simulates SMS delivery since this is a frontend-only PWA) -->
+                    <div id="otp-demo-banner"
+                         class="hidden bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-4 text-center text-sm text-amber-800"></div>
                     <div class="flex justify-center gap-2 mb-4">
                         <input type="tel" maxlength="1" class="otp-input w-11 h-12 text-center text-xl font-bold border-2 border-gray-200 rounded-xl outline-none transition" oninput="otpNext(this,0)" onkeydown="otpBack(event,0)">
                         <input type="tel" maxlength="1" class="otp-input w-11 h-12 text-center text-xl font-bold border-2 border-gray-200 rounded-xl outline-none transition" oninput="otpNext(this,1)" onkeydown="otpBack(event,1)">
@@ -1134,6 +1137,23 @@
         return 'Good evening,';
     }
 
+    // Keeps greeting and date range current — called on load, every minute,
+    // and when the tab becomes visible again
+    function updateLiveTime() {
+        setText('greeting-time', timeOfDayGreeting());
+        if (typeof updateDateRange === 'function') updateDateRange();
+    }
+
+    // Installs the interval + visibilitychange hook exactly once
+    function startLiveTime() {
+        updateLiveTime();
+        if (window._liveTimeInterval) return;
+        window._liveTimeInterval = setInterval(updateLiveTime, 60_000);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) updateLiveTime();
+        });
+    }
+
     // ── Persistence ───────────────────────────────────────────────
     function loadData() {
         const rawProfile  = localStorage.getItem(PROFILE_KEY);
@@ -1205,7 +1225,7 @@
         firebase.initializeApp(firebaseConfig);
         firebaseReady = true;
     } catch (e) {
-        console.warn("Firebase init skipped:", e.message);
+        console.error("[Firebase] Init failed:", e);
     }
 
     // ── Auth state drives the entire app startup ──────────────────
@@ -1241,6 +1261,7 @@
                 showScreen('home');
             }
             document.getElementById('expense-date').valueAsDate = new Date();
+            startLiveTime();
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('service-worker.js').catch(() => {});
             }
@@ -1287,16 +1308,24 @@
             const provider = new firebase.auth.GoogleAuthProvider();
             await firebase.auth().signInWithPopup(provider);
         } catch (err) {
+            console.error('[Auth] Sign-in error:', err.code, err.message, err);
+
             btn.disabled = false;
             btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><span>Continue with Google</span>`;
 
             if (['auth/popup-closed-by-user', 'auth/cancelled-popup-request'].includes(err.code)) return;
             const msgs = {
-                'auth/popup-blocked':          'Popups are blocked — allow popups for this site in your browser.',
-                'auth/network-request-failed': 'Connection failed. Check your internet.',
-                'auth/too-many-requests':      'Too many attempts. Try again later.',
+                'auth/popup-blocked':            'Popups are blocked — allow popups for this site in your browser.',
+                'auth/network-request-failed':   'Connection failed. Check your internet.',
+                'auth/too-many-requests':        'Too many attempts. Try again later.',
+                'auth/unauthorized-domain':      'This domain isn\'t authorized. Add "localhost" in Firebase Console → Authentication → Settings → Authorized domains.',
+                'auth/operation-not-allowed':    'Google Sign-In is disabled. Enable it in Firebase Console → Authentication → Sign-in method → Google.',
+                'auth/invalid-api-key':          'Invalid Firebase API key. Check firebaseConfig.apiKey in index.html.',
+                'auth/configuration-not-found':  'Firebase config mismatch. Verify apiKey, authDomain, projectId all belong to the same project.',
+                'auth/invalid-credential':       'Sign-in credentials rejected. Try again.',
+                'auth/api-key-not-valid':        'API key not valid. Paste the apiKey from the correct Firebase project.',
             };
-            showLoginError(msgs[err.code] || 'Sign-in failed. Please try again.');
+            showLoginError(msgs[err.code] || `Sign-in failed (${err.code || 'unknown'}). Check console for details.`);
         }
     }
 
@@ -1322,6 +1351,7 @@
             showScreen('home');
         }
         document.getElementById('expense-date').valueAsDate = new Date();
+        startLiveTime();
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('service-worker.js').catch(() => {});
         }
@@ -2082,7 +2112,13 @@
         mpesa:     { label: 'M-PESA',         short: 'M-PESA' },
     };
 
-    let payState = { method: 'momo', network: 'mtn', pendingAmount: 0 };
+    let payState = {
+        method: 'momo',
+        network: 'mtn',
+        pendingAmount: 0,
+        otp: '',            // generated 6-digit code (transient)
+        otpExpiresAt: 0     // epoch ms when the code expires
+    };
 
     // ── Init payment screen ───────────────────────────────────────
     function initPaymentScreen() {
@@ -2213,22 +2249,61 @@
         }
     }
 
+    // Generate a random 6-digit OTP, store it in payState, and display
+    // it in the amber banner (simulating SMS receipt for this demo app).
+    function generateOtp() {
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        payState.otp = code;
+        payState.otpExpiresAt = Date.now() + 5 * 60 * 1000;  // 5 min validity
+
+        const banner = document.getElementById('otp-demo-banner');
+        if (banner) {
+            banner.innerHTML = `📱 <strong>Demo OTP:</strong> <span class="font-mono text-lg tracking-widest">${code}</span> <span class="block text-xs text-amber-600 mt-0.5">(no real SMS — valid for 5 min)</span>`;
+            banner.classList.remove('hidden');
+        }
+        showPayToast(`OTP sent: ${code}`);
+        return code;
+    }
+
     function resendOtp() {
         document.querySelectorAll('.otp-input').forEach(i => i.value = '');
         document.querySelectorAll('.otp-input')[0].focus();
-        showPayToast('OTP resent to your number');
+        generateOtp();
     }
 
     function cancelOtp() {
         document.getElementById('otp-overlay').classList.add('hidden');
+        document.getElementById('otp-demo-banner')?.classList.add('hidden');
+        document.querySelectorAll('.otp-input').forEach(i => i.value = '');
         payState.pendingAmount = 0;
+        payState.otp = '';
+        payState.otpExpiresAt = 0;
     }
 
     function confirmOtp() {
         const inputs = document.querySelectorAll('.otp-input');
-        const otp    = [...inputs].map(i => i.value).join('');
-        if (otp.length < 6) { showPayToast('Please enter all 6 digits'); return; }
+        const entered = [...inputs].map(i => i.value).join('');
+        if (entered.length < 6) { showPayToast('Please enter all 6 digits'); return; }
+
+        if (!payState.otp || Date.now() > payState.otpExpiresAt) {
+            showPayToast('OTP expired. Tap Resend for a new code.');
+            return;
+        }
+        if (entered !== payState.otp) {
+            showPayToast('Incorrect OTP. Try again.');
+            [...inputs].forEach(i => { i.value = ''; i.classList.add('border-red-400'); });
+            setTimeout(() => {
+                document.querySelectorAll('.otp-input').forEach(i => i.classList.remove('border-red-400'));
+            }, 1500);
+            inputs[0].focus();
+            return;
+        }
+
+        // Success — clear everything and continue to processing
+        payState.otp = '';
+        payState.otpExpiresAt = 0;
         document.getElementById('otp-overlay').classList.add('hidden');
+        document.getElementById('otp-demo-banner')?.classList.add('hidden');
         [...inputs].forEach(i => i.value = '');
         processPayment();
     }
@@ -2246,6 +2321,7 @@
                 showPayToast('Please enter a valid mobile number'); return;
             }
             setText('otp-phone-display', phone);
+            generateOtp();
             document.getElementById('otp-overlay').classList.remove('hidden');
             setTimeout(() => document.querySelectorAll('.otp-input')[0].focus(), 200);
         } else {
