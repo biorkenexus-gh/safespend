@@ -154,9 +154,15 @@
                 <p class="text-sm text-gray-500 mb-6">Sign in to manage your weekly budget</p>
 
                 <!-- Error banner -->
-                <div id="login-error" class="hidden bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 flex items-start gap-2">
-                    <i class="fas fa-exclamation-circle text-danger mt-0.5 shrink-0"></i>
-                    <p id="login-error-msg" class="text-sm text-danger"></p>
+                <div id="login-error" class="hidden bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+                    <div class="flex items-start gap-2">
+                        <i class="fas fa-exclamation-circle text-danger mt-0.5 shrink-0"></i>
+                        <p id="login-error-msg" class="text-sm text-danger"></p>
+                    </div>
+                    <button onclick="clearCacheAndReload()"
+                        class="mt-2 w-full text-xs font-semibold text-danger bg-red-100 hover:bg-red-200 py-2 rounded-lg transition flex items-center justify-center gap-1.5">
+                        <i class="fas fa-sync-alt"></i> Clear cache &amp; reload
+                    </button>
                 </div>
 
                 <!-- Firebase not configured notice (shown when appId missing) -->
@@ -1261,9 +1267,7 @@
             }
             document.getElementById('expense-date').valueAsDate = new Date();
             startLiveTime();
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('service-worker.js').catch(() => {});
-            }
+            registerServiceWorker();
         } else {
             _showLoginContent();
             document.getElementById('login-overlay').classList.remove('hidden');
@@ -1351,9 +1355,7 @@
         }
         document.getElementById('expense-date').valueAsDate = new Date();
         startLiveTime();
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js').catch(() => {});
-        }
+        registerServiceWorker();
     }
 
     function showLoginError(msg) {
@@ -1363,6 +1365,53 @@
     }
     function hideLoginError() {
         document.getElementById('login-error')?.classList.add('hidden');
+    }
+
+    // ── Service worker registration + auto-update ─────────────────
+    function registerServiceWorker() {
+        if (!('serviceWorker' in navigator)) return;
+
+        navigator.serviceWorker.register('service-worker.js').then(reg => {
+            // Force-check for updates every time the app loads
+            reg.update().catch(() => {});
+
+            // If a new worker is found, activate it ASAP
+            reg.addEventListener('updatefound', () => {
+                const newSW = reg.installing;
+                if (!newSW) return;
+                newSW.addEventListener('statechange', () => {
+                    if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                        // New version is ready — skip waiting and reload once
+                        newSW.postMessage({ type: 'SKIP_WAITING' });
+                    }
+                });
+            });
+        }).catch(e => console.warn('[SW] register failed:', e));
+
+        // Reload exactly once when the controller changes (new SW took over)
+        let reloaded = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (reloaded) return;
+            reloaded = true;
+            window.location.reload();
+        });
+    }
+
+    // Manual recovery: unregister all service workers and clear caches,
+    // then hard-reload. Exposed via the "Clear cache" button in the
+    // login error banner (shown after any auth error).
+    async function clearCacheAndReload() {
+        try {
+            if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(regs.map(r => r.unregister()));
+            }
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(k => caches.delete(k)));
+            }
+        } catch (e) { console.warn('[SW] clear failed:', e); }
+        window.location.reload(true);
     }
 
     // ── Sign out ──────────────────────────────────────────────────

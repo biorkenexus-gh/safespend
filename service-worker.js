@@ -1,4 +1,4 @@
-const CACHE_NAME = 'safespend-v5';
+const CACHE_NAME = 'safespend-v6';
 
 const PRECACHE_URLS = [
     './',
@@ -30,9 +30,31 @@ self.addEventListener('activate', event => {
     self.clients.claim();
 });
 
-// ── Fetch: cache-first, fall back to network ──────────────────────
+// ── Fetch strategy ────────────────────────────────────────────────
+// index.html + service-worker.js → NETWORK-FIRST (ensures latest code is served)
+// everything else                → CACHE-FIRST (fast offline behavior)
 self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
+
+    const url = new URL(event.request.url);
+    const isHtmlNav = event.request.mode === 'navigate' ||
+                      url.pathname.endsWith('/index.html') ||
+                      url.pathname === '/' ||
+                      url.pathname.endsWith('/service-worker.js');
+
+    if (isHtmlNav) {
+        // Network-first: always try fresh, fall back to cache if offline
+        event.respondWith(
+            fetch(event.request).then(response => {
+                const clone = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                return response;
+            }).catch(() => caches.match(event.request).then(cached => cached || caches.match('./index.html')))
+        );
+        return;
+    }
+
+    // Cache-first for everything else
     event.respondWith(
         caches.match(event.request).then(cached => {
             if (cached) return cached;
@@ -51,7 +73,11 @@ self.addEventListener('fetch', event => {
 let notifTimeout = null;
 
 self.addEventListener('message', event => {
-    if (event.data && event.data.type === 'SCHEDULE_NOTIFICATION') {
+    if (!event.data) return;
+    if (event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+    if (event.data.type === 'SCHEDULE_NOTIFICATION') {
         scheduleDailyNotification(event.data.time);
     }
 });
