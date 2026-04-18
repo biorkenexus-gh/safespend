@@ -129,7 +129,14 @@
     <div id="login-overlay" class="fixed inset-0 z-[300] bg-gradient-to-br from-blue-900 via-blue-800 to-purple-900 flex flex-col items-center justify-center p-6">
         <!-- Logo -->
         <div class="text-center text-white mb-10">
-            <img src="logo.png" alt="SafeSpend" class="w-36 h-36 mx-auto mb-2 drop-shadow-2xl">
+            <img src="logo.png" alt="SafeSpend"
+                 class="w-36 h-36 mx-auto mb-3 rounded-3xl shadow-2xl object-contain bg-white p-2"
+                 onerror="this.style.display='none';document.getElementById('login-logo-fallback').style.display='flex'">
+            <div id="login-logo-fallback" style="display:none"
+                 class="w-24 h-24 bg-white/20 rounded-3xl items-center justify-center mx-auto mb-4 shadow-2xl">
+                <i class="fas fa-wallet text-5xl text-white"></i>
+            </div>
+            <h1 class="text-3xl font-display font-bold tracking-tight">SafeSpend</h1>
             <p class="text-blue-200 mt-1 text-sm">Track. Save. Thrive.</p>
         </div>
 
@@ -152,10 +159,15 @@
                     <p id="login-error-msg" class="text-sm text-danger"></p>
                 </div>
 
-                <!-- Google Sign-In button -->
+                <!-- Firebase not configured notice (shown when appId missing) -->
+                <div id="firebase-setup-notice" class="hidden bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
+                    <p class="text-xs font-semibold text-amber-800 mb-1">⚙️ Google Sign-In not configured yet</p>
+                    <p class="text-xs text-amber-700 leading-relaxed">To enable it: <strong>Firebase Console</strong> → Project Settings → Your Apps → Add Web App → copy the <code class="bg-amber-100 px-1 rounded font-mono">appId</code> value into the config in <code class="bg-amber-100 px-1 rounded font-mono">index.html</code>. App must also be served over <strong>http://</strong> not file://.</p>
+                </div>
+
+                <!-- Google Sign-In button (hidden when Firebase not configured) -->
                 <button onclick="signInWithGoogle()" id="google-btn"
                     class="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:scale-95 text-gray-700 font-semibold py-3.5 rounded-2xl shadow-sm transition transform">
-                    <!-- Google logo SVG -->
                     <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
                         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                         <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
@@ -166,8 +178,22 @@
                     <span>Continue with Google</span>
                 </button>
 
-                <p class="text-xs text-gray-400 text-center mt-5">
-                    By signing in you agree to SafeSpend's terms. Your data stays on your device.
+                <!-- Divider -->
+                <div class="flex items-center gap-3 my-4">
+                    <div class="flex-1 h-px bg-gray-200"></div>
+                    <span class="text-xs text-gray-400 font-medium">or</span>
+                    <div class="flex-1 h-px bg-gray-200"></div>
+                </div>
+
+                <!-- Guest mode button -->
+                <button onclick="signInAsGuest()"
+                    class="w-full flex items-center justify-center gap-2 bg-gray-50 border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-100 active:scale-95 text-gray-600 font-semibold py-3 rounded-2xl transition transform">
+                    <i class="fas fa-user-circle text-lg text-gray-400"></i>
+                    <span>Continue as Guest</span>
+                </button>
+
+                <p class="text-xs text-gray-400 text-center mt-4">
+                    Guest mode saves your data locally on this device. Sign in with Google to back it up.
                 </p>
             </div>
         </div>
@@ -181,7 +207,14 @@
     ============================================================ -->
     <div id="onboard-overlay" class="fixed inset-0 z-[200] bg-gradient-to-br from-blue-900 via-blue-800 to-purple-900 flex flex-col items-center justify-center p-6 hidden">
         <div class="text-center text-white mb-8">
-            <img src="logo.png" alt="SafeSpend" class="w-36 h-36 mx-auto mb-2 drop-shadow-2xl">
+            <img src="logo.png" alt="SafeSpend"
+                 class="w-32 h-32 mx-auto mb-3 rounded-3xl shadow-2xl object-contain bg-white p-2"
+                 onerror="this.style.display='none';document.getElementById('onboard-logo-fallback').style.display='flex'">
+            <div id="onboard-logo-fallback" style="display:none"
+                 class="w-24 h-24 bg-white/20 rounded-3xl items-center justify-center mx-auto mb-4 shadow-2xl">
+                <i class="fas fa-wallet text-5xl text-white"></i>
+            </div>
+            <h1 class="text-3xl font-display font-bold tracking-tight">SafeSpend</h1>
             <p class="text-blue-200 mt-1 text-sm">Track. Save. Thrive.</p>
         </div>
 
@@ -241,13 +274,15 @@
     <!-- ============================================================
          MAIN APP
     ============================================================ -->
-    <div id="app-container" class="max-w-md mx-auto min-h-screen bg-gray-50 shadow-2xl overflow-hidden relative">
+    <div id="app-container" class="max-w-md mx-auto min-h-screen bg-gray-50 shadow-2xl overflow-hidden relative hidden">
 
         <!-- Header -->
         <header class="bg-primary text-white p-4 shadow-lg sticky top-0 z-50">
             <div class="flex justify-between items-center">
                 <div class="flex items-center gap-2">
-                    <img src="logo.png" alt="SafeSpend" class="w-9 h-9 rounded-xl object-contain bg-white/10">
+                    <img src="logo.png" alt="SafeSpend"
+                         class="w-9 h-9 rounded-xl object-contain bg-white p-0.5 shadow-sm"
+                         onerror="this.style.display='none'">
                     <div>
                         <h1 class="font-display font-bold text-xl">SafeSpend</h1>
                         <p class="text-xs text-blue-200" id="current-date">Loading…</p>
@@ -518,8 +553,8 @@
                         <p class="font-semibold text-gray-800" id="profile-email-text">—</p>
                     </div>
 
-                    <!-- Google badge -->
-                    <div class="p-4 flex items-center gap-3">
+                    <!-- Google badge (shown for Google sign-in) -->
+                    <div id="profile-google-badge" class="p-4 flex items-center gap-3 hidden">
                         <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
                             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                             <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
@@ -528,6 +563,12 @@
                         </svg>
                         <span class="text-sm text-gray-600">Signed in with Google</span>
                         <span class="ml-auto text-xs bg-green-100 text-safe px-2 py-1 rounded-full font-medium">Verified</span>
+                    </div>
+                    <!-- Guest badge (shown for guest mode) -->
+                    <div id="profile-guest-badge" class="p-4 flex items-center gap-3 hidden">
+                        <i class="fas fa-user-circle text-gray-400 text-lg"></i>
+                        <span class="text-sm text-gray-600">Guest Mode — data saved locally</span>
+                        <span class="ml-auto text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full font-medium">Local</span>
                     </div>
                 </div>
 
@@ -1173,7 +1214,6 @@
     } else {
         document.addEventListener('DOMContentLoaded', () => {
             _showLoginContent();
-            showLoginError("Firebase not configured. Paste your Web App ID into firebaseConfig.appId.");
         });
     }
 
@@ -1188,6 +1228,7 @@
             saveData();
 
             document.getElementById('login-overlay').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
             applySettings();
             updateProfilePhoto();
 
@@ -1212,6 +1253,13 @@
     function _showLoginContent() {
         document.getElementById('login-loading').classList.add('hidden');
         document.getElementById('login-content').classList.remove('hidden');
+        if (!firebaseReady) {
+            // Hide Google button, show setup instructions instead
+            const btn = document.getElementById('google-btn');
+            if (btn) btn.classList.add('hidden');
+            const notice = document.getElementById('firebase-setup-notice');
+            if (notice) notice.classList.remove('hidden');
+        }
     }
 
     function _showOnboarding() {
@@ -1252,6 +1300,33 @@
         }
     }
 
+    // ── Guest sign-in (no Firebase required) ─────────────────────
+    function signInAsGuest() {
+        loadData();
+        if (!profile.uid) profile.uid = 'guest_' + Date.now();
+        profile.isGuest = true;
+        if (!profile.name) profile.name = 'Guest';
+        saveData();
+
+        document.getElementById('login-overlay').classList.add('hidden');
+        document.getElementById('app-container').classList.remove('hidden');
+        applySettings();
+        updateProfilePhoto();
+
+        const hasSetup = profile.currency && localStorage.getItem(DATA_KEY);
+        if (!hasSetup) {
+            _showOnboarding();
+        } else {
+            updateUI();
+            updateDateRange();
+            showScreen('home');
+        }
+        document.getElementById('expense-date').valueAsDate = new Date();
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js').catch(() => {});
+        }
+    }
+
     function showLoginError(msg) {
         const el = document.getElementById('login-error');
         const m  = document.getElementById('login-error-msg');
@@ -1265,12 +1340,18 @@
     async function signOut() {
         if (!confirm('Sign out of SafeSpend?')) return;
         try {
-            await firebase.auth().signOut();
+            if (firebaseReady && !profile.isGuest) {
+                await firebase.auth().signOut();
+            }
             profile.email       = '';
             profile.photoURL    = '';
             profile.customPhoto = '';
+            profile.isGuest     = false;
             delete profile.uid;
             saveData();
+            document.getElementById('app-container').classList.add('hidden');
+            document.getElementById('login-overlay').classList.remove('hidden');
+            _showLoginContent();
         } catch (e) { showPayToast('Sign out failed. Try again.'); }
     }
 
@@ -1306,6 +1387,12 @@
         setText('settings-email-display', profile.email || 'Tap to edit profile');
         setText('user-greeting',  `${profile.name || 'User'} 👋`);
         setText('greeting-time',  timeOfDayGreeting());
+
+        // Toggle auth badge in profile screen
+        const googleBadge = document.getElementById('profile-google-badge');
+        const guestBadge  = document.getElementById('profile-guest-badge');
+        if (googleBadge) googleBadge.classList.toggle('hidden', !!profile.isGuest);
+        if (guestBadge)  guestBadge.classList.toggle('hidden',  !profile.isGuest);
     }
 
     // ── Profile image upload ──────────────────────────────────────

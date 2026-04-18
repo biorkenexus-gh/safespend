@@ -1,8 +1,9 @@
-const CACHE_NAME = 'safespend-v2';
+const CACHE_NAME = 'safespend-v3';
 
 const PRECACHE_URLS = [
     './',
     './index.html',
+    './logo.png',
     'https://cdn.tailwindcss.com',
     'https://cdn.jsdelivr.net/npm/chart.js',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
