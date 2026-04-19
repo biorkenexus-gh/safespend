@@ -19,6 +19,8 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -119,6 +121,32 @@
         .card-preview { min-height: 140px; }
         .dark-mode .bg-green-50 { background-color: #052e16 !important; }
         .dark-mode .bg-green-100 { background-color: #14532d !important; }
+        /* Extra dark-mode coverage for new premium elements */
+        .dark-mode .bg-amber-50    { background-color: #1f1500 !important; }
+        .dark-mode .bg-amber-100   { background-color: #2a1e00 !important; }
+        .dark-mode .bg-amber-200   { background-color: #3a2a00 !important; }
+        .dark-mode .border-amber-200 { border-color: #5c4100 !important; }
+        .dark-mode .text-amber-800 { color: #fde68a !important; }
+        .dark-mode .bg-purple-100  { background-color: #2b1957 !important; }
+        .dark-mode .bg-pink-100    { background-color: #47132f !important; }
+        .dark-mode .bg-indigo-100  { background-color: #1e1b4b !important; }
+        .dark-mode .bg-orange-100  { background-color: #431407 !important; }
+        /* Smooth number transitions */
+        #health-score-value, #streak-count, #total-budget, #remaining-amount,
+        #total-spent, #daily-avg, #transaction-count {
+            transition: color 0.3s ease;
+        }
+        /* Scrollbar for horizontal badge strip */
+        .scrollbar-thin::-webkit-scrollbar { height: 4px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 2px; }
+        /* Nicer empty-state icon pulse */
+        @keyframes gentle-pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+        .empty-pulse { animation: gentle-pulse 2.5s ease-in-out infinite; }
+        /* Insight rotate dots */
+        #insight-dots > span { transition: background 0.3s ease; }
+        /* Card hover lift */
+        .lift-on-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .lift-on-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
     </style>
 </head>
 <body class="font-sans antialiased">
@@ -350,6 +378,54 @@
                     </div>
                 </div>
 
+                <!-- Financial Health Score + Streak -->
+                <div class="grid grid-cols-5 gap-3">
+                    <!-- Health Score (takes 3 of 5 cols) -->
+                    <div class="col-span-3 bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3">
+                        <div class="relative w-16 h-16 shrink-0">
+                            <svg viewBox="0 0 64 64" class="w-16 h-16 -rotate-90">
+                                <circle cx="32" cy="32" r="28" stroke="#E5E7EB" stroke-width="6" fill="none"/>
+                                <circle id="health-arc" cx="32" cy="32" r="28" stroke="#10B981" stroke-width="6" fill="none"
+                                        stroke-linecap="round" stroke-dasharray="176" stroke-dashoffset="176"
+                                        style="transition: stroke-dashoffset 0.8s ease-out, stroke 0.4s"/>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span id="health-score-value" class="text-xl font-display font-bold text-gray-800">—</span>
+                            </div>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs text-gray-500 font-medium">Health Score</p>
+                            <p id="health-score-label" class="font-display font-bold text-gray-800 truncate">Calculating…</p>
+                            <p id="health-score-tip" class="text-xs text-gray-400 truncate">Keep logging to improve</p>
+                        </div>
+                    </div>
+
+                    <!-- Streak (takes 2 of 5 cols) -->
+                    <div class="col-span-2 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-4 shadow-sm text-white flex flex-col justify-center">
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-fire text-yellow-200 text-lg"></i>
+                            <p class="text-xs opacity-90 font-medium">Streak</p>
+                        </div>
+                        <p class="font-display font-bold text-2xl leading-tight mt-0.5" id="streak-count">0</p>
+                        <p class="text-xs opacity-90" id="streak-label">weeks under</p>
+                    </div>
+                </div>
+
+                <!-- Weekly Challenge -->
+                <div id="challenge-card" class="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-purple-500">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-trophy text-purple-500"></i>
+                            <p class="font-display font-semibold text-gray-800 text-sm">Beat Last Week</p>
+                        </div>
+                        <span id="challenge-status" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">—</span>
+                    </div>
+                    <p id="challenge-desc" class="text-xs text-gray-500 mb-2">Log an expense to start the challenge</p>
+                    <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                        <div id="challenge-bar" class="h-full bg-purple-500 rounded-full transition-all duration-500" style="width:0%"></div>
+                    </div>
+                </div>
+
                 <!-- Quick Stats -->
                 <div class="grid grid-cols-3 gap-3">
                     <div class="bg-white rounded-xl p-3 shadow-sm text-center">
@@ -377,17 +453,25 @@
                     </div>
                 </div>
 
-                <!-- Weekly Insight -->
-                <div class="bg-gradient-to-r from-primary to-blue-600 rounded-2xl p-4 text-white shadow-lg">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center shrink-0">
-                            <i class="fas fa-lightbulb text-yellow-300"></i>
+                <!-- AI Insights (rotating smart messages) -->
+                <div class="bg-gradient-to-br from-primary via-blue-600 to-indigo-600 rounded-2xl p-4 text-white shadow-lg">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-wand-magic-sparkles text-yellow-300"></i>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-blue-100">Smart Insights</p>
                         </div>
-                        <div>
-                            <p class="text-sm text-blue-100">Weekly Insight</p>
-                            <p class="text-sm font-medium" id="insight-text">Start adding expenses to see your insights!</p>
-                        </div>
+                        <button onclick="cycleInsight()" class="text-xs text-blue-100 hover:text-white transition"
+                                id="insight-cycle-btn" title="Next insight">
+                            <i class="fas fa-rotate-right"></i>
+                        </button>
                     </div>
+                    <p class="text-sm font-medium leading-relaxed" id="insight-text">Start logging expenses to see personalized insights.</p>
+                    <div class="flex items-center gap-1 mt-3" id="insight-dots"></div>
+                </div>
+
+                <!-- Badges row -->
+                <div id="badges-strip" class="flex gap-2 overflow-x-auto pb-2 scrollbar-thin hidden">
+                    <!-- Badges injected dynamically -->
                 </div>
             </div>
 
@@ -436,19 +520,36 @@
                                 <i class="fas fa-film text-xl"></i>
                                 <span class="text-xs font-medium">Fun</span>
                             </button>
+                            <button class="category-btn p-3 rounded-xl border-2 border-gray-200 flex flex-col items-center gap-2" onclick="selectCategory(this,'health')">
+                                <i class="fas fa-heart-pulse text-xl"></i>
+                                <span class="text-xs font-medium">Health</span>
+                            </button>
                             <button class="category-btn p-3 rounded-xl border-2 border-gray-200 flex flex-col items-center gap-2" onclick="selectCategory(this,'other')">
                                 <i class="fas fa-ellipsis-h text-xl"></i>
                                 <span class="text-xs font-medium">Other</span>
                             </button>
                         </div>
+                        <p id="auto-cat-hint" class="text-xs text-primary mt-2 hidden">
+                            <i class="fas fa-magic-wand-sparkles"></i> <span id="auto-cat-hint-text"></span>
+                        </p>
                     </div>
 
                     <!-- Note -->
                     <div>
                         <label class="text-gray-700 font-medium mb-2 block">Note (Optional)</label>
                         <input type="text" id="expense-note"
+                            oninput="previewAutoCategory()"
                             class="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
-                            placeholder="What was this for?">
+                            placeholder="e.g. Lunch at KFC, Uber to office…">
+                    </div>
+
+                    <!-- Tags -->
+                    <div>
+                        <label class="text-gray-700 font-medium mb-2 block">Tags (Optional)</label>
+                        <input type="text" id="expense-tags"
+                            class="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                            placeholder="Comma-separated, e.g. work, urgent, recurring">
+                        <p class="text-xs text-gray-400 mt-1">Helps you find and filter expenses later</p>
                     </div>
 
                     <!-- Date -->
@@ -863,12 +964,52 @@
 
             <!-- ==================== HISTORY ==================== -->
             <div id="history-screen" class="screen p-4">
-                <div class="flex items-center mb-6">
-                    <button onclick="showScreen('home')" class="mr-4 text-gray-600 hover:text-gray-800">
-                        <i class="fas fa-arrow-left text-xl"></i>
-                    </button>
-                    <h2 class="text-2xl font-display font-bold text-gray-800">History</h2>
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <button onclick="showScreen('home')" class="mr-4 text-gray-600 hover:text-gray-800">
+                            <i class="fas fa-arrow-left text-xl"></i>
+                        </button>
+                        <h2 class="text-2xl font-display font-bold text-gray-800">History</h2>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button onclick="exportTransactionsCSV()" title="Export CSV"
+                                class="w-9 h-9 bg-white rounded-full shadow-sm hover:bg-gray-50 text-gray-600 flex items-center justify-center transition">
+                            <i class="fas fa-file-csv"></i>
+                        </button>
+                        <button onclick="exportTransactionsPDF()" title="Export PDF"
+                                class="w-9 h-9 bg-white rounded-full shadow-sm hover:bg-gray-50 text-gray-600 flex items-center justify-center transition">
+                            <i class="fas fa-file-pdf"></i>
+                        </button>
+                    </div>
                 </div>
+
+                <!-- Search & Filters -->
+                <div class="bg-white rounded-2xl p-3 shadow-sm mb-3 space-y-2">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input type="text" id="history-search" oninput="renderHistory()"
+                               class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-primary outline-none text-sm"
+                               placeholder="Search notes, tags, amount…">
+                    </div>
+                    <div class="flex gap-2 overflow-x-auto pb-1" id="history-cat-filters"></div>
+                    <div class="flex gap-2 items-center text-xs">
+                        <span class="text-gray-500">Range:</span>
+                        <select id="history-range" onchange="renderHistory()"
+                                class="flex-1 bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-2 outline-none focus:border-primary">
+                            <option value="current">This week</option>
+                            <option value="7">Last 7 days</option>
+                            <option value="30">Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                            <option value="all" selected>All time</option>
+                        </select>
+                        <button onclick="clearHistoryFilters()"
+                                class="text-primary text-xs hover:underline whitespace-nowrap">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Summary chip -->
+                <div id="history-summary" class="text-xs text-gray-500 mb-2 px-1"></div>
+
                 <div class="space-y-3" id="history-list">
                     <p class="text-center text-gray-400 py-8">No history yet</p>
                 </div>
@@ -1085,13 +1226,34 @@
 
     // ── Category config ───────────────────────────────────────────
     const categories = {
-        food:          { icon: 'utensils',      color: 'bg-orange-100 text-orange-600', label: 'Food' },
-        transport:     { icon: 'car',            color: 'bg-blue-100 text-blue-600',   label: 'Transport' },
-        bills:         { icon: 'file-invoice',   color: 'bg-red-100 text-red-600',     label: 'Bills' },
-        shopping:      { icon: 'shopping-bag',   color: 'bg-purple-100 text-purple-600', label: 'Shopping' },
-        entertainment: { icon: 'film',           color: 'bg-pink-100 text-pink-600',   label: 'Entertainment' },
-        other:         { icon: 'ellipsis-h',     color: 'bg-gray-100 text-gray-600',   label: 'Other' }
+        food:          { icon: 'utensils',      color: 'bg-orange-100 text-orange-600', label: 'Food',          hex: '#F97316' },
+        transport:     { icon: 'car',           color: 'bg-blue-100 text-blue-600',     label: 'Transport',     hex: '#3B82F6' },
+        bills:         { icon: 'file-invoice',  color: 'bg-red-100 text-red-600',       label: 'Bills',         hex: '#EF4444' },
+        shopping:      { icon: 'shopping-bag',  color: 'bg-purple-100 text-purple-600', label: 'Shopping',      hex: '#A855F7' },
+        entertainment: { icon: 'film',          color: 'bg-pink-100 text-pink-600',     label: 'Entertainment', hex: '#EC4899' },
+        health:        { icon: 'heart-pulse',   color: 'bg-green-100 text-green-600',   label: 'Health',        hex: '#10B981' },
+        other:         { icon: 'ellipsis-h',    color: 'bg-gray-100 text-gray-600',     label: 'Other',         hex: '#6B7280' }
     };
+
+    // Keyword → category mapping for auto-categorization.
+    // Matches against both the note and any tags. First match wins in iteration order.
+    const CATEGORY_RULES = {
+        food:          ['food','lunch','dinner','breakfast','restaurant','cafe','coffee','pizza','burger','kfc','mcdonald','chipotle','groceries','grocery','market','starbucks','bread','snack','meal','eat','drink','juice','soda','water','bar','pub','wine','beer','takeout','takeaway','waiter','tip'],
+        transport:     ['uber','bolt','lyft','taxi','fuel','gas','petrol','diesel','parking','bus','train','metro','subway','flight','airline','airport','ticket','trotro','tro-tro','toll','car wash','motor'],
+        bills:         ['rent','mortgage','electric','electricity','water bill','utility','internet','wifi','phone bill','mobile bill','insurance','subscription','netflix','spotify','hulu','dstv','showmax','cable','loan','bank fee','charge','tax'],
+        shopping:      ['shop','store','amazon','mall','clothes','shirt','shoes','dress','pants','jeans','jacket','accessory','purse','bag','furniture','decor','gift','present','pharmacy cvs'],
+        entertainment: ['movie','cinema','concert','game','steam','playstation','xbox','museum','park','zoo','theater','bowling','club','party','event','streaming','ticket'],
+        health:        ['pharmacy','medicine','doctor','hospital','clinic','gym','fitness','yoga','massage','dentist','therapy','vitamins','healthcare','nurse']
+    };
+
+    function suggestCategory(text) {
+        if (!text) return null;
+        const t = String(text).toLowerCase();
+        for (const [cat, kws] of Object.entries(CATEGORY_RULES)) {
+            if (kws.some(kw => t.includes(kw))) return cat;
+        }
+        return null;
+    }
 
     // ── App state ─────────────────────────────────────────────────
     let profile = {
@@ -1193,6 +1355,21 @@
         } else {
             appState.weekId = getWeekId(new Date());
         }
+
+        // Schema migration: ensure every transaction has tags[], autoCategorized, createdAt
+        migrateTransactions(appState.transactions);
+        weekHistory.forEach(w => migrateTransactions(w.transactions));
+    }
+
+    function migrateTransactions(txs) {
+        if (!Array.isArray(txs)) return;
+        txs.forEach(t => {
+            if (t.isTopUp) return;  // top-ups don't need category/tags
+            if (!Array.isArray(t.tags)) t.tags = [];
+            if (typeof t.autoCategorized !== 'boolean') t.autoCategorized = false;
+            if (!t.createdAt) t.createdAt = t.id || Date.now();
+            if (!t.category) t.category = 'other';
+        });
     }
 
     function saveData() {
@@ -1675,7 +1852,11 @@
         setText('analytics-spent',  fmt(appState.spent));
 
         updateProfileDisplay();
+        updateHealthScore();
         updateInsight();
+        updateChallenge();
+        updateStreak();
+        renderBadges();
         renderRecentTransactions();
     }
 
@@ -1695,31 +1876,333 @@
         setText('current-date', `${start.toLocaleDateString('en-US', opts)} – ${end.toLocaleDateString('en-US', opts)}`);
     }
 
-    function updateInsight() {
-        const el = document.getElementById('insight-text');
-        if (!el) return;
-        if (appState.transactions.length === 0) {
-            el.textContent = 'Start adding expenses to see your weekly insights!';
-            return;
-        }
-        const catTotals = {};
-        appState.transactions.forEach(t => {
-            catTotals[t.category] = (catTotals[t.category] || 0) + t.amount;
-        });
-        const [topCat, topAmt] = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
-        const topPct = Math.round((topAmt / appState.spent) * 100);
+    // ═══════════════════════════════════════════════════════════════
+    //  SMART DASHBOARD ENGINE — Health Score, AI Insights, Challenge, Streak, Badges
+    // ═══════════════════════════════════════════════════════════════
 
+    // Returns a summary of the current week: totals, per-category, daily pace, etc.
+    function computeWeekStats(state = appState) {
+        const txs = (state.transactions || []).filter(t => !t.isTopUp);
+        const catTotals = {};
+        txs.forEach(t => {
+            catTotals[t.category] = (catTotals[t.category] || 0) + (t.amount || 0);
+        });
+        const catEntries = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+
+        const dow       = new Date().getDay();                 // 0 = Sun
+        const daysElapsed = dow === 0 ? 7 : dow;                // 1..7
+        const daysLeft  = dow === 0 ? 0 : 7 - dow;
+        const pace      = state.budget > 0 ? (state.spent / state.budget) / (daysElapsed / 7) : 0;
+        const topCat    = catEntries[0] ? catEntries[0][0] : null;
+        const topCatPct = state.spent > 0 && topCat ? catTotals[topCat] / state.spent : 0;
+
+        const uniqueDays = new Set(txs.map(t => t.date)).size;
+
+        return {
+            txs, catTotals, catEntries, dow, daysElapsed, daysLeft,
+            pace, topCat, topCatPct, uniqueDays,
+            spent: state.spent, budget: state.budget,
+            remaining: state.budget - state.spent,
+            txCount: txs.length
+        };
+    }
+
+    // 0-100 score across 4 signals (budget pace, category balance, consistency, trend).
+    function computeHealthScore() {
+        const s = computeWeekStats();
+        if (s.budget <= 0) return { score: 0, label: 'Set a budget', tip: 'Go to Setup to begin', signals: {} };
+
+        // 1. Budget adherence (0-40): ideal pace = 1.0. Lower pace = better.
+        const paceScore = Math.max(0, Math.min(40, 40 - (Math.max(0, s.pace - 0.9) * 80)));
+
+        // 2. Category balance (0-25): penalize if one category > 60% of spending.
+        let balanceScore = 25;
+        if (s.topCatPct > 0.6) balanceScore = Math.max(0, 25 - (s.topCatPct - 0.6) * 60);
+
+        // 3. Logging consistency (0-20): unique days with expenses / elapsed days.
+        const consistency = s.daysElapsed > 0 ? (s.uniqueDays / s.daysElapsed) : 0;
+        const consistencyScore = Math.round(consistency * 20);
+
+        // 4. Trend vs last week (0-15): improved → full points, same → half, worse → 0.
+        let trendScore = 10;
+        if (weekHistory.length > 0 && weekHistory[0].spent > 0) {
+            const lastPace = weekHistory[0].budget > 0 ? weekHistory[0].spent / weekHistory[0].budget : 1;
+            if (s.pace < lastPace * 0.95)      trendScore = 15;
+            else if (s.pace < lastPace * 1.05) trendScore = 10;
+            else                                trendScore = Math.max(0, 10 - (s.pace - lastPace) * 30);
+        }
+
+        const raw = paceScore + balanceScore + consistencyScore + trendScore;
+        const score = Math.max(0, Math.min(100, Math.round(raw)));
+
+        let label, tip;
+        if      (score >= 85) { label = 'Excellent';  tip = 'Outstanding discipline this week'; }
+        else if (score >= 70) { label = 'Healthy';    tip = 'You\'re managing money well'; }
+        else if (score >= 55) { label = 'On track';   tip = 'A few small tweaks will help'; }
+        else if (score >= 40) { label = 'Watch out';  tip = s.pace > 1 ? 'Slow down spending pace' : 'Spread across more categories'; }
+        else                  { label = 'At risk';    tip = 'Review recent transactions & set limits'; }
+
+        return {
+            score, label, tip,
+            signals: { paceScore, balanceScore, consistencyScore, trendScore }
+        };
+    }
+
+    function updateHealthScore() {
+        const { score, label, tip } = computeHealthScore();
+        const arc    = document.getElementById('health-arc');
+        const valEl  = document.getElementById('health-score-value');
+        const lblEl  = document.getElementById('health-score-label');
+        const tipEl  = document.getElementById('health-score-tip');
+
+        if (valEl) valEl.textContent = score;
+        if (lblEl) lblEl.textContent = label;
+        if (tipEl) tipEl.textContent = tip;
+
+        if (arc) {
+            const circumference = 2 * Math.PI * 28;  // ~176
+            const offset = circumference * (1 - score / 100);
+            arc.setAttribute('stroke-dasharray', circumference);
+            arc.setAttribute('stroke-dashoffset', offset);
+            const color = score >= 70 ? '#10B981' : score >= 40 ? '#F59E0B' : '#EF4444';
+            arc.setAttribute('stroke', color);
+        }
+    }
+
+    // ── AI Insights — rule engine producing 1-4 contextual messages ──
+    let insightCache = [];
+    let insightIndex = 0;
+
+    function generateInsights() {
+        const s = computeWeekStats();
+        const out = [];
+
+        if (s.txCount === 0) {
+            return ['👋 Welcome! Log your first expense to unlock personalized insights.'];
+        }
+
+        // Pacing insight
+        if (s.pace > 1.2) {
+            const projected = (s.spent / s.daysElapsed) * 7;
+            out.push(`⚠️ At this pace, you'll spend ${fmt(projected)} by Sunday — ${fmt(projected - s.budget)} over budget.`);
+        } else if (s.pace < 0.7 && s.daysElapsed >= 3) {
+            const projected = (s.spent / s.daysElapsed) * 7;
+            out.push(`✨ Great pace! You're tracking to save ${fmt(s.budget - projected)} this week.`);
+        } else if (s.daysElapsed >= 3) {
+            out.push(`📊 You're pacing ${Math.round(s.pace * 100)}% of your budget — right on track.`);
+        }
+
+        // Top category concentration
+        if (s.topCatPct > 0.5 && s.topCat) {
+            const lbl = categories[s.topCat]?.label || s.topCat;
+            out.push(`🍽️ ${lbl} is ${Math.round(s.topCatPct * 100)}% of your spending this week — higher than balanced.`);
+        }
+
+        // Compare to previous week
         if (weekHistory.length > 0) {
             const last = weekHistory[0];
             if (last.spent > 0) {
-                const diff = last.spent - appState.spent;
-                if (diff > 0) {
-                    el.textContent = `You're spending ${Math.round((diff / last.spent) * 100)}% less than last week. Keep it up!`;
-                    return;
+                const diff = last.spent - s.spent;
+                const pct  = Math.round(Math.abs(diff) / last.spent * 100);
+                if (pct >= 10) {
+                    if (diff > 0) out.push(`📉 You've spent ${pct}% less than last week so far. Keep it up!`);
+                    else          out.push(`📈 You're spending ${pct}% more than last week — check if it's a one-off.`);
                 }
             }
         }
-        el.textContent = `${topPct}% of your spending is on ${categories[topCat]?.label || topCat}.`;
+
+        // Category jump detection
+        if (weekHistory.length > 0 && s.topCat) {
+            const lastCatTotals = {};
+            (weekHistory[0].transactions || []).forEach(t => {
+                if (!t.isTopUp) lastCatTotals[t.category] = (lastCatTotals[t.category] || 0) + (t.amount || 0);
+            });
+            const lastTop = lastCatTotals[s.topCat] || 0;
+            const currTop = s.catTotals[s.topCat] || 0;
+            if (lastTop > 0 && currTop > lastTop * 1.5) {
+                out.push(`🚨 ${categories[s.topCat]?.label} spending is ${Math.round(currTop / lastTop * 100)}% of last week's — unusual jump.`);
+            }
+        }
+
+        // Recurring pattern
+        const recurring = findRecurringTransactions();
+        if (recurring.length > 0) {
+            out.push(`🔁 Detected ${recurring.length} recurring charge${recurring.length > 1 ? 's' : ''} (${recurring.slice(0, 2).map(r => r.note || r.category).join(', ')}).`);
+        }
+
+        // Savings forecast
+        if (s.daysElapsed >= 4 && s.pace <= 1) {
+            const projected = (s.spent / s.daysElapsed) * 7;
+            const savings   = s.budget - projected;
+            if (savings > 0) {
+                out.push(`💰 Projected savings this week: ${fmt(savings)}. Consider moving it to a savings tag.`);
+            }
+        }
+
+        // Encouragement for low-spender days
+        if (s.daysLeft > 0 && s.pace < 0.8) {
+            out.push(`🎯 ${s.daysLeft} day${s.daysLeft !== 1 ? 's' : ''} left and ${fmt(s.remaining)} remaining — you're doing great.`);
+        }
+
+        return out.length ? out.slice(0, 5) : ['📊 Keep logging to unlock more insights.'];
+    }
+
+    function updateInsight() {
+        insightCache = generateInsights();
+        insightIndex = 0;
+        renderInsight();
+    }
+
+    function renderInsight() {
+        const el   = document.getElementById('insight-text');
+        const dots = document.getElementById('insight-dots');
+        const btn  = document.getElementById('insight-cycle-btn');
+        if (!el) return;
+
+        el.textContent = insightCache[insightIndex] || 'Keep logging expenses.';
+        if (dots) {
+            dots.innerHTML = insightCache.map((_, i) =>
+                `<span class="w-1.5 h-1.5 rounded-full ${i === insightIndex ? 'bg-white' : 'bg-white/30'}"></span>`
+            ).join('');
+        }
+        if (btn) btn.style.display = insightCache.length > 1 ? '' : 'none';
+    }
+
+    function cycleInsight() {
+        if (insightCache.length === 0) return;
+        insightIndex = (insightIndex + 1) % insightCache.length;
+        renderInsight();
+    }
+
+    // ── Weekly Challenge ──
+    function updateChallenge() {
+        const descEl   = document.getElementById('challenge-desc');
+        const statusEl = document.getElementById('challenge-status');
+        const barEl    = document.getElementById('challenge-bar');
+        if (!descEl || !statusEl || !barEl) return;
+
+        if (weekHistory.length === 0) {
+            descEl.textContent = 'Complete one full week to unlock the challenge.';
+            statusEl.textContent = 'Soon';
+            statusEl.className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500';
+            barEl.style.width = '0%';
+            return;
+        }
+
+        const last = weekHistory[0];
+        const s    = computeWeekStats();
+        // Compare spending at same day-index of week
+        const dayIdx = s.daysElapsed;
+        const lastTxsByDay = (last.transactions || []).filter(t => !t.isTopUp);
+        const lastThroughSameDay = lastTxsByDay
+            .filter(t => dayOfWeekIndex(t.date) <= dayIdx)
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+        const target  = lastThroughSameDay;
+        const current = s.spent;
+        const diff    = target - current;
+
+        if (target === 0) {
+            descEl.textContent = 'Last week had no spending by this day yet.';
+            statusEl.textContent = 'No target';
+            statusEl.className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500';
+            barEl.style.width = '0%';
+            return;
+        }
+
+        const pct = Math.min(100, (current / target) * 100);
+        barEl.style.width = `${pct}%`;
+
+        if (diff >= 0) {
+            descEl.textContent = `${fmt(current)} spent vs ${fmt(target)} last week — saving ${fmt(diff)}`;
+            statusEl.textContent = 'Winning 🏆';
+            statusEl.className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-safe';
+            barEl.className = 'h-full bg-gradient-to-r from-emerald-400 to-safe rounded-full transition-all duration-500';
+        } else {
+            descEl.textContent = `${fmt(current)} spent vs ${fmt(target)} last week — ${fmt(-diff)} over`;
+            statusEl.textContent = 'Behind';
+            statusEl.className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-danger';
+            barEl.className = 'h-full bg-gradient-to-r from-orange-400 to-danger rounded-full transition-all duration-500';
+        }
+    }
+
+    function dayOfWeekIndex(dateStr) {
+        if (!dateStr) return 0;
+        const d = new Date(dateStr);
+        const dow = d.getDay();
+        return dow === 0 ? 7 : dow;  // Mon=1 .. Sun=7
+    }
+
+    // ── Streak & Badges ──
+    function computeStreak() {
+        // Consecutive archived weeks where spent <= budget
+        let streak = 0;
+        for (const wk of weekHistory) {
+            if ((wk.spent || 0) <= (wk.budget || 0)) streak++;
+            else break;
+        }
+        // Include current week if on track
+        const onTrack = appState.spent <= appState.budget;
+        return { streak, onTrack };
+    }
+
+    function updateStreak() {
+        const { streak } = computeStreak();
+        setText('streak-count', streak);
+        const lbl = document.getElementById('streak-label');
+        if (lbl) lbl.textContent = streak === 1 ? 'week under' : 'weeks under';
+    }
+
+    function computeBadges() {
+        const badges  = [];
+        const { streak } = computeStreak();
+        const totalTxs = appState.transactions.filter(t => !t.isTopUp).length +
+                         weekHistory.reduce((n, w) => n + (w.transactions || []).filter(t => !t.isTopUp).length, 0);
+        const totalSaved = weekHistory.reduce((s, w) => s + Math.max(0, (w.budget || 0) - (w.spent || 0)), 0);
+
+        if (totalTxs >= 1)        badges.push({ icon: 'seedling',     label: 'First Expense',    color: 'bg-green-100 text-safe' });
+        if (totalTxs >= 25)       badges.push({ icon: 'pen-to-square', label: 'Prolific Logger', color: 'bg-blue-100 text-primary' });
+        if (totalTxs >= 100)      badges.push({ icon: 'crown',        label: '100 Logs',         color: 'bg-yellow-100 text-yellow-700' });
+        if (streak >= 1)          badges.push({ icon: 'fire',         label: `${streak}× Streak`, color: 'bg-orange-100 text-orange-600' });
+        if (streak >= 4)          badges.push({ icon: 'medal',        label: 'Month Strong',     color: 'bg-purple-100 text-purple-600' });
+        if (streak >= 12)         badges.push({ icon: 'trophy',       label: 'Quarter Champion', color: 'bg-amber-100 text-amber-700' });
+        if (totalSaved >= 100)    badges.push({ icon: 'piggy-bank',   label: `${fmt(totalSaved)} Saved`, color: 'bg-pink-100 text-pink-600' });
+        if (weekHistory.length >= 1 && weekHistory[0].spent <= weekHistory[0].budget * 0.5) {
+            badges.push({ icon: 'star', label: 'Half Budget Hero', color: 'bg-indigo-100 text-indigo-600' });
+        }
+        return badges;
+    }
+
+    function renderBadges() {
+        const strip = document.getElementById('badges-strip');
+        if (!strip) return;
+        const badges = computeBadges();
+        if (badges.length === 0) { strip.classList.add('hidden'); return; }
+        strip.classList.remove('hidden');
+        strip.innerHTML = badges.map(b => `
+            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full ${b.color} text-xs font-semibold shrink-0 shadow-sm">
+                <i class="fas fa-${b.icon}"></i>
+                <span>${b.label}</span>
+            </div>
+        `).join('');
+    }
+
+    // ── Recurring detection (simple: same rounded-amount + category appearing 2+ weeks) ──
+    function findRecurringTransactions() {
+        const buckets = {};
+        const push = (t) => {
+            if (t.isTopUp) return;
+            const key = `${t.category}|${Math.round(t.amount)}|${(t.note || '').slice(0, 15).toLowerCase()}`;
+            buckets[key] = buckets[key] || { count: 0, total: 0, sample: t };
+            buckets[key].count++;
+            buckets[key].total += t.amount;
+        };
+        appState.transactions.forEach(push);
+        weekHistory.slice(0, 4).forEach(w => (w.transactions || []).forEach(push));
+        return Object.values(buckets)
+            .filter(b => b.count >= 2)
+            .sort((a, b) => b.count - a.count)
+            .map(b => ({ ...b.sample, recurrenceCount: b.count }));
     }
 
     function renderRecentTransactions() {
@@ -1727,7 +2210,15 @@
         if (!container) return;
         const recent = appState.transactions.slice(0, 5);
         if (recent.length === 0) {
-            container.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">No expenses yet this week</p>';
+            container.innerHTML = `
+                <div class="text-center py-6">
+                    <i class="fas fa-receipt text-3xl text-gray-300 empty-pulse"></i>
+                    <p class="text-sm text-gray-400 mt-2">No expenses yet this week</p>
+                    <button onclick="showScreen('add')"
+                            class="mt-3 text-xs bg-primary text-white px-4 py-1.5 rounded-full font-semibold hover:bg-blue-800 transition">
+                        <i class="fas fa-plus mr-1"></i> Log your first expense
+                    </button>
+                </div>`;
             return;
         }
         container.innerHTML = recent.map(t => {
@@ -1747,18 +2238,25 @@
                 </div>`;
             }
             const cat = categories[t.category] || categories.other;
+            const tagChips = (t.tags || []).slice(0, 2).map(tg =>
+                `<span class="text-[10px] bg-white/70 text-gray-500 px-1.5 py-0.5 rounded ml-1">${tg}</span>`
+            ).join('');
             return `
             <div class="transaction-item flex items-center justify-between p-3 rounded-xl bg-gray-50">
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
                     <div class="w-10 h-10 ${cat.color} rounded-full flex items-center justify-center shrink-0">
                         <i class="fas fa-${cat.icon}"></i>
                     </div>
-                    <div>
-                        <p class="font-medium text-gray-800 text-sm">${cat.label}</p>
-                        <p class="text-xs text-gray-500">${t.note || 'No note'}</p>
+                    <div class="min-w-0">
+                        <p class="font-medium text-gray-800 text-sm truncate">${t.note || cat.label}</p>
+                        <div class="flex items-center gap-1 mt-0.5">
+                            <span class="text-[11px] text-gray-500">${cat.label}</span>
+                            ${tagChips}
+                            ${t.autoCategorized ? '<span class="text-[10px] bg-blue-100 text-primary px-1.5 py-0.5 rounded ml-1"><i class="fas fa-wand-magic-sparkles mr-0.5"></i>auto</span>' : ''}
+                        </div>
                     </div>
                 </div>
-                <span class="font-bold text-gray-800 shrink-0">-${fmt(t.amount)}</span>
+                <span class="font-bold text-gray-800 shrink-0 ml-2">-${fmt(t.amount)}</span>
             </div>`;
         }).join('');
     }
@@ -1784,24 +2282,59 @@
         }
     }
 
+    // Live hint under the category grid: suggests a category as the user types the note
+    function previewAutoCategory() {
+        const note = document.getElementById('expense-note').value.trim();
+        const hint = document.getElementById('auto-cat-hint');
+        const hintText = document.getElementById('auto-cat-hint-text');
+        if (!hint || !hintText) return;
+
+        if (selectedCategory) { hint.classList.add('hidden'); return; }  // don't nag if user already picked
+        const suggested = suggestCategory(note);
+        if (suggested && categories[suggested]) {
+            hintText.textContent = `Looks like "${categories[suggested].label}" — tap to apply`;
+            hint.classList.remove('hidden');
+            hint.onclick = () => {
+                const btn = document.querySelector(`.category-btn[onclick*="${suggested}"]`);
+                if (btn) selectCategory(btn, suggested);
+                hint.classList.add('hidden');
+            };
+        } else {
+            hint.classList.add('hidden');
+        }
+    }
+
+    function parseTagsInput(raw) {
+        if (!raw) return [];
+        return raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean).slice(0, 8);
+    }
+
     function saveExpense() {
         const amount = parseFloat(document.getElementById('expense-amount').value);
         const note   = document.getElementById('expense-note').value.trim();
+        const tags   = parseTagsInput(document.getElementById('expense-tags')?.value);
         const date   = document.getElementById('expense-date').value;
 
         if (!amount || amount <= 0) { alert('Please enter a valid amount.'); return; }
-        if (!selectedCategory)      { alert('Please select a category.'); return; }
+
+        // Auto-categorize if the user didn't pick one
+        let category = selectedCategory;
+        let autoCategorized = false;
+        if (!category) {
+            category = suggestCategory(note) || suggestCategory(tags.join(' ')) || 'other';
+            autoCategorized = true;
+        }
 
         const remaining = appState.budget - appState.spent;
         if (amount > remaining) {
-            tempExpense = { amount, note, date };
+            tempExpense = { amount, note, date, tags, category, autoCategorized };
             setText('emergency-budget',    fmt(appState.budget));
             setText('emergency-remaining', fmt(Math.max(remaining, 0)));
             setText('emergency-expense',   fmt(amount));
             setText('emergency-over',      fmt(amount - remaining));
             document.getElementById('emergency-modal').classList.remove('hidden');
         } else {
-            addTransaction(amount, selectedCategory, note, date);
+            addTransaction(amount, category, note, date, tags, autoCategorized);
             showScreen('home');
             resetAddForm();
         }
@@ -1810,8 +2343,10 @@
     function confirmEmergencySpend() {
         const reason = document.getElementById('emergency-reason').value.trim();
         if (!reason) { alert('Please provide a reason for this emergency spending.'); return; }
-        const { amount, note, date } = tempExpense;
-        addTransaction(amount, selectedCategory, note ? `${note} (Emergency: ${reason})` : `Emergency: ${reason}`, date);
+        const { amount, note, date, tags, category, autoCategorized } = tempExpense;
+        const combinedNote = note ? `${note} (Emergency: ${reason})` : `Emergency: ${reason}`;
+        const combinedTags = [...(tags || []), 'emergency'];
+        addTransaction(amount, category, combinedNote, date, combinedTags, autoCategorized);
         closeEmergencyModal();
         showScreen('home');
         resetAddForm();
@@ -1822,8 +2357,17 @@
         tempExpense = null;
     }
 
-    function addTransaction(amount, category, note, date) {
-        appState.transactions.unshift({ id: Date.now(), amount, category, note, date });
+    function addTransaction(amount, category, note, date, tags, autoCategorized) {
+        appState.transactions.unshift({
+            id: Date.now(),
+            amount,
+            category,
+            note: note || '',
+            date,
+            tags: tags || [],
+            autoCategorized: !!autoCategorized,
+            createdAt: Date.now()
+        });
         appState.spent += amount;
         saveData();
         updateUI();
@@ -1832,7 +2376,9 @@
     function resetAddForm() {
         document.getElementById('expense-amount').value = '';
         document.getElementById('expense-note').value   = '';
+        const tagsEl = document.getElementById('expense-tags'); if (tagsEl) tagsEl.value = '';
         document.getElementById('emergency-reason').value = '';
+        document.getElementById('auto-cat-hint')?.classList.add('hidden');
         document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
         selectedCategory = null;
         const w = document.getElementById('budget-warning');
@@ -1986,47 +2532,285 @@
     }
 
     // ── History ───────────────────────────────────────────────────
+    // ── History with search + filter + grouped transactions ────────
+    let historyState = { cat: 'all' };  // persists filter across renders
+
+    function renderHistoryFilters() {
+        const wrap = document.getElementById('history-cat-filters');
+        if (!wrap) return;
+        const cats = [['all', 'All']].concat(Object.entries(categories).map(([k, v]) => [k, v.label]));
+        wrap.innerHTML = cats.map(([k, label]) => {
+            const active = historyState.cat === k;
+            const ic = k === 'all' ? 'layer-group' : (categories[k]?.icon || 'tag');
+            return `<button onclick="setHistoryCat('${k}')"
+                class="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition ${
+                    active ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }"><i class="fas fa-${ic}"></i> ${label}</button>`;
+        }).join('');
+    }
+
+    function setHistoryCat(c) { historyState.cat = c; renderHistory(); }
+
+    function clearHistoryFilters() {
+        const search = document.getElementById('history-search');
+        const range  = document.getElementById('history-range');
+        if (search) search.value = '';
+        if (range)  range.value = 'all';
+        historyState.cat = 'all';
+        renderHistory();
+    }
+
+    function getAllTransactionsFlat() {
+        const out = [];
+        appState.transactions.forEach(t => out.push({ ...t, weekId: appState.weekId, weekLabel: 'This week' }));
+        weekHistory.forEach(w => (w.transactions || []).forEach(t =>
+            out.push({ ...t, weekId: w.weekId, weekLabel: formatWeekLabel(w.weekId) })
+        ));
+        return out;
+    }
+
     function renderHistory() {
+        renderHistoryFilters();
+
         const container = document.getElementById('history-list');
+        const summaryEl = document.getElementById('history-summary');
         if (!container) return;
 
-        const currentEntry = {
-            weekId: appState.weekId,
-            label:  'Current Week',
-            budget: appState.budget,
-            spent:  appState.spent
-        };
+        const search  = (document.getElementById('history-search')?.value || '').toLowerCase().trim();
+        const rangeEl = document.getElementById('history-range');
+        const range   = rangeEl ? rangeEl.value : 'all';
+        const cat     = historyState.cat;
 
-        const allWeeks = [currentEntry, ...weekHistory.map(w => ({
-            ...w,
-            label: formatWeekLabel(w.weekId)
-        }))];
+        let txs = getAllTransactionsFlat().filter(t => !t.isTopUp);
 
-        if (allWeeks.length === 1 && currentEntry.spent === 0) {
-            container.innerHTML = '<p class="text-center text-gray-400 py-8">No history yet — start adding expenses!</p>';
+        // Range filter
+        if (range === 'current') {
+            txs = txs.filter(t => t.weekId === appState.weekId);
+        } else if (range !== 'all') {
+            const days = parseInt(range, 10);
+            const cutoff = Date.now() - days * 86400000;
+            txs = txs.filter(t => {
+                const ts = t.createdAt || (t.date ? new Date(t.date).getTime() : 0);
+                return ts >= cutoff;
+            });
+        }
+
+        // Category filter
+        if (cat !== 'all') txs = txs.filter(t => t.category === cat);
+
+        // Search: note, tags, amount
+        if (search) {
+            txs = txs.filter(t => {
+                const note = (t.note || '').toLowerCase();
+                const tags = (t.tags || []).join(' ').toLowerCase();
+                const amt  = String(t.amount);
+                return note.includes(search) || tags.includes(search) || amt.includes(search);
+            });
+        }
+
+        if (summaryEl) {
+            const total = txs.reduce((s, t) => s + (t.amount || 0), 0);
+            summaryEl.textContent = txs.length === 0
+                ? 'No matches'
+                : `${txs.length} transaction${txs.length !== 1 ? 's' : ''} · Total ${fmt(total)}`;
+        }
+
+        if (txs.length === 0) {
+            container.innerHTML = `
+                <div class="bg-white rounded-xl p-8 text-center text-gray-400">
+                    <i class="fas fa-receipt text-3xl mb-2"></i>
+                    <p class="text-sm">${search || cat !== 'all' || range !== 'all' ? 'No transactions match your filters' : 'No history yet — start adding expenses!'}</p>
+                </div>`;
             return;
         }
 
-        container.innerHTML = allWeeks.map(w => {
-            const over = w.spent > w.budget;
-            const pct  = Math.min(w.budget > 0 ? (w.spent / w.budget) * 100 : 0, 100);
+        // Group by date
+        const groups = {};
+        txs.forEach(t => {
+            const key = t.date || 'Unknown';
+            (groups[key] = groups[key] || []).push(t);
+        });
+        const sortedDates = Object.keys(groups).sort((a, b) => (a < b ? 1 : -1));
+
+        container.innerHTML = sortedDates.map(date => {
+            const dayTotal = groups[date].reduce((s, t) => s + (t.amount || 0), 0);
             return `
-            <div class="bg-white rounded-xl p-4 shadow-sm">
-                <div class="flex justify-between items-center mb-2">
-                    <h4 class="font-semibold text-gray-800">${w.label}</h4>
-                    ${over
-                        ? '<span class="text-xs bg-red-100 text-danger px-2 py-1 rounded-full">Over Budget</span>'
-                        : '<span class="text-xs bg-green-100 text-safe px-2 py-1 rounded-full">On Track</span>'}
+                <div>
+                    <div class="flex items-center justify-between px-1 mb-1.5">
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">${formatHistoryDate(date)}</p>
+                        <p class="text-xs text-gray-400 font-semibold">${fmt(dayTotal)}</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm divide-y divide-gray-100 overflow-hidden mb-3">
+                        ${groups[date].map(t => renderHistoryRow(t)).join('')}
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    function renderHistoryRow(t) {
+        const c = categories[t.category] || categories.other;
+        const iconClass = (c.color || '').split(' ').filter(x => !x.startsWith('text-')).join(' ');
+        const tagBits = (t.tags || []).slice(0, 3).map(tg =>
+            `<span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">${tg}</span>`
+        ).join(' ');
+        const autoBadge = t.autoCategorized
+            ? '<span class="text-[10px] bg-blue-50 text-primary px-1.5 py-0.5 rounded ml-1">auto</span>' : '';
+        return `
+            <div class="flex items-center gap-3 p-3">
+                <div class="w-9 h-9 rounded-full ${iconClass} flex items-center justify-center shrink-0">
+                    <i class="fas fa-${c.icon} text-sm" style="color:${c.hex || '#6B7280'}"></i>
                 </div>
-                <div class="flex justify-between text-sm text-gray-600 mb-2">
-                    <span>Spent: <span class="font-semibold ${over ? 'text-danger' : 'text-gray-800'}">${fmt(w.spent)}</span></span>
-                    <span>Budget: ${fmt(w.budget)}</span>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-800 truncate">${t.note || c.label}${autoBadge}</p>
+                    <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
+                        <span class="text-[11px] text-gray-500">${c.label}</span>
+                        ${tagBits}
+                    </div>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div class="h-full rounded-full ${over ? 'bg-danger' : 'bg-safe'}" style="width:${pct}%"></div>
+                <div class="text-right">
+                    <p class="font-bold text-gray-800 text-sm">${fmt(t.amount)}</p>
                 </div>
             </div>`;
-        }).join('');
+    }
+
+    function formatHistoryDate(iso) {
+        if (!iso || iso === 'Unknown') return 'Unknown';
+        const d = new Date(iso);
+        const today     = new Date(); today.setHours(0,0,0,0);
+        const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+        const that = new Date(d); that.setHours(0,0,0,0);
+        if (that.getTime() === today.getTime())     return 'Today';
+        if (that.getTime() === yesterday.getTime()) return 'Yesterday';
+        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+
+    // ── Export: CSV ────────────────────────────────────────────────
+    function exportTransactionsCSV() {
+        const txs = getAllTransactionsFlat().filter(t => !t.isTopUp);
+        if (txs.length === 0) { showPayToast('No transactions to export'); return; }
+
+        const header = ['Date', 'Week', 'Category', 'Note', 'Tags', 'Amount', 'Currency', 'AutoCategorized'];
+        const rows = txs.map(t => [
+            t.date || '',
+            t.weekLabel || '',
+            categories[t.category]?.label || t.category,
+            csvEscape(t.note || ''),
+            csvEscape((t.tags || []).join(';')),
+            (t.amount || 0).toFixed(2),
+            profile.currency || 'USD',
+            t.autoCategorized ? 'yes' : 'no'
+        ]);
+        const csv = [header, ...rows].map(r => r.join(',')).join('\n');
+        downloadBlob(csv, `safespend-transactions-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv;charset=utf-8');
+        showPayToast('CSV downloaded');
+    }
+
+    function csvEscape(v) {
+        const s = String(v);
+        if (/[,"\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+        return s;
+    }
+
+    function downloadBlob(content, filename, mime) {
+        const blob = new Blob([content], { type: mime });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // ── Export: PDF ────────────────────────────────────────────────
+    function exportTransactionsPDF() {
+        if (typeof window.jspdf === 'undefined') { showPayToast('PDF engine not loaded'); return; }
+        const txs = getAllTransactionsFlat().filter(t => !t.isTopUp);
+        if (txs.length === 0) { showPayToast('No transactions to export'); return; }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+
+        // Header
+        doc.setFillColor(30, 58, 138);
+        doc.rect(0, 0, doc.internal.pageSize.getWidth(), 60, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22); doc.setFont('helvetica', 'bold');
+        doc.text('SafeSpend Report', 40, 38);
+        doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+        doc.text(`Generated ${new Date().toLocaleDateString()} for ${profile.name || 'User'}`, 40, 52);
+
+        // Summary
+        doc.setTextColor(30, 58, 138);
+        doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+        doc.text('Summary', 40, 90);
+        doc.setTextColor(80, 80, 80); doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+
+        const total = txs.reduce((s, t) => s + (t.amount || 0), 0);
+        const catTotals = {};
+        txs.forEach(t => { catTotals[t.category] = (catTotals[t.category] || 0) + (t.amount || 0); });
+
+        let y = 108;
+        doc.text(`Total transactions: ${txs.length}`, 40, y); y += 14;
+        doc.text(`Total spent: ${fmt(total)}`, 40, y); y += 14;
+        doc.text(`Current weekly budget: ${fmt(appState.budget)}`, 40, y); y += 14;
+        const hs = computeHealthScore();
+        doc.text(`Financial Health Score: ${hs.score}/100 (${hs.label})`, 40, y); y += 20;
+
+        // Category breakdown
+        doc.setTextColor(30, 58, 138); doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+        doc.text('By Category', 40, y); y += 6;
+
+        if (doc.autoTable) {
+            doc.autoTable({
+                startY: y + 4,
+                head: [['Category', 'Amount', 'Share']],
+                body: Object.entries(catTotals).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => [
+                    categories[cat]?.label || cat,
+                    fmt(amt),
+                    `${Math.round((amt / total) * 100)}%`
+                ]),
+                theme: 'striped',
+                headStyles: { fillColor: [30, 58, 138] },
+                styles: { fontSize: 9 }
+            });
+            y = doc.lastAutoTable.finalY + 20;
+        }
+
+        // Transactions table
+        doc.setTextColor(30, 58, 138); doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+        doc.text('Transactions', 40, y);
+
+        if (doc.autoTable) {
+            doc.autoTable({
+                startY: y + 8,
+                head: [['Date', 'Category', 'Note', 'Tags', 'Amount']],
+                body: txs.map(t => [
+                    t.date || '',
+                    categories[t.category]?.label || t.category,
+                    (t.note || '').slice(0, 40),
+                    (t.tags || []).slice(0, 3).join(', '),
+                    fmt(t.amount)
+                ]),
+                theme: 'grid',
+                headStyles: { fillColor: [30, 58, 138] },
+                styles: { fontSize: 8, cellPadding: 4 },
+                columnStyles: { 4: { halign: 'right' } }
+            });
+        }
+
+        // Footer
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8); doc.setTextColor(150);
+            doc.text(
+                `SafeSpend · Page ${i}/${pageCount}`,
+                doc.internal.pageSize.getWidth() - 80,
+                doc.internal.pageSize.getHeight() - 20
+            );
+        }
+
+        doc.save(`safespend-report-${new Date().toISOString().split('T')[0]}.pdf`);
+        showPayToast('PDF downloaded');
     }
 
     // ── Setup (new week) ──────────────────────────────────────────
