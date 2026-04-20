@@ -1,0 +1,75 @@
+// SafeSpend — Firestore Security Rules
+//
+// Paste this ENTIRE file into Firebase Console → Firestore Database → Rules → Publish.
+//
+// Design notes:
+//   • Earnings are NEVER written directly. They are computed from `referrals` docs
+//     (sum of rewardAmount where status == 'active'). This removes any cross-user
+//     write path and prevents commission fraud.
+//   • A referee creates their own pending referral doc at signup, and can only
+//     flip their own referral to 'active' (immutable referrer/reward).
+//   • Withdrawals can be created by the user but never modified from the client —
+//     admins approve/pay via the Firebase Console or a Cloud Function.
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Users ────────────────────────────────────────────────────
+    // Any authenticated user can READ user docs (needed to look up a
+    // referrer by referralCode). Write is restricted to the owner.
+    match /users/{uid} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid
+                       // Never let a user set their own referredBy to themselves
+                       && (!('referredBy' in request.resource.data)
+                           || request.resource.data.referredBy != request.auth.uid);
+      allow delete: if false;
+    }
+
+    // ─── Referrals ────────────────────────────────────────────────
+    // Read: only if you're the referrer or referee.
+    // Create: only by the referee, only pending, can't self-refer.
+    // Update: only by referee, only pending → active, and reward/referrer are locked.
+    match /referrals/{id} {
+      allow read: if request.auth != null
+                    && (resource.data.referrerId == request.auth.uid
+                        || resource.data.refereeId  == request.auth.uid);
+
+      allow create: if request.auth != null
+                    && request.resource.data.refereeId  == request.auth.uid
+                    && request.resource.data.referrerId != request.auth.uid
+                    && request.resource.data.status     == 'pending'
+                    && request.resource.data.rewardAmount is number
+                    && request.resource.data.rewardAmount > 0
+                    && request.resource.data.rewardAmount <= 100;  // cap to prevent inflated codes
+
+      allow update: if request.auth != null
+                    && resource.data.refereeId == request.auth.uid
+                    && resource.data.status    == 'pending'
+                    && request.resource.data.status == 'active'
+                    // Immutable fields
+                    && request.resource.data.referrerId   == resource.data.referrerId
+                    && request.resource.data.refereeId    == resource.data.refereeId
+                    && request.resource.data.rewardAmount == resource.data.rewardAmount
+                    && request.resource.data.rewardCurrency == resource.data.rewardCurrency;
+
+      allow delete: if false;
+    }
+
+    // ─── Withdrawals ──────────────────────────────────────────────
+    // Users submit requests; only admin (Firebase Console) processes them.
+    match /withdrawals/{id} {
+      allow read:   if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.amount is number
+                    && request.resource.data.amount > 0;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

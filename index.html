@@ -16,6 +16,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -687,6 +688,147 @@
                 </button>
             </div>
 
+            <!-- ==================== REFERRAL DASHBOARD ==================== -->
+            <div id="referral-screen" class="screen p-4 space-y-4">
+                <div class="flex items-center mb-2">
+                    <button onclick="showScreen('settings')" class="mr-4 text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-2xl font-display font-bold text-gray-800">Refer &amp; Earn</h2>
+                </div>
+
+                <!-- Firestore-not-ready banner -->
+                <div id="referral-no-firestore" class="hidden bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                    <p class="font-semibold mb-1">⚙️ Enable Firestore to use referrals</p>
+                    <p class="text-xs leading-relaxed">Firebase Console → Build → Firestore Database → <strong>Create database</strong> → Production mode → choose your region. Then paste the security rules from <code class="bg-amber-100 px-1 rounded">firestore.rules</code> in the Rules tab and Publish.</p>
+                </div>
+
+                <!-- Hero card: code + share -->
+                <div id="referral-ready" class="hidden space-y-4">
+                    <div class="bg-gradient-to-br from-primary via-blue-600 to-indigo-600 rounded-3xl p-6 text-white shadow-xl">
+                        <div class="flex items-center gap-2 mb-1">
+                            <i class="fas fa-gift text-yellow-300"></i>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-blue-100">Your referral code</p>
+                        </div>
+                        <p id="ref-code-display" class="font-display font-bold text-3xl tracking-wider mb-3">—</p>
+                        <p class="text-xs text-blue-100 mb-4 break-all" id="ref-link-display">—</p>
+                        <div class="grid grid-cols-4 gap-2">
+                            <button onclick="copyReferralLink()" class="bg-white/20 hover:bg-white/30 backdrop-blur text-white rounded-xl py-2.5 text-xs font-semibold transition">
+                                <i class="fas fa-copy block text-base mb-0.5"></i> Copy
+                            </button>
+                            <button onclick="shareReferralWA()" class="bg-white/20 hover:bg-white/30 backdrop-blur text-white rounded-xl py-2.5 text-xs font-semibold transition">
+                                <i class="fab fa-whatsapp block text-base mb-0.5"></i> WhatsApp
+                            </button>
+                            <button onclick="shareReferralSMS()" class="bg-white/20 hover:bg-white/30 backdrop-blur text-white rounded-xl py-2.5 text-xs font-semibold transition">
+                                <i class="fas fa-sms block text-base mb-0.5"></i> SMS
+                            </button>
+                            <button onclick="shareReferralNative()" class="bg-white/20 hover:bg-white/30 backdrop-blur text-white rounded-xl py-2.5 text-xs font-semibold transition">
+                                <i class="fas fa-share-nodes block text-base mb-0.5"></i> More
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Stats grid -->
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="bg-white rounded-2xl p-3 shadow-sm text-center">
+                            <p class="text-xs text-gray-500">Total</p>
+                            <p class="font-display font-bold text-2xl text-gray-800" id="ref-total">0</p>
+                            <p class="text-[10px] text-gray-400">invites</p>
+                        </div>
+                        <div class="bg-white rounded-2xl p-3 shadow-sm text-center">
+                            <p class="text-xs text-gray-500">Active</p>
+                            <p class="font-display font-bold text-2xl text-safe" id="ref-active">0</p>
+                            <p class="text-[10px] text-gray-400">activated</p>
+                        </div>
+                        <div class="bg-white rounded-2xl p-3 shadow-sm text-center">
+                            <p class="text-xs text-gray-500">Earnings</p>
+                            <p class="font-display font-bold text-2xl text-primary" id="ref-earnings">—</p>
+                            <p class="text-[10px] text-gray-400" id="ref-earnings-pending">+ — pending</p>
+                        </div>
+                    </div>
+
+                    <!-- How it works -->
+                    <div class="bg-white rounded-2xl p-4 shadow-sm">
+                        <h3 class="font-display font-semibold text-gray-800 text-sm mb-3 flex items-center gap-2">
+                            <i class="fas fa-circle-info text-primary"></i> How it works
+                        </h3>
+                        <ol class="text-xs text-gray-600 space-y-2 list-none">
+                            <li class="flex gap-2"><span class="bg-blue-100 text-primary w-5 h-5 rounded-full text-center font-bold shrink-0">1</span>Share your link with friends</li>
+                            <li class="flex gap-2"><span class="bg-blue-100 text-primary w-5 h-5 rounded-full text-center font-bold shrink-0">2</span>They sign in with Google</li>
+                            <li class="flex gap-2"><span class="bg-blue-100 text-primary w-5 h-5 rounded-full text-center font-bold shrink-0">3</span>They log their first expense</li>
+                            <li class="flex gap-2"><span class="bg-green-100 text-safe w-5 h-5 rounded-full text-center font-bold shrink-0">💰</span>You earn <span id="ref-reward-amt" class="font-bold">—</span> per active referral</li>
+                        </ol>
+                    </div>
+
+                    <!-- Withdraw button -->
+                    <button onclick="openWithdrawModal()"
+                            class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-4 rounded-2xl shadow-lg hover:shadow-xl active:scale-98 transition flex items-center justify-center gap-2">
+                        <i class="fas fa-money-bill-transfer"></i>
+                        <span>Request Withdrawal</span>
+                    </button>
+                    <p class="text-xs text-center text-gray-400 -mt-2">Minimum <span id="ref-min-withdraw">—</span> · processed within 3-5 business days</p>
+
+                    <!-- Referral history -->
+                    <div class="bg-white rounded-2xl shadow-sm">
+                        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                            <h3 class="font-display font-semibold text-gray-800 text-sm">Referral History</h3>
+                            <span id="ref-history-count" class="text-xs text-gray-400">—</span>
+                        </div>
+                        <div id="ref-history-list" class="divide-y divide-gray-100">
+                            <div class="p-6 text-center text-gray-400 text-sm">
+                                <i class="fas fa-user-friends text-2xl mb-2 empty-pulse"></i>
+                                <p>No referrals yet — share your link to invite friends</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== WITHDRAW MODAL ==================== -->
+            <div id="withdraw-modal" class="fixed inset-0 bg-black/60 z-[180] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl slide-up">
+                    <div class="text-center mb-5">
+                        <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-money-bill-transfer text-2xl text-safe"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-gray-800">Request Withdrawal</h3>
+                        <p class="text-sm text-gray-500 mt-1">Available: <span id="withdraw-available" class="font-semibold text-gray-800">—</span></p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Method</label>
+                            <select id="withdraw-method" class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                                <option value="momo">Mobile Money</option>
+                                <option value="bank">Bank Transfer</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide" id="withdraw-acct-label">Mobile Money Number</label>
+                            <input type="text" id="withdraw-account"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                                   placeholder="e.g. +233 XX XXX XXXX">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Amount</label>
+                            <input type="number" id="withdraw-amount" min="0" step="0.01"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                                   placeholder="0.00">
+                        </div>
+                        <p id="withdraw-error" class="hidden text-xs text-danger"></p>
+                    </div>
+
+                    <button onclick="submitWithdraw()"
+                            class="w-full mt-5 bg-primary text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition">
+                        Submit Request
+                    </button>
+                    <button onclick="closeWithdrawModal()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
             <!-- ==================== PAYMENT / FUND BUDGET ==================== -->
             <div id="payment-screen" class="screen p-4">
                 <div class="flex items-center mb-6">
@@ -1099,6 +1241,21 @@
                         </div>
                     </div>
 
+                    <!-- Refer & Earn card — gradient highlight, stats inline -->
+                    <div class="bg-gradient-to-br from-primary to-indigo-600 rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-lg transition text-white lift-on-hover"
+                         onclick="showReferralScreen()">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+                                <i class="fas fa-gift text-yellow-300 text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-base">Refer &amp; Earn</h3>
+                                <p class="text-xs opacity-90" id="settings-ref-summary">Invite friends and earn rewards</p>
+                            </div>
+                            <i class="fas fa-chevron-right opacity-75 shrink-0"></i>
+                        </div>
+                    </div>
+
                     <!-- Options -->
                     <div class="bg-white rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100">
 
@@ -1402,13 +1559,46 @@
     };
 
     let firebaseReady = false;
+    let db             = null;   // Firestore instance (null if not enabled)
+    let firestoreReady = false;
     try {
         if (firebaseConfig.appId === "PASTE_YOUR_WEB_APP_ID_HERE") throw new Error("appId not set");
         firebase.initializeApp(firebaseConfig);
         firebaseReady = true;
+
+        // Firestore — optional. If not enabled in Firebase Console, referral system degrades gracefully.
+        try {
+            db = firebase.firestore();
+            firestoreReady = true;
+            console.info('[Firestore] Initialized.');
+        } catch (fe) {
+            console.warn('[Firestore] Not available — referral system disabled:', fe.message);
+        }
     } catch (e) {
         console.error("[Firebase] Init failed:", e);
     }
+
+    // ─────────────────────────────────────────────────────────────
+    //  REFERRAL SYSTEM — configuration & shared state
+    // ─────────────────────────────────────────────────────────────
+    const REFERRAL = {
+        REWARD_AMOUNT:        5,         // fixed commission per activated referral
+        MIN_WITHDRAWAL:       20,        // minimum amount a user can request to withdraw
+        CODE_PREFIX:          'SAFE',    // displayed prefix for referral codes
+        CODE_LENGTH:          5,         // chars after prefix
+        LINK_BASE:            window.location.origin + window.location.pathname,
+        PENDING_REF_KEY:      'safespend_pending_ref',
+        DEVICE_FP_KEY:        'safespend_device_fp',
+        NOTIFS_SEEN_KEY:      'safespend_ref_notifs_seen'
+    };
+    let refState = {
+        myCode:       null,
+        myReferrals:  [],   // referrals where I'm referrer
+        totalEarnings: 0,
+        pendingEarnings: 0, // pending referrals haven't paid out yet
+        activeCount:  0,
+        pendingCount: 0
+    };
 
     // ── Auth state drives the entire app startup ──────────────────
     if (firebaseReady) {
@@ -1445,6 +1635,17 @@
             document.getElementById('expense-date').valueAsDate = new Date();
             startLiveTime();
             registerServiceWorker();
+
+            // Referral lifecycle (fire-and-forget; errors don't block main flow)
+            ensureUserDoc(user)
+                .then(() => linkPendingReferral(user))
+                .then(result => {
+                    if (result && result.ok) {
+                        showPayToast(`🎁 Linked to ${result.referrer.displayName || 'a friend'}'s referral. Log your first expense to activate!`);
+                    }
+                })
+                .then(() => loadReferralDashboard())
+                .catch(err => console.warn('[Referral] Lifecycle error:', err));
         } else {
             _showLoginContent();
             document.getElementById('login-overlay').classList.remove('hidden');
@@ -1533,6 +1734,459 @@
         document.getElementById('expense-date').valueAsDate = new Date();
         startLiveTime();
         registerServiceWorker();
+        // Referral system runs for Google users (guest mode skipped — no stable uid)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  REFERRAL ENGINE
+    //
+    //  Security model (enforced by firestore.rules):
+    //    • /users/{uid}      — read all authed (for code lookup), write own only
+    //    • /referrals/{id}   — referee creates, referee activates own, no updates by others
+    //    • /withdrawals/{id} — create own, read own, admin approves via console
+    //
+    //  Earnings are COMPUTED from activated referrals (never stored directly) to
+    //  prevent any cross-user write path. Fraud checks below.
+    // ═══════════════════════════════════════════════════════════════
+
+    // Deterministic short code per user. Re-generates if collision (unlikely).
+    function generateReferralCode() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // no confusable 0/O/1/I
+        let s = '';
+        for (let i = 0; i < REFERRAL.CODE_LENGTH; i++) s += chars[Math.floor(Math.random() * chars.length)];
+        return `${REFERRAL.CODE_PREFIX}-${s}`;
+    }
+
+    function buildReferralLink(code) {
+        return `${REFERRAL.LINK_BASE}?ref=${encodeURIComponent(code)}`;
+    }
+
+    // Simple device fingerprint for duplicate-account fraud detection.
+    async function getDeviceFingerprint() {
+        let fp = localStorage.getItem(REFERRAL.DEVICE_FP_KEY);
+        if (fp) return fp;
+        const seed = [
+            navigator.userAgent || '',
+            screen.width + 'x' + screen.height,
+            Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+            navigator.language || '',
+            Math.floor(Date.now() / 86400000)  // bucket by day so fingerprint rotates slowly
+        ].join('|');
+        const buf = new TextEncoder().encode(seed);
+        const hash = await crypto.subtle.digest('SHA-256', buf);
+        fp = Array.from(new Uint8Array(hash)).slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('');
+        localStorage.setItem(REFERRAL.DEVICE_FP_KEY, fp);
+        return fp;
+    }
+
+    // Capture ?ref=CODE from the URL on first load, store, then clean the URL.
+    function captureReferralFromURL() {
+        const params = new URLSearchParams(window.location.search);
+        const code = (params.get('ref') || '').trim().toUpperCase();
+        if (!code) return;
+        // Only store if well-formed (PREFIX-XXXXX)
+        const expectedPrefix = REFERRAL.CODE_PREFIX + '-';
+        if (!code.startsWith(expectedPrefix) || code.length < expectedPrefix.length + 3) return;
+        localStorage.setItem(REFERRAL.PENDING_REF_KEY, code);
+        // Clean URL so the code doesn't stick around in reloads or share
+        params.delete('ref');
+        const cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.history.replaceState({}, document.title, cleanUrl);
+    }
+    captureReferralFromURL();
+
+    // Ensure a Firestore user doc exists for the currently-authenticated user.
+    // Creates one with a fresh referral code on first login.
+    async function ensureUserDoc(user) {
+        if (!firestoreReady || !user || !user.uid) return null;
+        const ref = db.collection('users').doc(user.uid);
+        const snap = await ref.get();
+        if (snap.exists) return snap.data();
+
+        // New user: create doc with a unique code (retry on rare collision)
+        let code, attempts = 0;
+        while (attempts++ < 5) {
+            code = generateReferralCode();
+            const clash = await db.collection('users').where('referralCode', '==', code).limit(1).get();
+            if (clash.empty) break;
+        }
+        const fp = await getDeviceFingerprint();
+        const record = {
+            uid:               user.uid,
+            displayName:       user.displayName || '',
+            email:             user.email || '',
+            photoURL:          user.photoURL || '',
+            referralCode:      code,
+            referredBy:        null,
+            firstExpenseAt:    null,
+            deviceFingerprint: fp,
+            createdAt:         firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await ref.set(record);
+        return record;
+    }
+
+    // Try to link the current user to a referrer, using the pending code in localStorage.
+    // Runs validation (self-ref, already-referred, dup-device) and creates a pending
+    // /referrals doc on success. Idempotent — safe to call repeatedly.
+    async function linkPendingReferral(user) {
+        if (!firestoreReady || !user) return { ok: false, reason: 'no-firestore' };
+        const pending = localStorage.getItem(REFERRAL.PENDING_REF_KEY);
+        if (!pending) return { ok: false, reason: 'no-code' };
+
+        try {
+            // Load user doc (should have been created by ensureUserDoc)
+            const myDocRef = db.collection('users').doc(user.uid);
+            const mySnap   = await myDocRef.get();
+            const me       = mySnap.data() || {};
+
+            if (me.referredBy) {
+                localStorage.removeItem(REFERRAL.PENDING_REF_KEY);
+                return { ok: false, reason: 'already-referred' };
+            }
+
+            // Lookup referrer by code
+            const lookup = await db.collection('users').where('referralCode', '==', pending).limit(1).get();
+            if (lookup.empty) {
+                localStorage.removeItem(REFERRAL.PENDING_REF_KEY);
+                return { ok: false, reason: 'invalid-code' };
+            }
+            const referrerDoc = lookup.docs[0];
+            const referrer    = referrerDoc.data();
+
+            // Self-referral check
+            if (referrer.uid === user.uid) {
+                localStorage.removeItem(REFERRAL.PENDING_REF_KEY);
+                return { ok: false, reason: 'self-referral' };
+            }
+
+            // Duplicate-device check (best-effort — not blocking, just logged)
+            const myFp = await getDeviceFingerprint();
+            if (referrer.deviceFingerprint && referrer.deviceFingerprint === myFp) {
+                localStorage.removeItem(REFERRAL.PENDING_REF_KEY);
+                return { ok: false, reason: 'same-device' };
+            }
+
+            // Create referral doc (security rules enforce refereeId == self, status == 'pending')
+            await db.collection('referrals').add({
+                referrerId:     referrer.uid,
+                referrerCode:   pending,
+                referrerName:   referrer.displayName || '',
+                refereeId:      user.uid,
+                refereeName:    user.displayName || profile.name || '',
+                status:         'pending',
+                rewardAmount:   REFERRAL.REWARD_AMOUNT,
+                rewardCurrency: profile.currency || 'USD',
+                createdAt:      firebase.firestore.FieldValue.serverTimestamp(),
+                activatedAt:    null,
+                deviceFingerprint: myFp
+            });
+            // Update my user doc so we don't re-link on subsequent logins
+            await myDocRef.update({ referredBy: referrer.uid });
+
+            localStorage.removeItem(REFERRAL.PENDING_REF_KEY);
+            return { ok: true, referrer };
+        } catch (err) {
+            console.warn('[Referral] Link failed:', err);
+            return { ok: false, reason: 'error', error: err.message };
+        }
+    }
+
+    // Called the first time a user logs an expense. Activates any pending
+    // referral where the referee is the current user, which triggers the
+    // commission computation on the referrer side.
+    async function maybeActivateReferral() {
+        if (!firestoreReady) return;
+        const user = firebase.auth().currentUser;
+        if (!user) return;
+
+        try {
+            const myRef  = db.collection('users').doc(user.uid);
+            const mySnap = await myRef.get();
+            if (!mySnap.exists) return;
+            const me = mySnap.data();
+            if (me.firstExpenseAt) return;  // already activated once — don't re-trigger
+
+            // Mark my first expense timestamp
+            await myRef.update({ firstExpenseAt: firebase.firestore.FieldValue.serverTimestamp() });
+
+            // Activate pending referral where I'm the referee (rules allow this self-update)
+            const pending = await db.collection('referrals')
+                .where('refereeId', '==', user.uid)
+                .where('status', '==', 'pending')
+                .limit(1)
+                .get();
+            if (pending.empty) return;
+            const doc = pending.docs[0];
+            await doc.ref.update({
+                status: 'active',
+                activatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            showPayToast(`🎉 You activated a referral — ${doc.data().referrerName || 'your friend'} earned a reward`);
+        } catch (err) {
+            console.warn('[Referral] Activation failed:', err);
+        }
+    }
+
+    // Load the current user's referral dashboard data from Firestore.
+    async function loadReferralDashboard() {
+        if (!firestoreReady) { refState = { myCode: null, myReferrals: [], totalEarnings: 0, pendingEarnings: 0, activeCount: 0, pendingCount: 0 }; return; }
+        const user = firebase.auth().currentUser;
+        if (!user) return;
+        try {
+            const myRef = db.collection('users').doc(user.uid);
+            const mySnap = await myRef.get();
+            const me = mySnap.data() || {};
+            refState.myCode = me.referralCode || null;
+
+            // Fetch all my referrals (as referrer)
+            const q = await db.collection('referrals').where('referrerId', '==', user.uid).get();
+            const refs = q.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => {
+                const ta = a.createdAt?.toMillis?.() || 0;
+                const tb = b.createdAt?.toMillis?.() || 0;
+                return tb - ta;
+            });
+            refState.myReferrals = refs;
+            refState.activeCount  = refs.filter(r => r.status === 'active').length;
+            refState.pendingCount = refs.filter(r => r.status === 'pending').length;
+            refState.totalEarnings   = refs.filter(r => r.status === 'active').reduce((s, r) => s + (r.rewardAmount || 0), 0);
+            refState.pendingEarnings = refs.filter(r => r.status === 'pending').reduce((s, r) => s + (r.rewardAmount || 0), 0);
+
+            // Detect fresh activations we haven't notified for yet
+            const seen = JSON.parse(localStorage.getItem(REFERRAL.NOTIFS_SEEN_KEY) || '[]');
+            const unseenActive = refs.filter(r => r.status === 'active' && !seen.includes(r.id));
+            unseenActive.forEach(r => {
+                showPayToast(`💰 ${r.refereeName || 'A new user'} completed sign-up — you earned ${fmt(r.rewardAmount)}`);
+            });
+            if (unseenActive.length) {
+                localStorage.setItem(REFERRAL.NOTIFS_SEEN_KEY, JSON.stringify([...seen, ...unseenActive.map(r => r.id)]));
+            }
+        } catch (err) {
+            console.warn('[Referral] Dashboard load failed:', err);
+        }
+    }
+
+    // Fetch the total already withdrawn so remaining balance is correct.
+    async function getWithdrawnTotal() {
+        if (!firestoreReady) return 0;
+        const user = firebase.auth().currentUser;
+        if (!user) return 0;
+        try {
+            const q = await db.collection('withdrawals')
+                .where('userId', '==', user.uid)
+                .where('status', 'in', ['pending', 'approved', 'paid'])
+                .get();
+            return q.docs.reduce((s, d) => s + (d.data().amount || 0), 0);
+        } catch { return 0; }
+    }
+
+    // ── Render Referral Dashboard ─────────────────────────────────
+    async function showReferralScreen() {
+        const notReadyEl = document.getElementById('referral-no-firestore');
+        const readyEl    = document.getElementById('referral-ready');
+
+        // Guest users can't use referrals (no stable uid for cross-device tracking)
+        if (profile.isGuest || !firebase.auth().currentUser) {
+            notReadyEl?.classList.remove('hidden');
+            readyEl?.classList.add('hidden');
+            notReadyEl.innerHTML = `
+                <p class="font-semibold mb-1">🔒 Sign in with Google</p>
+                <p class="text-xs leading-relaxed">Guest mode can't earn referral rewards — your code needs to sync across devices. Sign out and use "Continue with Google" to enable this feature.</p>`;
+            showScreen('referral');
+            return;
+        }
+
+        if (!firestoreReady) {
+            notReadyEl?.classList.remove('hidden');
+            readyEl?.classList.add('hidden');
+            showScreen('referral');
+            return;
+        }
+
+        notReadyEl?.classList.add('hidden');
+        readyEl?.classList.remove('hidden');
+        showScreen('referral');
+
+        // Always refresh the dashboard when opened
+        await loadReferralDashboard();
+        renderReferralDashboard();
+    }
+
+    function renderReferralDashboard() {
+        const code = refState.myCode || '—';
+        const link = refState.myCode ? buildReferralLink(refState.myCode) : '—';
+        setText('ref-code-display', code);
+        setText('ref-link-display', link);
+        setText('ref-total',        refState.myReferrals.length);
+        setText('ref-active',       refState.activeCount);
+        setText('ref-earnings',     fmt(refState.totalEarnings));
+        setText('ref-earnings-pending', `+ ${fmt(refState.pendingEarnings)} pending`);
+        setText('ref-reward-amt',   fmt(REFERRAL.REWARD_AMOUNT));
+        setText('ref-min-withdraw', fmt(REFERRAL.MIN_WITHDRAWAL));
+        setText('ref-history-count', refState.myReferrals.length === 0 ? '—' : `${refState.myReferrals.length} total`);
+
+        // Update Settings card summary too
+        const s = document.getElementById('settings-ref-summary');
+        if (s && refState.myReferrals.length > 0) {
+            s.textContent = `${refState.activeCount} active · ${fmt(refState.totalEarnings)} earned`;
+        }
+
+        const list = document.getElementById('ref-history-list');
+        if (!list) return;
+        if (refState.myReferrals.length === 0) return;  // keep empty state
+
+        list.innerHTML = refState.myReferrals.map(r => {
+            const when = r.createdAt?.toDate?.() ? timeAgo(r.createdAt.toDate()) : 'just now';
+            let badge;
+            if (r.status === 'active') {
+                badge = '<span class="text-xs bg-green-100 text-safe px-2 py-0.5 rounded-full font-semibold">Active</span>';
+            } else if (r.status === 'pending') {
+                badge = '<span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">Pending</span>';
+            } else {
+                badge = '<span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold">Rejected</span>';
+            }
+            const amt = r.status === 'active'
+                ? `<span class="font-bold text-safe text-sm">+${fmt(r.rewardAmount)}</span>`
+                : `<span class="text-gray-400 text-xs">${fmt(r.rewardAmount)}</span>`;
+            const initial = (r.refereeName || 'U')[0].toUpperCase();
+            return `
+                <div class="flex items-center gap-3 p-3">
+                    <div class="w-9 h-9 bg-blue-100 text-primary rounded-full flex items-center justify-center font-bold shrink-0">${initial}</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-800 truncate">${r.refereeName || 'Anonymous'}</p>
+                        <p class="text-[11px] text-gray-500">${when}</p>
+                    </div>
+                    ${badge}
+                    <div class="ml-2 text-right min-w-[60px]">${amt}</div>
+                </div>`;
+        }).join('');
+    }
+
+    function timeAgo(d) {
+        const s = Math.floor((Date.now() - d.getTime()) / 1000);
+        if (s < 60)        return 'just now';
+        if (s < 3600)      return `${Math.floor(s / 60)}m ago`;
+        if (s < 86400)     return `${Math.floor(s / 3600)}h ago`;
+        if (s < 86400 * 7) return `${Math.floor(s / 86400)}d ago`;
+        return d.toLocaleDateString();
+    }
+
+    // ── Share handlers ────────────────────────────────────────────
+    function copyReferralLink() {
+        if (!refState.myCode) return;
+        const link = buildReferralLink(refState.myCode);
+        navigator.clipboard.writeText(link).then(() => {
+            showPayToast('Link copied to clipboard');
+        }).catch(() => {
+            prompt('Copy your referral link:', link);
+        });
+    }
+
+    function shareReferralWA() {
+        if (!refState.myCode) return;
+        const link = buildReferralLink(refState.myCode);
+        const msg  = `Hey! I've been using SafeSpend to track my weekly budget — it's actually helping me save. Sign up with my link and we both get a reward: ${link}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function shareReferralSMS() {
+        if (!refState.myCode) return;
+        const link = buildReferralLink(refState.myCode);
+        const msg  = `Try SafeSpend with me — great for weekly budgets. ${link}`;
+        window.location.href = `sms:?&body=${encodeURIComponent(msg)}`;
+    }
+
+    async function shareReferralNative() {
+        if (!refState.myCode) return;
+        const link = buildReferralLink(refState.myCode);
+        const data = {
+            title: 'Join me on SafeSpend',
+            text:  `I've been tracking my weekly budget with SafeSpend. Join with my link:`,
+            url:   link
+        };
+        if (navigator.share) {
+            try { await navigator.share(data); } catch { /* user cancelled */ }
+        } else {
+            copyReferralLink();
+        }
+    }
+
+    // ── Withdrawal flow ───────────────────────────────────────────
+    async function openWithdrawModal() {
+        const withdrawn = await getWithdrawnTotal();
+        const available = Math.max(0, refState.totalEarnings - withdrawn);
+        setText('withdraw-available', fmt(available));
+
+        const modal = document.getElementById('withdraw-modal');
+        const methodEl = document.getElementById('withdraw-method');
+        const amountEl = document.getElementById('withdraw-amount');
+        const acctEl   = document.getElementById('withdraw-account');
+        const errEl    = document.getElementById('withdraw-error');
+        if (amountEl) amountEl.value = '';
+        if (acctEl)   acctEl.value = '';
+        if (errEl)   { errEl.textContent = ''; errEl.classList.add('hidden'); }
+        // Save available on the modal for validation at submit time
+        modal.dataset.available = String(available);
+        updateWithdrawMethodLabel();
+        methodEl?.addEventListener('change', updateWithdrawMethodLabel, { once: true });
+        modal.classList.remove('hidden');
+    }
+
+    function updateWithdrawMethodLabel() {
+        const method = document.getElementById('withdraw-method')?.value;
+        const label  = document.getElementById('withdraw-acct-label');
+        const input  = document.getElementById('withdraw-account');
+        if (!label || !input) return;
+        if (method === 'bank') {
+            label.textContent = 'Bank Account Details';
+            input.placeholder = 'Bank name · Account number · Name';
+        } else {
+            label.textContent = 'Mobile Money Number';
+            input.placeholder = 'e.g. +233 XX XXX XXXX';
+        }
+    }
+
+    function closeWithdrawModal() {
+        document.getElementById('withdraw-modal').classList.add('hidden');
+    }
+
+    async function submitWithdraw() {
+        const user = firebase.auth().currentUser;
+        if (!user || !firestoreReady) return;
+        const modal  = document.getElementById('withdraw-modal');
+        const method = document.getElementById('withdraw-method').value;
+        const acct   = document.getElementById('withdraw-account').value.trim();
+        const amount = parseFloat(document.getElementById('withdraw-amount').value);
+        const avail  = parseFloat(modal.dataset.available || '0');
+        const errEl  = document.getElementById('withdraw-error');
+        const showErr = msg => { errEl.textContent = msg; errEl.classList.remove('hidden'); };
+
+        if (!acct || acct.length < 6) return showErr('Enter a valid account detail');
+        if (!amount || amount <= 0)   return showErr('Enter a valid amount');
+        if (amount < REFERRAL.MIN_WITHDRAWAL) return showErr(`Minimum withdrawal is ${fmt(REFERRAL.MIN_WITHDRAWAL)}`);
+        if (amount > avail)           return showErr(`You only have ${fmt(avail)} available`);
+
+        try {
+            await db.collection('withdrawals').add({
+                userId:         user.uid,
+                userEmail:      user.email || '',
+                userName:       user.displayName || profile.name || '',
+                amount:         amount,
+                currency:       profile.currency || 'USD',
+                method:         method,
+                accountDetails: acct,
+                status:         'pending',
+                requestedAt:    firebase.firestore.FieldValue.serverTimestamp(),
+                processedAt:    null,
+                processedBy:    null
+            });
+            closeWithdrawModal();
+            showPayToast('✅ Withdrawal request submitted — processed within 3-5 business days');
+            renderReferralDashboard();
+        } catch (err) {
+            console.warn('[Withdraw] Failed:', err);
+            showErr('Submission failed. Check your connection and retry.');
+        }
     }
 
     function showLoginError(msg) {
@@ -2358,6 +3012,7 @@
     }
 
     function addTransaction(amount, category, note, date, tags, autoCategorized) {
+        const wasFirst = appState.transactions.filter(t => !t.isTopUp).length === 0;
         appState.transactions.unshift({
             id: Date.now(),
             amount,
@@ -2371,6 +3026,9 @@
         appState.spent += amount;
         saveData();
         updateUI();
+
+        // If this is the very first expense this session, activate any pending referral
+        if (wasFirst) maybeActivateReferral();
     }
 
     function resetAddForm() {
