@@ -24,7 +24,7 @@ service cloud.firestore {
     //   3. Publish updated rules.
     function isAdmin() {
       return request.auth != null && request.auth.uid in [
-        'REPLACE_WITH_YOUR_FIREBASE_UID'
+        'uaiU5Afc1gMowVL37hTzJpSNqBT2'
       ];
     }
 
