@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeSpend — Official User Guide</title>
+    <style>
+        /* ════════════════════════════════════════════════════════════
+           PAGE SETUP — print-ready with proper A4 sizing and margins
+           ════════════════════════════════════════════════════════════ */
+        @page {
+            size: A4;
+            margin: 2cm 1.8cm 2cm 1.8cm;
+        }
+        @page :first {
+            margin: 0;
+        }
+
+        :root {
+            --primary: #1E3A8A;
+            --accent:  #3B82F6;
+            --safe:    #10B981;
+            --warning: #F59E0B;
+            --danger:  #EF4444;
+            --purple:  #A855F7;
+            --text:    #111827;
+            --muted:   #6B7280;
+            --border:  #E5E7EB;
+            --bg-soft: #F9FAFB;
+        }
+
+        * { box-sizing: border-box; }
+
+        html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+            color: var(--text);
+            line-height: 1.65;
+            font-size: 11pt;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+        }
+
+        /* ════════════════════════════════════════════════════════════
+           PRINT INSTRUCTIONS — visible on screen, hidden in PDF
+           ════════════════════════════════════════════════════════════ */
+        .print-banner {
+            background: linear-gradient(135deg, #1E3A8A, #3B82F6);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 14pt;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .print-banner button {
+            background: white;
+            color: var(--primary);
+            border: none;
+            padding: 10px 28px;
+            font-size: 14pt;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.1s;
+        }
+        .print-banner button:hover { transform: translateY(-1px); }
+        .print-banner small { display: block; opacity: 0.9; margin-top: 8px; font-size: 10pt; font-weight: 400; }
+
+        @media print {
+            .print-banner { display: none !important; }
+        }
+
+        /* ════════════════════════════════════════════════════════════
+           LAYOUT
+           ════════════════════════════════════════════════════════════ */
+        .page {
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 40px 50px;
+        }
+
+        /* ════════════════════════════════════════════════════════════
+           COVER PAGE
+           ════════════════════════════════════════════════════════════ */
+        .cover {
+            height: 100vh;
+            min-height: 1000px;
+            background: linear-gradient(135deg, #0F1E5C 0%, #1E3A8A 40%, #3B82F6 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 60px 40px;
+            page-break-after: always;
+            position: relative;
+            overflow: hidden;
+        }
+        .cover::before {
+            content: '';
+            position: absolute;
+            top: -100px; right: -100px;
+            width: 400px; height: 400px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+        .cover::after {
+            content: '';
+            position: absolute;
+            bottom: -150px; left: -150px;
+            width: 500px; height: 500px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+        .cover-logo {
+            font-size: 100px;
+            margin-bottom: 30px;
+            background: rgba(255,255,255,0.15);
+            width: 160px; height: 160px;
+            border-radius: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 1;
+        }
+        .cover h1 {
+            font-size: 68pt;
+            margin: 0;
+            font-weight: 800;
+            letter-spacing: -3px;
+            line-height: 1;
+            position: relative; z-index: 1;
+        }
+        .cover h2 {
+            font-size: 18pt;
+            font-weight: 300;
+            margin-top: 15px;
+            opacity: 0.95;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            position: relative; z-index: 1;
+        }
+        .cover .tagline {
+            font-size: 13pt;
+            margin-top: 30px;
+            opacity: 0.8;
+            max-width: 600px;
+            line-height: 1.6;
+            position: relative; z-index: 1;
+        }
+        .cover .footer-info {
+            position: absolute;
+            bottom: 50px;
+            font-size: 11pt;
+            opacity: 0.8;
+            z-index: 1;
+        }
+        .cover .version {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            margin-top: 40px;
+            font-weight: 600;
+            position: relative; z-index: 1;
+        }
+
+        /* ════════════════════════════════════════════════════════════
+           TABLE OF CONTENTS
+           ════════════════════════════════════════════════════════════ */
+        .toc {
+            page-break-after: always;
+        }
+        .toc h2 {
+            font-size: 24pt;
+            color: var(--primary);
+            border-bottom: 4px solid var(--primary);
+            padding-bottom: 12px;
+            margin-bottom: 25px;
+        }
+        .toc-list {
+            list-style: none;
+            padding: 0;
+            counter-reset: toc-counter;
+        }
+        .toc-list li {
+            counter-increment: toc-counter;
+            padding: 10px 0;
+            border-bottom: 1px dashed #D1D5DB;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .toc-list li::before {
+            content: counter(toc-counter) ".";
+            color: var(--primary);
+            font-weight: 700;
+            margin-right: 12px;
+            min-width: 28px;
+        }
+        .toc-list li a {
+            color: var(--text);
+            text-decoration: none;
+            flex: 1;
+            font-weight: 500;
+        }
+        .toc-list li a:hover { color: var(--primary); }
+        .toc-list li .page-num {
+            color: var(--muted);
+            font-size: 10pt;
+        }
+
+        /* ════════════════════════════════════════════════════════════
+           CHAPTER HEADINGS
+           ════════════════════════════════════════════════════════════ */
+        .chapter {
+            page-break-before: always;
+        }
+        .chapter-label {
+            font-size: 10pt;
+            color: var(--accent);
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-top: 20px;
+        }
+        h1 {
+            font-size: 28pt;
+            color: var(--primary);
+            margin: 5px 0 25px 0;
+            font-weight: 800;
+            letter-spacing: -1px;
+            line-height: 1.15;
+        }
+        h2 {
+            font-size: 16pt;
+            color: var(--primary);
+            border-left: 5px solid var(--primary);
+            padding-left: 15px;
+            margin-top: 35px;
+            margin-bottom: 15px;
+            page-break-after: avoid;
+            font-weight: 700;
+        }
+        h3 {
+            font-size: 13pt;
+            color: var(--accent);
+            margin-top: 25px;
+            margin-bottom: 10px;
+            page-break-after: avoid;
+            font-weight: 600;
+        }
+        h4 {
+            font-size: 11pt;
+            color: var(--text);
+            margin-top: 18px;
+            font-weight: 600;
+        }
+
+        p { margin: 10px 0; }
+
+        ol, ul { padding-left: 25px; margin: 12px 0; }
+        li { margin-bottom: 8px; }
+
+        /* Numbered step lists */
+        ol.steps {
+            counter-reset: step-counter;
+            list-style: none;
+            padding-left: 0;
+        }
+        ol.steps > li {
+            counter-increment: step-counter;
+            position: relative;
+            padding-left: 48px;
+            margin-bottom: 18px;
+            min-height: 32px;
+        }
+        ol.steps > li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0; top: 0;
+            background: var(--primary);
+            color: white;
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 12pt;
+        }
+
+        /* ════════════════════════════════════════════════════════════
+           CALLOUT BOXES — Tip, Warning, Info, Pro
+           ════════════════════════════════════════════════════════════ */
+        .callout {
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin: 18px 0;
+            page-break-inside: avoid;
+            position: relative;
+            padding-left: 54px;
+            font-size: 10.5pt;
+        }
+        .callout::before {
+            position: absolute;
+            left: 16px; top: 14px;
+            font-size: 20pt;
+            line-height: 1;
+        }
+        .callout-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+            display: block;
+            font-size: 11pt;
+        }
+        .tip {
+            background: #ECFDF5;
+            border-left: 4px solid var(--safe);
+        }
+        .tip::before { content: '💡'; }
+        .tip .callout-title { color: #047857; }
+
+        .warning {
+            background: #FFFBEB;
+            border-left: 4px solid var(--warning);
+        }
+        .warning::before { content: '⚠️'; }
+        .warning .callout-title { color: #B45309; }
+
+        .info {
+            background: #EFF6FF;
+            border-left: 4px solid var(--accent);
+        }
+        .info::before { content: 'ℹ️'; }
+        .info .callout-title { color: #1D4ED8; }
+
+        .pro {
+            background: #FEF3F2;
+            border-left: 4px solid #EF4444;
+        }
+        .pro::before { content: '🔒'; }
+        .pro .callout-title { color: #B91C1C; }
+
+        /* ════════════════════════════════════════════════════════════
+           TABLES
+           ════════════════════════════════════════════════════════════ */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 18px 0;
+            font-size: 10.5pt;
+            page-break-inside: avoid;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        th {
+            background: var(--primary);
+            color: white;
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 10.5pt;
+        }
+        td {
+            padding: 9px 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        tr:nth-child(even) td { background: var(--bg-soft); }
+        tr:last-child td { border-bottom: none; }
+
+        /* ════════════════════════════════════════════════════════════
+           FEATURE CARDS (used in overview sections)
+           ════════════════════════════════════════════════════════════ */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .feature-card {
+            background: var(--bg-soft);
+            border-radius: 10px;
+            padding: 16px;
+            border-top: 3px solid var(--primary);
+            page-break-inside: avoid;
+        }
+        .feature-card .icon {
+            font-size: 24pt;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .feature-card h4 { margin: 0 0 6px 0; color: var(--primary); }
+        .feature-card p { margin: 0; font-size: 10pt; color: var(--muted); }
+
+        /* ════════════════════════════════════════════════════════════
+           SCREENSHOT PLACEHOLDER (visual suggestion)
+           ════════════════════════════════════════════════════════════ */
+        .screenshot {
+            background: linear-gradient(135deg, #F3F4F6, #E5E7EB);
+            border: 2px dashed #9CA3AF;
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--muted);
+            border-radius: 12px;
+            margin: 20px 0;
+            font-size: 10pt;
+            page-break-inside: avoid;
+        }
+        .screenshot .ss-icon {
+            font-size: 28pt;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .screenshot strong { color: var(--text); }
+
+        /* ════════════════════════════════════════════════════════════
+           CODE + KEYBOARD + INLINE HIGHLIGHTS
+           ════════════════════════════════════════════════════════════ */
+        code {
+            background: #F3F4F6;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            color: var(--primary);
+        }
+        kbd {
+            background: white;
+            border: 1.5px solid #D1D5DB;
+            border-radius: 4px;
+            padding: 1px 8px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.85em;
+            box-shadow: 0 1px 0 #D1D5DB;
+            color: var(--text);
+        }
+        .highlight {
+            background: #FEF3C7;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        /* ════════════════════════════════════════════════════════════
+           INTRO HERO (first page of intro chapter)
+           ════════════════════════════════════════════════════════════ */
+        .hero-intro {
+            background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+            padding: 25px 30px;
+            border-radius: 12px;
+            margin: 20px 0 30px 0;
+            border-left: 5px solid var(--primary);
+        }
+        .hero-intro p {
+            margin: 0;
+            font-size: 12pt;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        /* Footer (post-section) */
+        .section-footer {
+            margin-top: 40px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 9pt;
+            text-align: center;
+        }
+
+        /* Two-column for side-by-side lists */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 18px 0;
+        }
+
+        /* Category pills */
+        .pill {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 9pt;
+            font-weight: 600;
+            margin-right: 6px;
+            margin-bottom: 4px;
+        }
+        .pill-food { background: #FED7AA; color: #9A3412; }
+        .pill-transport { background: #BFDBFE; color: #1E40AF; }
+        .pill-bills { background: #FECACA; color: #991B1B; }
+        .pill-shopping { background: #E9D5FF; color: #6B21A8; }
+        .pill-fun { background: #FBCFE8; color: #9D174D; }
+        .pill-health { background: #BBF7D0; color: #166534; }
+        .pill-other { background: #E5E7EB; color: #374151; }
+
+        /* FAQ style Q&A */
+        .qa { margin: 16px 0; page-break-inside: avoid; }
+        .qa .q {
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+        .qa .q::before { content: 'Q: '; color: var(--accent); }
+        .qa .a { margin-left: 20px; }
+        .qa .a::before { content: 'A: '; color: var(--safe); font-weight: 700; }
+
+        /* Quick reference box */
+        .quick-ref {
+            background: var(--primary);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        .quick-ref h4 {
+            color: white;
+            margin-top: 0;
+            font-size: 12pt;
+        }
+        .quick-ref ul { margin: 10px 0; }
+        .quick-ref li { color: rgba(255,255,255,0.95); }
+    </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCREEN-ONLY PRINT INSTRUCTIONS (hidden in PDF)
+     ════════════════════════════════════════════════════════════ -->
+<div class="print-banner">
+    📄 To save this guide as a PDF: press <kbd style="background:white;color:var(--primary)">Ctrl+P</kbd> (Windows) or <kbd style="background:white;color:var(--primary)">⌘+P</kbd> (Mac)
+    <br>
+    <button onclick="window.print()">🖨️ Save as PDF Now</button>
+    <small>In the print dialog, select "Save as PDF" as the destination</small>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     COVER PAGE
+     ════════════════════════════════════════════════════════════ -->
+<div class="cover">
+    <div class="cover-logo">💰</div>
+    <h1>SafeSpend</h1>
+    <h2>Weekly Expenses Tracker</h2>
+    <p class="tagline">Track. Save. Thrive.<br>Your smart financial companion for better money habits.</p>
+    <div class="version">Official User Guide · Version 2.0</div>
+    <div class="footer-info">
+        © SafeSpend · All Rights Reserved
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     TABLE OF CONTENTS
+     ════════════════════════════════════════════════════════════ -->
+<div class="page toc">
+    <h2>Table of Contents</h2>
+    <ol class="toc-list">
+        <li><a href="#ch1">Introduction to SafeSpend</a></li>
+        <li><a href="#ch2">User Registration &amp; Login</a></li>
+        <li><a href="#ch3">Dashboard Overview</a></li>
+        <li><a href="#ch4">Expense Tracking Features</a></li>
+        <li><a href="#ch5">Budget Management</a></li>
+        <li><a href="#ch6">Mobile Money Wallet</a></li>
+        <li><a href="#ch7">Reports &amp; Analytics</a></li>
+        <li><a href="#ch8">Notifications &amp; Alerts</a></li>
+        <li><a href="#ch9">Security Features</a></li>
+        <li><a href="#ch10">Referral System</a></li>
+        <li><a href="#ch11">Step-by-Step Quick Start</a></li>
+        <li><a href="#ch12">Troubleshooting</a></li>
+        <li><a href="#ch13">Frequently Asked Questions</a></li>
+        <li><a href="#ch14">Conclusion</a></li>
+    </ol>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHAPTER 1: INTRODUCTION
+     ════════════════════════════════════════════════════════════ -->
+<div class="page chapter" id="ch1">
+    <div class="chapter-label">Chapter 1</div>
+    <h1>Introduction to SafeSpend</h1>
+
+    <div class="hero-intro">
+        <p>SafeSpend is a modern weekly expense tracker that helps you log spending, manage a budget, and stay financially aware — all through a clean, fast, mobile-first experience.</p>
+    </div>
+
+    <h2>What is SafeSpend?</h2>
+    <p>SafeSpend is a Progressive Web App (PWA) built to make weekly financial management simple and intuitive. Unlike complicated spreadsheet-based tools, SafeSpend focuses on <strong>one week at a time</strong> — encouraging healthier spending habits through short, achievable cycles.</p>
+
+    <h2>Purpose of the App</h2>
+    <p>Most personal finance apps overwhelm users with monthly reports and overwhelming category structures. SafeSpend was built to solve this by:</p>
+    <ul>
+        <li>Keeping financial tracking <strong>simple and visual</strong></li>
+        <li>Encouraging <strong>weekly budget discipline</strong> instead of monthly overload</li>
+        <li>Providing <strong>smart, AI-powered insights</strong> in plain language</li>
+        <li>Offering <strong>offline support</strong> so you can log expenses anywhere</li>
+        <li>Including a <strong>Mobile Money Wallet</strong> for seamless transactions</li>
+    </ul>
+
+    <h2>Who is it For?</h2>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <span class="icon">🎓</span>
+            <h4>Students</h4>
+            <p>Manage allowances and weekly spending with ease.</p>
+        </div>
+        <div class="feature-card">
+            <span class="icon">💼</span>
+            <h4>Young Professionals</h4>
+            <p>Build disciplined money habits with weekly check-ins.</p>
+        </div>
+        <div class="feature-card">
+            <span class="icon">🏠</span>
+            <h4>Households</h4>
+            <p>Track family spending and stay within grocery/utility budgets.</p>
+        </div>
+        <div class="feature-card">
+            <span class="icon">📱</span>
+            <h4>Mobile Money Users</h4>
+            <p>Integrated wallet for MTN, Vodafone, AirtelTigo, and M-PESA.</p>
+        </div>
+    </div>
+
+    <h2>Key Benefits</h2>
+    <table>
+        <thead>
+            <tr><th>Feature</th><th>What You Get</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Financial Health Score</strong></td><td>A 0–100 score showing how well you're managing money this week</td></tr>
+            <tr><td><strong>AI Insights</strong></td><td>Personalized tips like "You're pacing 40% above last week's spending"</td></tr>
+            <tr><td><strong>Auto-categorization</strong></td><td>Expenses automatically tagged (Food, Transport, Bills, etc.)</td></tr>
+            <tr><td><strong>Gamification</strong></td><td>Streaks and badges for consistent saving habits</td></tr>
+            <tr><td><strong>Mobile Money Wallet</strong></td><td>Deposit, send, and withdraw — all inside the app</td></tr>
+            <tr><td><strong>Export Reports</strong></td><td>Download your transactions as CSV or branded PDF</td></tr>
+            <tr><td><strong>Offline-first</strong></td><td>Works without internet; syncs when reconnected</td></tr>
+            <tr><td><strong>Dark Mode</strong></td><td>Easy on the eyes during late-night budget reviews</td></tr>
+            <tr><td><strong>Multi-currency</strong></td><td>USD, EUR, GBP, CAD, AUD, GHS — and more</td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout tip">
+        <span class="callout-title">Quick Tip</span>
+        SafeSpend is designed to be installed on your phone's home screen like a native app. Open the app in Chrome or Safari, tap the menu, and select "Install" or "Add to Home Screen."
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHAPTER 2: REGISTRATION & LOGIN
+     ════════════════════════════════════════════════════════════ -->
+<div class="page chapter" id="ch2">
+    <div class="chapter-label">Chapter 2</div>
+    <h1>User Registration &amp; Login</h1>
+
+    <p>SafeSpend offers two ways to get started — a full account via <strong>Google Sign-In</strong> (recommended), or a quick <strong>Guest Mode</strong> for immediate use on a single device.</p>
+
+    <h2>2.1 &nbsp; Signing Up with Google (Recommended)</h2>
+
+    <p>Google Sign-In automatically sets up your profile, syncs data across devices, and unlocks the full feature set including the Wallet and Referral System.</p>
+
+    <ol class="steps">
+        <li>Open SafeSpend in your browser (or tap the installed app icon).</li>
+        <li>On the login screen, click <strong>"Continue with Google"</strong>.</li>
+        <li>A Google account picker will appear — select the account you want to use.</li>
+        <li>Grant the requested permissions (email, name, profile picture).</li>
+        <li>You'll be redirected back to the app, signed in and ready to use.</li>
+    </ol>
+
+    <div class="screenshot">
+        <span class="ss-icon">🖼️</span>
+        <strong>Screenshot:</strong> Login screen showing the logo, "Continue with Google" button, and "Continue as Guest" option
+    </div>
+
+    <div class="callout info">
+        <span class="callout-title">Why Google Sign-In?</span>
+        Data automatically syncs across all your devices. Your expenses, wallet balance, and referral earnings stay with your account — not your device.
+    </div>
+
+    <h2>2.2 &nbsp; Continue as Guest</h2>
+
+    <p>Guest mode is perfect if you want to try the app immediately without an account. All your data is saved <strong>locally on your device only</strong>.</p>
+
+    <ol class="steps">
+        <li>On the login screen, click <strong>"Continue as Guest"</strong>.</li>
+        <li>You'll be taken straight to the onboarding flow.</li>
+        <li>Complete setup (currency + weekly budget).</li>
+        <li>Start logging expenses right away.</li>
+    </ol>
+
+    <div class="callout warning">
+        <span class="callout-title">Guest Mode Limitations</span>
+        Guest mode <strong>cannot use</strong> the Wallet (for sending/receiving money) or the Referral System. If you clear your browser data, your guest data is permanently lost. Switch to Google Sign-In any time to unlock full features.
+    </div>
+
+    <h2>2.3 &nbsp; Profile Setup &amp; Customization</h2>
+
+    <h3>Uploading a Profile Picture</h3>
+    <ol class="steps">
+        <li>Tap <strong>Settings</strong> (gear icon in the top-right header).</li>
+        <li>Tap your profile card at the top of the screen.</li>
+        <li>On the Profile screen, tap the <strong>camera icon</strong> on your avatar.</li>
+        <li>Choose an image from your device (max 5MB, JPG/PNG).</li>
+        <li>The image is automatically resized to 300×300 and saved.</li>
+    </ol>
+
+    <h3>Editing Your Display Name</h3>
+    <ol class="steps">
+        <li>From your Profile screen, tap <strong>Edit</strong> next to your name.</li>
+        <li>Type your preferred name.</li>
+        <li>Tap <strong>Save</strong>.</li>
+    </ol>
+
+    <h3>Changing Currency</h3>
+    <ol class="steps">
+        <li>Go to <strong>Settings</strong>.</li>
+        <li>Locate the <strong>Currency</strong> dropdown.</li>
+        <li>Select your preferred currency (USD, EUR, GBP, CAD, AUD, GHS, etc.).</li>
+        <li>All amounts update instantly across the app.</li>
+    </ol>
+
+    <h2>2.4 &nbsp; Signing Out</h2>
+    <ol class="steps">
+        <li>Go to <strong>Settings → Profile</strong>.</li>
+        <li>Scroll to the bottom and tap <strong>Sign Out</strong>.</li>
+        <li>Confirm the prompt. You'll return to the login screen.</li>
+    </ol>
+
+    <div class="callout tip">
+        <span class="callout-title">Data Safety</span>
+        Signing out does <strong>not</strong> delete your data. Your expenses and wallet balance remain safe and reappear when you sign back in with the same Google account.
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHAPTER 3: DASHBOARD OVERVIEW
+     ════════════════════════════════════════════════════════════ -->
+<div class="page chapter" id="ch3">
+    <div class="chapter-label">Chapter 3</div>
+    <h1>Dashboard Overview</h1>
+
+    <p>The Home screen is your financial command center. Everything important about your week is here — budget progress, health score, smart insights, and recent activity.</p>
+
+    <div class="screenshot">
+        <span class="ss-icon">🖼️</span>
+        <strong>Screenshot:</strong> Home screen with greeting, budget card, Health Score gauge, streak counter, Weekly Challenge, and recent transactions
+    </div>
+
+    <h2>3.1 &nbsp; Home Screen Elements</h2>
+
+    <h3>A. Greeting &amp; Time</h3>
+    <p>The top of the screen shows a time-aware greeting ("Good morning / afternoon / evening") that updates every 60 seconds automatically.</p>
+
+    <h3>B. Budget Card</h3>
+    <p>A colored card showing:</p>
+    <ul>
+        <li><strong>Weekly Budget</strong> — your target for the week</li>
+        <li><strong>Remaining</strong> — how much you still have to spend</li>
+        <li><strong>Progress bar</strong> — visual representation (green → yellow → red as you approach the limit)</li>
+        <li><strong>Spent Today</strong> — amount used since midnight</li>
+        <li><strong>Days Left</strong> — days remaining before the week resets (Mondays)</li>
+    </ul>
+
+    <h3>C. Financial Health Score</h3>
+    <p>A circular gauge displaying a score from 0 to 100 based on four signals:</p>
+    <table>
+        <thead><tr><th>Signal</th><th>Weight</th><th>What it Measures</th></tr></thead>
+        <tbody>
+            <tr><td>Budget pace</td><td>40%</td><td>How close your spending is to the ideal daily pace</td></tr>
+            <tr><td>Category balance</td><td>25%</td><td>Whether spending is spread across categories (not all on one)</td></tr>
+            <tr><td>Logging consistency</td><td>20%</td><td>How often you log expenses throughout the week</td></tr>
+            <tr><td>Week-over-week trend</td><td>15%</td><td>Are you improving compared to last week?</td></tr>
+        </tbody>
+    </table>
+
+    <h3>D. Streak Counter</h3>
+    <p>Orange flame card showing consecutive weeks under budget. Keep logging to keep the streak alive!</p>
+
+    <h3>E. Weekly Challenge</h3>
+    <p>"Beat Last Week" widget comparing your spending at the same day-index. Green means you're saving more; red means you're behind.</p>
+
+    <h3>F. Quick Stats</h3>
+    <p>Three small cards: Total Spent · Transaction Count · Daily Average.</p>
+
+    <h3>G. Recent Transactions</h3>
+    <p>Last 5 expenses with category icons and tags. Tap <strong>"View All"</strong> for the full history.</p>
+
+    <h3>H. Smart Insights</h3>
+    <p>Rotating AI-generated messages such as:</p>
+    <ul>
+        <li>"🚨 Food spending is 2× last week — unusual jump"</li>
+        <li>"✨ Great pace! You're tracking to save $45 this week."</li>
+        <li>"🔁 Detected 3 recurring charges (Netflix, Spotify, Gym)"</li>
+    </ul>
+    <p>Use the <strong>refresh icon</strong> to cycle through all available insights.</p>
+
+    <h3>I. Badges Strip</h3>
+    <p>Horizontal scroll of achievements you've earned — First Expense, Prolific Logger, Month Strong, etc.</p>
+
+    <h2>3.2 &nbsp; Navigation</h2>
+
+    <p>SafeSpend uses a <strong>bottom navigation bar</strong> for the main screens:</p>
+
+    <div class="feature-grid">
+        <div class="feature-card">
+            <span class="icon">🏠</span>
+            <h4>Home</h4>
+            <p>Dashboard with all your weekly stats.</p>
+        </div>
+        <div class="feature-card">
+            <span class="icon">➕</span>
+            <h4>Add</h4>
+            <p>Quick-access button to log a new expense.</p>
+        </div>
+        <div class="feature-card">
+            <span class="icon">📊</span>
+            <h4>Analytics</h4>
+            <p>Charts and category breakdowns.</p>
+        </div>
+        <div class="feature-card">
+            <span class="icon">📅</span>
+            <h4>History</h4>
+            <p>Full transaction log with search &amp; filters.</p>
+        </div>
+    </div>
+
+    <p>The header also has:</p>
+    <ul>
+        <li><strong>Settings (⚙️)</strong> — top-right gear icon</li>
+        <li><strong>Profile (👤)</strong> — your avatar on the right</li>
+    </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHAPTER 4: EXPENSE TRACKING
+     ════════════════════════════════════════════════════════════ -->
+<div class="page chapter" id="ch4">
+    <div class="chapter-label">Chapter 4</div>
+    <h1>Expense Tracking</h1>
+
+    <p>The core of SafeSpend is fast, friction-free expense logging. This chapter walks through adding, editing, and understanding your transactions.</p>
+
+    <h2>4.1 &nbsp; Adding an Expense</h2>
+
+    <ol class="steps">
+        <li>From the bottom navigation, tap the <strong>Add (+)</strong> button.</li>
+        <li>Enter the <strong>amount</strong> (numbers only; currency prefix is automatic).</li>
+        <li>Optionally <strong>select a category</strong> from the 7-icon grid.
+            <div style="margin-top:8px;">
+                <span class="pill pill-food">🍽️ Food</span>
+                <span class="pill pill-transport">🚗 Transport</span>
+                <span class="pill pill-bills">📄 Bills</span>
+                <span class="pill pill-shopping">🛍️ Shopping</span>
+                <span class="pill pill-fun">🎬 Fun</span>
+                <span class="pill pill-health">❤️ Health</span>
+                <span class="pill pill-other">📌 Other</span>
+            </div>
+        </li>
+        <li>Type a <strong>note</strong> (optional) — e.g. "KFC lunch with Alex".</li>
+        <li>Add <strong>tags</strong> (optional, comma-separated) — e.g. "work, urgent, recurring".</li>
+        <li>Confirm the <strong>date</strong> (defaults to today).</li>
+        <li>Tap <strong>Save Expense</strong>.</li>
+    </ol>
+
+    <div class="callout tip">
+        <span class="callout-title">Auto-Categorization</span>
+        If you skip the category selection, SafeSpend's keyword engine infers it from your note. Write "Uber to office" and it auto-tags as <strong>Transport</strong>. Write "Netflix" → <strong>Bills</strong>. You'll see a small "<strong>auto</strong>" badge on the transaction.
+    </div>
+
+    <h2>4.2 &nbsp; Understanding Categories</h2>
+
+    <table>
+        <thead><tr><th>Category</th><th>Keywords Include</th></tr></thead>
+        <tbody>
+            <tr><td><span class="pill pill-food">🍽️ Food</span></td><td>food, lunch, dinner, restaurant, coffee, pizza, KFC, groceries, market…</td></tr>
+            <tr><td><span class="pill pill-transport">🚗 Transport</span></td><td>uber, bolt, taxi, fuel, gas, parking, bus, metro, flight, tro-tro…</td></tr>
+            <tr><td><span class="pill pill-bills">📄 Bills</span></td><td>rent, electric, water, internet, WiFi, Netflix, Spotify, insurance…</td></tr>
+            <tr><td><span class="pill pill-shopping">🛍️ Shopping</span></td><td>shop, store, Amazon, clothes, shoes, gift, mall…</td></tr>
+            <tr><td><span class="pill pill-fun">🎬 Fun</span></td><td>movie, cinema, concert, game, Steam, party, club, event…</td></tr>
+            <tr><td><span class="pill pill-health">❤️ Health</span></td><td>pharmacy, doctor, hospital, gym, yoga, dentist, therapy…</td></tr>
+            <tr><td><span class="pill pill-other">📌 Other</span></td><td>fallback for uncategorized expenses</td></tr>
+        </tbody>
+    </table>
+
+    <h2>4.3 &nbsp; Emergency Spending Warning</h2>
+
+    <p>If you try to log an expense larger than your remaining budget, SafeSpend shows a red warning modal:</p>
+
+    <ol class="steps">
+        <li>Modal appears: "This will exceed your weekly budget!"</li>
+        <li>You're prompted to enter a <strong>reason</strong> for the emergency expense.</li>
+        <li>After providing justification, the expense is saved with an "<strong>emergency</strong>" tag.</li>
+        <li>The transaction is recorded for awareness — helpful during budget review.</li>
+    </ol>
+
+    <div class="callout pro">
+        <span class="callout-title">Why the friction?</span>
+        Emergency spending modal is <em>intentional friction</em> — it forces a moment of reflection before breaking your budget. Over time, this builds better habits.
+    </div>
+
+    <h2>4.4 &nbsp; Weekly Reset &amp; Carry-Over</h2>
+
+    <p>SafeSpend operates on a Monday-to-Sunday week. Every Monday at 00:00 local time:</p>
+    <ul>
+        <li>The previous week is <strong>automatically archived</strong> to your History.</li>
+        <li>A new weekly budget begins.</li>
+        <li>If <strong>Carry Over Savings</strong> is enabled in Settings, unused budget from last week is added to the new week.</li>
+    </ul>
+
+    <h2>4.5 &nbsp; Tags &amp; Notes Best Practices</h2>
+
+    <ul>
+        <li><strong>Be specific in notes</strong> — "Lunch with Sarah" beats "Food" for future reference.</li>
+        <li><strong>Use tags for search</strong> — tag work expenses "work" to filter them later for reimbursement.</li>
+        <li><strong>Tag recurring expenses</strong> "monthly" or "subscription" — SafeSpend detects them automatically anyway, but explicit tags help.</li>
+        <li><strong>Max 8 tags</strong> per transaction; tags are lowercased automatically.</li>
+    </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHAPTER 5: BUDGET MANAGEMENT
+     ════════════════════════════════════════════════════════════ -->
+<div class="page chapter" id="ch5">
+    <div class="chapter-label">Chapter 5</div>
+    <h1>Budget Management</h1>
+
+    <p>Your weekly budget is the foundation of SafeSpend. This chapter covers setting, adjusting, and funding it.</p>
+
+    <h2>5.1 &nbsp; Setting Your Weekly Budget</h2>
+
+    <p>During onboarding you set an initial budget. You can change it anytime:</p>
+
+    <ol class="steps">
+        <li>From the Home screen, tap the <strong>edit icon (✏️)</strong> on your budget card.</li>
+        <li>You'll land on the <strong>Weekly Setup</strong> screen.</li>
+        <li>Adjust the <strong>Weekly Budget Amount</strong> field.</li>
+        <li>Toggle options:
+            <ul>
+                <li><strong>Carry Over Savings</strong> — unused money rolls to next week</li>
+                <li><strong>Spending Alerts</strong> — warns at 80% budget usage</li>
+            </ul>
+        </li>
+        <li>Tap <strong>Save Setup</strong>.</li>
+    </ol>
+
+    <div class="callout warning">
+        <span class="callout-title">Budget Changes Mid-Week</span>
+        Changing your budget mid-week <strong>doesn't reset the week</strong>. It adjusts your remaining target. Your transaction log stays intact.
+    </div>
+
+    <h2>5.2 &nbsp; Funding Your Budget (Top-Up)</h2>
+
+    <p>Instead of fixed weekly budgets, you can "fund" your budget dynamically — simulating a real-world allowance or paycheck top-up.</p>
+
+    <ol class="steps">
+        <li>On the Home screen, tap the <strong>plus icon (➕)</strong> on your budget card.</li>
+        <li>The <strong>Fund Budget</strong> screen opens with two tabs:
+            <ul>
+                <li><strong>Mobile Money</strong> — top up via MTN MoMo, Vodafone Cash, AirtelTigo, or M-PESA</li>
+                <li><strong>Card</strong> — credit or debit card</li>
+            </ul>
+        </li>
+        <li>Enter the amount you want to add.</li>
+        <li>For Mobile Money: select network → enter phone number → tap "Pay with Mobile Money" → enter OTP (auto-generated &amp; shown in amber banner during demo mode).</li>
+        <li>For Card: enter card number, cardholder name, expiry, and CVV.</li>
+        <li>Tap the payment button — you'll see a 2-3 second simulation overlay.</li>
+        <li>On success, your budget increases by the top-up amount.</li>
+    </ol>
+
+    <div class="callout info">
+        <span class="callout-title">Demo Mode</span>
+        Payments are currently simulated for testing. Real Mobile Money integration plugs into the <code>processMomoTransaction()</code> function via a Cloud Function with provider credentials.
+    </div>
+
+    <h2>5.3 &nbsp; Budget vs Spending Tracking</h2>
+
+    <p>The progress bar on your budget card visually communicates status:</p>
+
+    <table>
+        <thead><tr><th>% Used</th><th>Color</th><th>Meaning</th></tr></thead>
+        <tbody>
+            <tr><td>0 – 50%</td><td>🟢 Green</td><td>On track — plenty of budget left</td></tr>
+            <tr><td>50 – 80%</td><td>🟡 Yellow</td><td>Slow down — over half spent</td></tr>
+            <tr><td>80 – 100%</td><td>🟠 Orange</td><td>Warning — approaching limit</td></tr>
+            <tr><td>100%+</td><td>🔴 Red</td><td>Over budget — immediate attention needed</td></tr>
+        </tbody>
+    </table>
+
+    <h2>5.4 &nbsp; Understanding Your Spending Pace</h2>
+
+    <p>Pace is calculated as: <code>(spent / budget) ÷ (days elapsed / 7)</code></p>
+    <ul>
+        <li><strong>Pace = 1.0</strong> — spending exactly on target</li>
+        <li><strong>Pace &gt; 1.2</strong> — overspending; AI will warn you</li>
+        <li><strong>Pace &lt; 0.7</strong> — saving well; AI will encourage you</li>
+    </ul>
+
+    <div class="callout tip">
+        <span class="callout-title">Pro Tip</span>
+        Check your pace on the Home screen every evening. A quick glance tells you whether to be more cautious tomorrow.
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHAPTER 6: MOBILE MONEY WALLET
+     ════════════════════════════════════════════════════════════ -->
+<div class="page chapter" id="ch6">
+    <div class="chapter-label">Chapter 6</div>
+    <h1>Mobile Money Wallet</h1>
+
+    <p>The Wallet is a built-in savings account that lives alongside your expense tracker. Deposit money from Mobile Money, send to other SafeSpend users, or withdraw back to your Mobile Money account — all from one screen.</p>
+
+    <div class="screenshot">
+        <span class="ss-icon">💳</span>
+        <strong>Screenshot:</strong> Wallet dashboard with green gradient balance card, three action buttons (Add Money, Send, Withdraw), and transaction history with In/Out filter tabs
+    </div>
+
+    <h2>6.1 &nbsp; Accessing the Wallet</h2>
+    <ol class="steps">
+        <li>Open <strong>Settings</strong> (gear icon, top-right).</li>
+        <li>Tap the green <strong>Mobile Money Wallet</strong> card.</li>
+        <li>The Wallet Dashboard opens, showing your current balance.</li>
+    </ol>
+
+    <div class="callout warning">
+        <span class="callout-title">Google Sign-In Required</span>
+        The Wallet requires cross-device sync, which only works with Google Sign-In. Guest mode users will see a prompt to sign in.
+    </div>
+
+    <h2>6.2 &nbsp; Depositing Money</h2>
+
+    <p>Fund your wallet from your Mobile Money account:</p>
+
+    <ol class="steps">
+        <li>On the Wallet Dashboard, tap <strong>Add Money</strong>.</li>
+        <li>Select your <strong>network</strong>: MTN, Vodafone, AirtelTigo, or M-PESA.</li>
+        <li>Enter your <strong>Mobile Money phone number</strong>.</li>
+        <li>Enter the <strong>amount</strong> to deposit.</li>
+        <li>Tap <strong>"Pay with MoMo"</strong>.</li>
+        <li>Wait for the 2-second processing overlay.</li>
+        <li>On success, your wallet balance updates immediately.</li>
+    </ol>
+
+    <h2>6.3 &nbsp; Sending Money</h2>
+
+    <p>Send to another SafeSpend user by email or to any external Mobile Money number:</p>
+
+    <ol class="steps">
+        <li>Tap <strong>Send</strong> on the Wallet Dashboard.</li>
+        <li>In the Recipient field, enter:
+            <ul>
+                <li><strong>An email address</strong> → system looks up the SafeSpend user</li>
+                <li><strong>A phone number</strong> → treated as external Mobile Money</li>
+            </ul>
+        </li>
+        <li>Preview card appears confirming the recipient.</li>
+        <li>Enter the <strong>amount</strong> (must be ≤ your available balance).</li>
+        <li>Add an optional <strong>note</strong>.</li>
+        <li>Tap <strong>Continue</strong>.</li>
+        <li>Enter your 4-digit <strong>Wallet PIN</strong> (see 6.5 for setup).</li>
+        <li>Transfer completes instantly for SafeSpend-to-SafeSpend sends.</li>
+    </ol>
+
+    <div class="callout info">
+        <span class="callout-title">SafeSpend vs External Transfers</span>
+        <strong>SafeSpend-to-SafeSpend</strong> transfers are instant and free — recipient sees the money immediately in their wallet.<br>
+        <strong>External MoMo</strong> transfers route through the mobile money provider and may carry network fees.
+    </div>
+
+    <h2>6.4 &nbsp; Withdrawing Money</h2>
+
+    <p>Move money from your wallet back to your Mobile Money account:</p>
+
+    <ol class="steps">
+        <li>Tap <strong>Withdraw</strong> on the Wallet Dashboard.</li>
+        <li>Select your <strong>network</strong>.</li>
+        <li>Enter the destination <strong>phone number</strong>.</li>
+        <li>Enter the <strong>amount</strong> (≤ available balance).</li>
+        <li>Tap <strong>Continue</strong>.</li>
+        <li>Enter your 4-digit <strong>Wallet PIN</strong>.</li>
+        <li>Processing overlay runs for 2 seconds; success toast appears.</li>
+    </ol>
+
+    <h2>6.5 &nbsp; Setting Up Your Wallet PIN</h2>
+
+    <p>The first time you attempt to Send or Withdraw, a PIN setup modal appears:</p>
+
+    <ol class="steps">
+        <li>Enter a <strong>4-digit PIN</strong> of your choice.</li>
+        <li>Tap <strong>Continue</strong>.</li>
+        <li><strong>Re-enter</strong> the same PIN to confirm.</li>
+        <li>Tap <strong>Save PIN</strong>.</li>
+        <li>Your PIN is hashed and saved. You'll enter it for all future wallet transactions.</li>
+    </ol>
+
+    <div class="callout pro">
+        <span class="callout-title">Security</span>
+        Your PIN is stored as a SHA-256 hash with a unique random salt. SafeSpend <strong>never</strong> stores your raw PIN, and cannot retrieve it. If you forget it, contact support to reset.
+    </div>
+
+    <h2>6.6 &nbsp; Transaction History</h2>
+
+    <p>All wallet activity appears on the Wallet Dashboard with filter tabs:</p>
+    <ul>
+        <li><strong>All</strong> — every transaction</li>
+        <li><strong>In</strong> — money received (deposits, incoming transfers)</li>
+        <li><strong>Out</strong> — money sent (outgoing transfers, withdrawals)</li>
+    </ul>
+
+    <p>Each row shows:</p>
+    <ul>
+        <li>Transaction type icon (⬇ deposit, ➡ send, ⬆ withdraw)</li>
+        <li>Counterparty (user name or MoMo network + phone)</li>
+        <li>Time ago label</li>
+        <li>Amount with +/- prefix, colored by direction</li>
+    </ul>
+
+    <h2>6.7 &nbsp; Wallet Balance</h2>
+
+    <p>Your wallet balance is <strong>computed from your transactions</strong> — never stored as a single number. This means:</p>
+    <ul>
+        <li>Impossible to forge a balance (fraud-proof)</li>
+        <li>Perfect audit trail — every movement is traceable</li>
+        <li>Balance always matches the sum of transactions</li>
+    </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHAPTER 7: REPORTS & ANALYTICS
+     ════════════════════════════════════════════════════════════ -->
+<div class="page chapter" id="ch7">
+    <div class="chapter-label">Chapter 7</div>
+    <h1>Reports &amp; Analytics</h1>
+
+    <h2>7.1 &nbsp; Analytics Screen</h2>
+
+    <p>Tap <strong>Analytics</strong> in the bottom navigation to see:</p>
+
+    <ul>
+        <li><strong>Budget vs Spent card</strong> — headline numbers for the week</li>
+        <li><strong>Category breakdown pie chart</strong> — visual distribution of spending across categories</li>
+        <li><strong>Daily spending bar chart</strong> — spending by day of the week</li>
+        <li><strong>Top categories list</strong> — ranked by amount with percentage</li>
+    </ul>
+
+    <div class="screenshot">
+        <span class="ss-icon">📊</span>
+        <strong>Screenshot:</strong> Analytics screen with donut chart showing category distribution and bar chart of daily spending
+    </div>
+
+    <h2>7.2 &nbsp; History Screen</h2>
+
+    <p>Tap <strong>History</strong> in the bottom navigation. Features:</p>
+
+    <ul>
+        <li><strong>Full-text search</strong> — searches notes, tags, and amounts</li>
+        <li><strong>Category filter pills</strong> — tap any category to filter</li>
+        <li><strong>Date range dropdown</strong> — This week / 7d / 30d / 90d / All time</li>
+        <li><strong>Grouped by date</strong> — Today, Yesterday, weekday labels</li>
+        <li><strong>Summary chip</strong> — total count and total spent for current filter</li>
+        <li><strong>Reset button</strong> — clears all filters at once</li>
+    </ul>
+
+    <h2>7.3 &nbsp; Exporting Reports</h2>
+
+    <h3>CSV Export</h3>
+    <ol class="steps">
+        <li>On the History screen, tap the <strong>CSV icon</strong> (top-right).</li>
+        <li>A file downloads: <code>safespend-transactions-YYYY-MM-DD.csv</code></li>
+        <li>Open with Excel, Google Sheets, or any spreadsheet tool.</li>
+        <li>Columns: Date, Week, Category, Note, Tags, Amount, Currency, AutoCategorized</li>
+    </ol>
+
+    <h3>PDF Export</h3>
+    <ol class="steps">
+        <li>On the History screen, tap the <strong>PDF icon</strong> (top-right).</li>
+        <li>A branded PDF downloads: <code>safespend-report-YYYY-MM-DD.pdf</code></li>
+        <li>Includes: Summary card, Category breakdown table, Full transaction table, Page numbers</li>
+    </ol>
+
+    <div class="callout tip">
+        <span class="callout-title">Use CSV for Accounting, PDF for Sharing</span>
+        CSV is perfect for importing into bookkeeping tools. PDF is ideal for sharing with a financial advisor, boss (for reimbursements), or simply keeping monthly archives.
+    </div>
+
+    <h2>7.4 &nbsp; Understanding the Analytics Charts</h2>
+
+    <h3>Category Donut Chart</h3>
+    <p>Each segment represents a category's share of your total spending. Larger slices = bigger spending.</p>
+
+    <h3>Daily Spending Bar Chart</h3>
+    <p>Shows how spending is distributed across the 7 days of the week. Weekend peaks are common; large spikes on a single day suggest impulse spending.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHAPTER 8: NOTIFICATIONS
+     ════════════════════════════════════════════════════════════ -->
+<div class="page chapter" id="ch8">
+    <div class="chapter-label">Chapter 8</div>
+    <h1>Notifications &amp; Alerts</h1>
+
+    <h2>8.1 &nbsp; Types of Notifications</h2>
+
+    <table>
+        <thead><tr><th>Type</th><th>When it Fires</th><th>Where</th></tr></thead>
+        <tbody>
+            <tr><td>Daily Reminder</td><td>Configured time each day (default 8:00 PM)</td><td>System notification</td></tr>
+            <tr><td>Budget Warning</td><td>When 80% of budget is used</td><td>In-app toast + visual</td></tr>
+            <tr><td>Emergency Modal</td><td>Expense exceeds remaining budget</td><td>Full-screen modal</td></tr>
+            <tr><td>Referral Activated</td><td>Someone you referred logs first expense</td><td>In-app toast</td></tr>
+            <tr><td>Wallet Transaction</td><td>After successful deposit/send/withdraw</td><td>In-app toast</td></tr>
+            <tr><td>Smart Insight Rotation</td><td>Based on spending patterns</td><td>Home screen carousel</td></tr>
+        </tbody>
+    </table>
+
+    <h2>8.2 &nbsp; Enabling Daily Reminders</h2>
+
+    <ol class="steps">
+        <li>Go to <strong>Settings</strong>.</li>
+        <li>Find <strong>Daily Reminder</strong>.</li>
+        <li>Toggle the switch <strong>ON</strong>.</li>
+        <li>Your browser will ask for notification permission — click <strong>Allow</strong>.</li>
+        <li>Optionally change the reminder time (default 8:00 PM).</li>
+    </ol>
+
+    <h3>What the reminder says:</h3>
+    <p><em>"SafeSpend Reminder 💰 — Have you logged today's expenses?"</em></p>
+
+    <div class="callout warning">
+        <span class="callout-title">Browser Permission</span>
+        If you accidentally deny permission, you'll need to re-enable it manually in your browser settings (Site Settings → Notifications).
+    </div>
+
+    <h2>8.3 &nbsp; In-App Toasts</h2>
+
+    <p>Small notification cards slide up from the bottom for:</p>
+    <ul>
+        <li>Successful expense added</li>
+        <li>Payment confirmed / failed</li>
+        <li>PIN verified / incorrect</li>
+        <li>Referral linked / activated</li>
+        <li>Wallet transaction completed</li>
+    </ul>
+
+    <p>They auto-dismiss after 3 seconds.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHAPTER 9: SECURITY
+     ════════════════════════════════════════════════════════════ -->
+<div class="page chapter" id="ch9">
+    <div class="chapter-label">Chapter 9</div>
+    <h1>Security Features</h1>
+
+    <p>SafeSpend is built with bank-grade security practices at every layer.</p>
+
+    <h2>9.1 &nbsp; Authentication</h2>
+
+    <ul>
+        <li><strong>Google Sign-In</strong> via Firebase Authentication (OAuth 2.0)</li>
+        <li>No passwords stored by SafeSpend — handled by Google</li>
+        <li>Your session is token-based and auto-renews</li>
+        <li>Sign out from any device invalidates that session</li>
+    </ul>
+
+    <h2>9.2 &nbsp; Wallet PIN</h2>
+
+    <ul>
+        <li><strong>4-digit PIN</strong> required for all wallet transactions (send/withdraw)</li>
+        <li>PIN is <strong>SHA-256 hashed</strong> with a random per-user salt</li>
+        <li>Salt is generated via <code>crypto.randomUUID()</code> — cryptographically strong</li>
+        <li>Raw PIN never leaves your device or reaches any server</li>
+        <li>Three wrong attempts show a shake animation and error message</li>
+    </ul>
+
+    <h2>9.3 &nbsp; OTP Verification</h2>
+
+    <p>Budget top-ups via Mobile Money require a 6-digit OTP:</p>
+    <ul>
+        <li>Auto-generated with 5-minute expiry</li>
+        <li>Displayed in amber banner (currently demo mode)</li>
+        <li>Auto-submit when all 6 digits entered</li>
+        <li>"Resend" button generates a fresh code</li>
+    </ul>
+
+    <h2>9.4 &nbsp; Firestore Security Rules</h2>
+
+    <p>Data stored in Firebase is protected by strict server-side rules:</p>
+    <ul>
+        <li><strong>Users can only write their own data</strong> — can't modify another user's profile, wallet, or referrals</li>
+        <li><strong>Wallet balance is computed, never stored</strong> — impossible to forge</li>
+        <li><strong>Transactions are immutable</strong> — once created, cannot be edited or deleted</li>
+        <li><strong>Self-referral blocked</strong> — cannot refer yourself</li>
+        <li><strong>Reward amounts capped</strong> — referral rewards limited to $100 max</li>
+    </ul>
+
+    <h2>9.5 &nbsp; Fraud Prevention</h2>
+
+    <table>
+        <thead><tr><th>Attack Vector</th><th>Protection</th></tr></thead>
+        <tbody>
+            <tr><td>Fake balance inflation</td><td>Balance computed from transactions; can't be directly written</td></tr>
+            <tr><td>Self-referral for commission</td><td>Rules block referrerId == refereeId</td></tr>
+            <tr><td>Duplicate-account farming</td><td>SHA-256 device fingerprint check on signup</td></tr>
+            <tr><td>Transaction tampering</td><td>Audit trail is immutable (no update/delete)</td></tr>
+            <tr><td>Inflated reward amounts</td><td>Server-side cap of 100 per referral</td></tr>
+        </tbody>
+    </table>
+
+    <h2>9.6 &nbsp; Best Practices for Users</h2>
+
+    <ol>
+        <li><strong>Use a strong PIN</strong> — avoid 1234, 0000, or your birth year</li>
+        <li><strong>Don't share your Google password</strong> — Google Sign-In gives full access</li>
+        <li><strong>Sign out on shared devices</strong> — public computers especially</li>
+        <li><strong>Keep the app updated</strong> — pull the latest version regularly</li>
+        <li><strong>Review your transactions weekly</strong> — catch anything unexpected quickly</li>
+        <li><strong>Enable browser notifications carefully</strong> — only allow trusted apps</li>
+    </ol>
+
+    <div class="callout pro">
+        <span class="callout-title">Privacy Promise</span>
+        SafeSpend never sells your data. Your expenses, wallet activity, and financial patterns stay with you. Data is encrypted in transit (HTTPS) and at rest (Firebase).
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHAPTER 10: REFERRAL SYSTEM
+     ════════════════════════════════════════════════════════════ -->
+<div class="page chapter" id="ch10">
+    <div class="chapter-label">Chapter 10</div>
+    <h1>Referral System</h1>
+
+    <p>Invite friends to SafeSpend and earn commission when they sign up and start using the app.</p>
+
+    <h2>10.1 &nbsp; How It Works</h2>
+
+    <ol class="steps">
+        <li>You share your unique referral link with a friend.</li>
+        <li>They click the link and sign up with Google.</li>
+        <li>Their account is automatically linked as your referral (status: <strong>Pending</strong>).</li>
+        <li>When they log their <strong>first expense</strong>, the referral becomes <strong>Active</strong>.</li>
+        <li>You earn a fixed commission (<strong>5 units</strong> in your chosen currency).</li>
+    </ol>
+
+    <div class="screenshot">
+        <span class="ss-icon">🎁</span>
+        <strong>Screenshot:</strong> Referral Dashboard with unique code, share buttons (Copy / WhatsApp / SMS / More), stats grid, and history list
+    </div>
+
+    <h2>10.2 &nbsp; Accessing the Referral Dashboard</h2>
+
+    <ol class="steps">
+        <li>Go to <strong>Settings</strong>.</li>
+        <li>Tap the purple/indigo <strong>Refer &amp; Earn</strong> card.</li>
+        <li>The dashboard opens with your code, link, and stats.</li>
+    </ol>
+
+    <h2>10.3 &nbsp; Sharing Your Link</h2>
+
+    <p>Your referral code has the format <code>SAFE-XXXXX</code> (e.g. <code>SAFE-X9K2P</code>).</p>
+    <p>Your link looks like: <code>https://yourapp.url/?ref=SAFE-X9K2P</code></p>
+
+    <p>The dashboard provides four share methods:</p>
+
+    <table>
+        <thead><tr><th>Button</th><th>What it Does</th></tr></thead>
+        <tbody>
+            <tr><td><strong>📋 Copy</strong></td><td>Copies link to clipboard for pasting anywhere</td></tr>
+            <tr><td><strong>💬 WhatsApp</strong></td><td>Opens WhatsApp with pre-filled message including your link</td></tr>
+            <tr><td><strong>📱 SMS</strong></td><td>Opens SMS app with pre-filled text</td></tr>
+            <tr><td><strong>📤 More</strong></td><td>Native share sheet (Twitter, Instagram, Email, etc.)</td></tr>
+        </tbody>
+    </table>
+
+    <h2>10.4 &nbsp; Tracking Your Referrals</h2>
+
+    <p>The Referral Dashboard shows three key stats:</p>
+
+    <div class="feature-grid">
+        <div class="feature-card">
+            <span class="icon">👥</span>
+            <h4>Total Invites</h4>
+            <p>Everyone who signed up with your link.</p>
+        </div>
+        <div class="feature-card">
+            <span class="icon">✅</span>
+            <h4>Active</h4>
+            <p>Those who've logged their first expense.</p>
+        </div>
+        <div class="feature-card">
+            <span class="icon">💰</span>
+            <h4>Earnings</h4>
+            <p>Total commission earned, plus pending amount.</p>
+        </div>
+        <div class="feature-card">
+            <span class="icon">📋</span>
+            <h4>History List</h4>
+            <p>All referrals with status badges and timestamps.</p>
+        </div>
+    </div>
+
+    <h2>10.5 &nbsp; Withdrawing Your Earnings</h2>
+
+    <ol class="steps">
+        <li>On the Referral Dashboard, tap <strong>Request Withdrawal</strong>.</li>
+        <li>Select method: <strong>Mobile Money</strong> or <strong>Bank Transfer</strong>.</li>
+        <li>Enter your account details (phone number or bank info).</li>
+        <li>Enter the amount — minimum is <strong>20 units</strong>.</li>
+        <li>Tap <strong>Submit Request</strong>.</li>
+        <li>Processing takes <strong>3-5 business days</strong>.</li>
+    </ol>
+
+    <div class="callout warning">
+        <span class="callout-title">Minimum Withdrawal</span>
+        You need at least $20 (or equivalent) of active earnings before requesting a withdrawal. Keep inviting to reach the threshold.
+    </div>
+
+    <h2>10.6 &nbsp; Fraud Prevention</h2>
+
+    <p>The following are automatically blocked:</p>
+    <ul>
+        <li><strong>Self-referrals</strong> — can't refer yourself</li>
+        <li><strong>Duplicate referrals</strong> — user can only be referred once</li>
+        <li><strong>Same-device farming</strong> — device fingerprinting detects multiple accounts on one device</li>
+        <li><strong>Reward inflation</strong> — cap of 100 per referral at the database rule level</li>
+    </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHAPTER 11: STEP-BY-STEP QUICK START
+     ════════════════════════════════════════════════════════════ -->
+<div class="page chapter" id="ch11">
+    <div class="chapter-label">Chapter 11</div>
+    <h1>Step-by-Step Quick Start</h1>
+
+    <p>New to SafeSpend? Follow this walkthrough to get set up and using the app like a pro in under 5 minutes.</p>
+
+    <h2>🚀 Day 1: Setup (5 minutes)</h2>
+
+    <ol class="steps">
+        <li><strong>Open the app</strong> at your SafeSpend URL or from your home screen icon.</li>
+        <li><strong>Sign in with Google</strong> — tap the big blue button and pick your account.</li>
+        <li><strong>Complete onboarding</strong>:
+            <ul>
+                <li>Your name is pre-filled from Google</li>
+                <li>Choose your <strong>currency</strong> (e.g. USD, GHS)</li>
+                <li>Set your <strong>weekly budget</strong> (start with something realistic, say $150)</li>
+                <li>Tap <strong>Get Started</strong></li>
+            </ul>
+        </li>
+        <li><strong>Add your first expense</strong>:
+            <ul>
+                <li>Tap the <strong>+</strong> button in the bottom nav</li>
+                <li>Enter amount (e.g. $12)</li>
+                <li>Type a note: "Lunch at Chipotle"</li>
+                <li>Tap <strong>Save Expense</strong></li>
+                <li>Watch the app auto-categorize it as <strong>Food</strong></li>
+            </ul>
+        </li>
+        <li><strong>Explore your Health Score</strong> — the gauge on Home updates automatically.</li>
+    </ol>
+
+    <h2>📅 Daily Routine (&lt; 1 minute/day)</h2>
+
+    <ol class="steps">
+        <li>Each evening, open the app.</li>
+        <li>Tap <strong>+</strong> and log today's expenses.</li>
+        <li>Check your Health Score and AI insight.</li>
+        <li>Close the app. You're done.</li>
+    </ol>
+
+    <h2>📊 Weekly Review (5 minutes, every Sunday)</h2>
+
+    <ol class="steps">
+        <li>Open <strong>Analytics</strong> — see where your money went.</li>
+        <li>Note your <strong>top category</strong> — was it expected?</li>
+        <li>Check <strong>History</strong> — spot any suspicious or forgotten expenses.</li>
+        <li>Reflect on your <strong>Health Score</strong> and <strong>Streak</strong>.</li>
+        <li>Adjust next week's budget if needed.</li>
+    </ol>
+
+    <h2>💪 Level Up: Advanced Features</h2>
+
+    <ul>
+        <li><strong>Week 2:</strong> Try the Mobile Money Wallet. Deposit a small amount.</li>
+        <li><strong>Week 3:</strong> Invite a friend via the Referral System.</li>
+        <li><strong>Week 4:</strong> Export your month as PDF and review.</li>
+        <li><strong>Month 2:</strong> Upload a profile picture, enable Dark Mode, set a daily reminder.</li>
+    </ul>
+
+    <div class="quick-ref">
+        <h4>⚡ Quick Reference Card</h4>
+        <ul>
+            <li><strong>Home:</strong> Dashboard with all your stats</li>
+            <li><strong>Add (+):</strong> Log new expense</li>
+            <li><strong>Analytics:</strong> Charts &amp; insights</li>
+            <li><strong>History:</strong> Full log + search + export</li>
+            <li><strong>Settings:</strong> Profile, wallet, referrals, dark mode</li>
+        </ul>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHAPTER 12: TROUBLESHOOTING
+     ════════════════════════════════════════════════════════════ -->
+<div class="page chapter" id="ch12">
+    <div class="chapter-label">Chapter 12</div>
+    <h1>Troubleshooting</h1>
+
+    <p>Running into issues? Most problems have quick fixes below.</p>
+
+    <h2>12.1 &nbsp; Sign-In Issues</h2>
+
+    <h3>"Sign-in failed, please try again"</h3>
+    <ol>
+        <li>Open browser DevTools (F12) → Console tab.</li>
+        <li>Look for <code>[Auth] Sign-in error:</code> — it shows the exact Firebase error code.</li>
+        <li>Match the code to these fixes:
+            <ul>
+                <li><code>auth/popup-blocked</code> → Allow popups for this site in browser settings</li>
+                <li><code>auth/unauthorized-domain</code> → Add <code>localhost</code> to Firebase Console → Authentication → Settings → Authorized domains</li>
+                <li><code>auth/operation-not-allowed</code> → Enable Google provider in Firebase Console → Authentication → Sign-in method</li>
+                <li><code>auth/network-request-failed</code> → Check your internet connection</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h3>Sign-in popup closes immediately</h3>
+    <ul>
+        <li>Popup blockers are likely active — check browser toolbar for blocked popup icon</li>
+        <li>Try clicking the Google button again; browsers sometimes need a second try</li>
+    </ul>
+
+    <h2>12.2 &nbsp; App Shows Old Version</h2>
+
+    <p>If you've just updated and the app still looks like the old one:</p>
+    <ol class="steps">
+        <li>Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> (or <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> on Mac) to hard-reload.</li>
+        <li>If still old, open DevTools → Application tab → Service Workers → click <strong>Unregister</strong>.</li>
+        <li>Reload the page once more.</li>
+        <li>Alternatively, tap the <strong>"Clear cache &amp; reload"</strong> button in any error banner.</li>
+    </ol>
+
+    <h2>12.3 &nbsp; OTP Not Appearing</h2>
+
+    <p>Budget top-up OTP should show in an amber banner inside the OTP modal.</p>
+    <ul>
+        <li>Make sure you're using <strong>Mobile Money</strong> (not Card) — OTP only appears for MoMo</li>
+        <li>Wait 1-2 seconds after clicking Pay — the banner appears after generation</li>
+        <li>If the banner is empty, tap <strong>Resend OTP</strong> to generate a new one</li>
+    </ul>
+
+    <h2>12.4 &nbsp; Wallet Issues</h2>
+
+    <div class="qa">
+        <div class="q">Why can't I access the Wallet?</div>
+        <div class="a">The Wallet requires Google Sign-In. Guest mode users see a "Sign in with Google" prompt.</div>
+    </div>
+
+    <div class="qa">
+        <div class="q">I forgot my wallet PIN!</div>
+        <div class="a">PIN resets aren't available in-app (security). Contact support or reset via Firebase Console by removing the <code>walletPinHash</code> field from your user doc.</div>
+    </div>
+
+    <div class="qa">
+        <div class="q">Can I send money to any phone number?</div>
+        <div class="a">Yes — but if the number isn't a registered SafeSpend user, it's treated as an external Mobile Money recipient. SafeSpend-to-SafeSpend is instant; external sends go through the MoMo provider.</div>
+    </div>
+
+    <h2>12.5 &nbsp; Time Display Incorrect</h2>
+
+    <p>If the greeting says "Good morning" when it's evening:</p>
+    <ol class="steps">
+        <li>The greeting refreshes every 60 seconds automatically.</li>
+        <li>If it's still wrong, the tab may have been inactive — switch away and back to trigger a refresh.</li>
+        <li>Hard-reload to reset all timers.</li>
+    </ol>
+
+    <h2>12.6 &nbsp; Referral Link Not Working</h2>
+
+    <div class="qa">
+        <div class="q">My friend clicked the link but I didn't earn commission.</div>
+        <div class="a">Three things must happen:
+            <ol>
+                <li>Friend clicked the link (<code>?ref=SAFE-XXXXX</code>)</li>
+                <li>Friend signed in with Google (guest mode doesn't count)</li>
+                <li>Friend logged their first expense</li>
+            </ol>
+            If all three are done, refresh your Referral Dashboard.
+        </div>
+    </div>
+
+    <div class="qa">
+        <div class="q">"Sign-in failed" on a referred user's device</div>
+        <div class="a">The referral code may have been captured but sign-in failed. Tell them to try again and check the URL still includes <code>?ref=SAFE-XXXXX</code>.</div>
+    </div>
+
+    <h2>12.7 &nbsp; Data Not Syncing Across Devices</h2>
+
+    <ul>
+        <li>Only <strong>Google Sign-In</strong> accounts sync. Guest mode is device-only.</li>
+        <li>Make sure you're signed in with the <strong>same Google account</strong> on both devices.</li>
+        <li>Firestore must be <strong>enabled</strong> in Firebase Console for sync to work.</li>
+        <li>Check your internet connection — sync requires a live connection.</li>
+    </ul>
+
+    <h2>12.8 &nbsp; Can't Install as PWA</h2>
+
+    <ul>
+        <li>Use <strong>Chrome, Edge, or Safari</strong> (other browsers may not support PWA install)</li>
+        <li>The app must be served over <strong>HTTPS</strong> (not <code>http://localhost</code> for install prompt)</li>
+        <li>Look for the install icon in the URL bar, or use browser menu → "Install SafeSpend"</li>
+    </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHAPTER 13: FAQ
+     ════════════════════════════════════════════════════════════ -->
+<div class="page chapter" id="ch13">
+    <div class="chapter-label">Chapter 13</div>
+    <h1>Frequently Asked Questions</h1>
+
+    <div class="qa">
+        <div class="q">Is SafeSpend free?</div>
+        <div class="a">Yes, 100% free to use with all core features included.</div>
+    </div>
+
+    <div class="qa">
+        <div class="q">Is my financial data safe?</div>
+        <div class="a">Yes — stored in Firebase with bank-grade encryption. SafeSpend never sells your data, shows ads based on spending, or shares with third parties.</div>
+    </div>
+
+    <div class="qa">
+        <div class="q">Does it work offline?</div>
+        <div class="a">Yes. SafeSpend is a Progressive Web App with offline support. You can log expenses without internet; they sync when you're back online.</div>
+    </div>
+
+    <div class="qa">
+        <div class="q">Can I import data from another app?</div>
+        <div class="a">Not currently — SafeSpend focuses on fresh weekly tracking. If you need imports, export your previous data as CSV and reference it alongside.</div>
+    </div>
+
+    <div class="qa">
+        <div class="q">Can I change my currency later?</div>
+        <div class="a">Yes, anytime from Settings. All existing amounts stay as numbers; only the symbol changes. You may want to manually adjust for exchange rates.</div>
+    </div>
+
+    <div class="qa">
+        <div class="q">Do I need to manually reset every week?</div>
+        <div class="a">No — SafeSpend automatically archives the previous week every Monday at midnight.</div>
+    </div>
+
+    <div class="qa">
+        <div class="q">What's "Carry Over Savings"?</div>
+        <div class="a">If you spent less than your budget, the unused amount rolls into next week's budget. Enabled in Settings → Weekly Setup.</div>
+    </div>
+
+    <div class="qa">
+        <div class="q">How are referrals paid out?</div>
+        <div class="a">Withdrawals (minimum 20 units) are processed manually within 3-5 business days via Mobile Money or Bank Transfer.</div>
+    </div>
+
+    <div class="qa">
+        <div class="q">Are Mobile Money transactions real?</div>
+        <div class="a">Currently simulated for testing. Real integration requires connecting to an approved MoMo provider (MTN OpenAPI, Flutterwave, Paystack) via Cloud Functions.</div>
+    </div>
+
+    <div class="qa">
+        <div class="q">Can I delete my account?</div>
+        <div class="a">Yes — contact support, or remove your user document from Firestore manually. "Reset All Data" in Settings clears local data but keeps your Firestore records.</div>
+    </div>
+
+    <div class="qa">
+        <div class="q">Why Monday-to-Sunday weeks?</div>
+        <div class="a">It matches ISO 8601 and most people's mental model of "a week." Starts Monday, ends Sunday.</div>
+    </div>
+
+    <div class="qa">
+        <div class="q">Will there be an iOS / Android app?</div>
+        <div class="a">SafeSpend IS a native-quality app on both — via PWA installation. Install from your browser's menu for a home screen icon. No app store required.</div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHAPTER 14: CONCLUSION
+     ════════════════════════════════════════════════════════════ -->
+<div class="page chapter" id="ch14">
+    <div class="chapter-label">Chapter 14</div>
+    <h1>Conclusion</h1>
+
+    <div class="hero-intro">
+        <p>Thank you for choosing SafeSpend! You now have everything you need to take control of your weekly finances.</p>
+    </div>
+
+    <h2>Summary of What You Learned</h2>
+    <ul>
+        <li>✅ How to sign up, log in, and set up your profile</li>
+        <li>✅ How to add, categorize, and tag expenses</li>
+        <li>✅ How to manage your weekly budget and carry over savings</li>
+        <li>✅ How to use the Mobile Money Wallet for deposits, sends, and withdrawals</li>
+        <li>✅ How to interpret your Financial Health Score and AI Insights</li>
+        <li>✅ How to export reports as CSV or PDF</li>
+        <li>✅ How to invite friends and earn referral commissions</li>
+        <li>✅ How to keep your account secure with PIN and OTP</li>
+        <li>✅ How to troubleshoot common issues</li>
+    </ul>
+
+    <h2>Our Philosophy</h2>
+    <p>SafeSpend is built on the belief that <strong>small, consistent actions compound into big financial wins</strong>. Logging a single expense takes 10 seconds. Doing it daily for a year gives you 365 data points about your life — more than most people ever have. That's the foundation for real financial clarity.</p>
+
+    <h2>Future Improvements</h2>
+    <p>We're actively working on:</p>
+    <ul>
+        <li>🔌 Real Mobile Money API integration (MTN, Flutterwave, Paystack)</li>
+        <li>📧 Email notifications for transactions and weekly summaries</li>
+        <li>📸 Receipt photo upload with automatic OCR extraction</li>
+        <li>🎙️ Voice input for quick expense logging</li>
+        <li>👥 Multi-user households with shared budgets</li>
+        <li>🏦 Bank account sync via Plaid/Mono for automatic imports</li>
+        <li>🔔 Firebase Cloud Messaging for cross-device push notifications</li>
+    </ul>
+
+    <h2>Getting Help</h2>
+    <p>If you run into issues:</p>
+    <ol>
+        <li>Consult <strong>Chapter 12: Troubleshooting</strong> first</li>
+        <li>Check the <strong>Chapter 13: FAQ</strong></li>
+        <li>Open browser DevTools (F12) and check the console for detailed errors</li>
+        <li>Contact SafeSpend support through the app's settings</li>
+    </ol>
+
+    <h2>Stay Connected</h2>
+    <p>Follow updates, request features, and share feedback:</p>
+    <ul>
+        <li>🌐 Website: Your SafeSpend URL</li>
+        <li>💻 Source Code: <a href="https://github.com/biorkenexus-gh/safespend">github.com/biorkenexus-gh/safespend</a></li>
+        <li>📧 Support: through in-app settings</li>
+    </ul>
+
+    <div class="callout tip">
+        <span class="callout-title">One Last Thing</span>
+        The best budget is the one you actually stick to. Don't aim for perfection — aim for consistency. A week logged imperfectly is better than a week not logged at all. You've got this. 💪
+    </div>
+
+    <div class="section-footer">
+        SafeSpend Official User Guide · Version 2.0<br>
+        © All Rights Reserved
+    </div>
+</div>
+
+</body>
+</html>
