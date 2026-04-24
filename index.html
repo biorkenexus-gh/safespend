@@ -412,6 +412,47 @@
                     </div>
                 </div>
 
+                <!-- Quick Add row — one-tap expense logging for repeated items -->
+                <div id="quick-add-row" class="hidden flex gap-2 overflow-x-auto pb-2 scrollbar-thin -mx-4 px-4"></div>
+
+                <!-- Daily Streak + Top Goal + Next Bill grid -->
+                <div id="engagement-strip" class="grid grid-cols-2 gap-3 hidden">
+                    <!-- Daily streak card -->
+                    <div id="daily-streak-card" class="bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl p-3 text-white shadow-sm">
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-fire text-yellow-200"></i>
+                            <p class="text-xs opacity-90 font-medium">Daily Streak</p>
+                        </div>
+                        <p class="font-display font-bold text-2xl leading-tight mt-0.5" id="daily-streak-count">0</p>
+                        <p class="text-xs opacity-90" id="daily-streak-label">Log today to start</p>
+                    </div>
+                    <!-- Top savings goal card (hidden if none) -->
+                    <div id="top-goal-card" class="hidden bg-white rounded-2xl p-3 shadow-sm cursor-pointer hover:shadow-md transition" onclick="showGoalsScreen()">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-base" id="top-goal-emoji">🎯</span>
+                            <p class="text-xs text-gray-500 font-medium truncate flex-1" id="top-goal-name">—</p>
+                        </div>
+                        <p class="font-display font-bold text-lg text-primary leading-tight" id="top-goal-progress">—</p>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden mt-1">
+                            <div id="top-goal-bar" class="h-full bg-gradient-to-r from-blue-500 to-primary rounded-full transition-all duration-500" style="width:0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming bill alert (shown if bill due within 7 days) -->
+                <div id="bill-alert-card" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-center gap-3 cursor-pointer hover:bg-amber-100 transition" onclick="showBillsScreen()">
+                    <div class="text-2xl shrink-0" id="bill-alert-emoji">📅</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs text-amber-700 font-semibold uppercase tracking-wide">Upcoming Bill</p>
+                        <p class="text-sm font-semibold text-gray-800 truncate" id="bill-alert-name">—</p>
+                        <p class="text-xs text-amber-700" id="bill-alert-due">—</p>
+                    </div>
+                    <button onclick="event.stopPropagation();handleMarkBillPaid(document.getElementById('bill-alert-card').dataset.billId)"
+                            class="text-xs bg-safe text-white px-3 py-1.5 rounded-full font-semibold hover:bg-green-600 transition shrink-0">
+                        Paid
+                    </button>
+                </div>
+
                 <!-- Weekly Challenge -->
                 <div id="challenge-card" class="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-purple-500">
                     <div class="flex items-center justify-between mb-2">
@@ -1106,6 +1147,222 @@
                 </div>
             </div>
 
+            <!-- ==================== SAVINGS GOALS SCREEN ==================== -->
+            <div id="goals-screen" class="screen p-4 space-y-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <button onclick="showScreen('home')" class="mr-4 text-gray-600 hover:text-gray-800">
+                            <i class="fas fa-arrow-left text-xl"></i>
+                        </button>
+                        <h2 class="text-2xl font-display font-bold text-gray-800">Savings Goals</h2>
+                    </div>
+                    <button onclick="openCreateGoalModal()" title="New goal"
+                            class="w-10 h-10 bg-primary text-white rounded-full shadow-lg hover:bg-blue-800 transition flex items-center justify-center">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+
+                <!-- Summary strip -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-white rounded-2xl p-3 shadow-sm text-center">
+                        <p class="text-xs text-gray-500">Active</p>
+                        <p class="font-display font-bold text-2xl text-primary" id="goals-active-count">0</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-3 shadow-sm text-center">
+                        <p class="text-xs text-gray-500">Completed</p>
+                        <p class="font-display font-bold text-2xl text-safe" id="goals-completed-count">0</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-3 shadow-sm text-center">
+                        <p class="text-xs text-gray-500">Saved</p>
+                        <p class="font-display font-bold text-2xl text-gray-800" id="goals-total-saved">—</p>
+                    </div>
+                </div>
+
+                <div id="goals-list" class="space-y-3">
+                    <!-- Empty state filled dynamically -->
+                </div>
+            </div>
+
+            <!-- ==================== CREATE/EDIT GOAL MODAL ==================== -->
+            <div id="goal-modal" class="fixed inset-0 bg-black/60 z-[180] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl slide-up">
+                    <div class="text-center mb-5">
+                        <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-bullseye text-2xl text-primary"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-gray-800">New Savings Goal</h3>
+                        <p class="text-sm text-gray-500 mt-1">What are you saving for?</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Emoji + Name</label>
+                            <div class="flex gap-2 mt-1">
+                                <input type="text" id="goal-emoji" maxlength="2" value="🎯"
+                                       class="w-16 p-3 text-center text-2xl rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                                <input type="text" id="goal-name" maxlength="40" placeholder="e.g. Vacation, Laptop, Emergency"
+                                       class="flex-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Target Amount</label>
+                            <input type="number" id="goal-target" min="1" step="0.01" placeholder="0.00"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none text-xl font-bold">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Deadline (Optional)</label>
+                            <input type="date" id="goal-deadline"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                        </div>
+                        <p id="goal-error" class="hidden text-xs text-danger"></p>
+                    </div>
+
+                    <button onclick="submitGoal()"
+                            class="w-full mt-5 bg-primary text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition">
+                        Create Goal
+                    </button>
+                    <button onclick="closeGoalModal()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== CONTRIBUTE TO GOAL MODAL ==================== -->
+            <div id="contribute-modal" class="fixed inset-0 bg-black/60 z-[180] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl slide-up">
+                    <div class="text-center mb-5">
+                        <div id="contrib-goal-emoji" class="text-5xl mb-2">🎯</div>
+                        <h3 class="text-xl font-display font-bold text-gray-800" id="contrib-goal-name">Goal</h3>
+                        <p class="text-sm text-gray-500 mt-1">
+                            <span id="contrib-current">—</span> of <span id="contrib-target" class="font-semibold">—</span>
+                        </p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Add Amount</label>
+                            <input type="number" id="contrib-amount" min="0.01" step="0.01" placeholder="0.00"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none text-xl font-bold">
+                        </div>
+                        <div class="grid grid-cols-4 gap-2">
+                            <button onclick="quickContrib(10)"  class="py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold">+10</button>
+                            <button onclick="quickContrib(25)"  class="py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold">+25</button>
+                            <button onclick="quickContrib(50)"  class="py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold">+50</button>
+                            <button onclick="quickContrib(100)" class="py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold">+100</button>
+                        </div>
+                        <p id="contrib-error" class="hidden text-xs text-danger"></p>
+                    </div>
+
+                    <button onclick="submitContribution()"
+                            class="w-full mt-5 bg-safe text-white font-semibold py-3 rounded-xl hover:bg-green-600 transition">
+                        Add to Savings
+                    </button>
+                    <button onclick="closeContributeModal()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== RECURRING BILLS SCREEN ==================== -->
+            <div id="bills-screen" class="screen p-4 space-y-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <button onclick="showScreen('home')" class="mr-4 text-gray-600 hover:text-gray-800">
+                            <i class="fas fa-arrow-left text-xl"></i>
+                        </button>
+                        <h2 class="text-2xl font-display font-bold text-gray-800">Recurring Bills</h2>
+                    </div>
+                    <button onclick="openCreateBillModal()" title="Add bill"
+                            class="w-10 h-10 bg-primary text-white rounded-full shadow-lg hover:bg-blue-800 transition flex items-center justify-center">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+
+                <!-- Summary -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-white rounded-2xl p-3 shadow-sm text-center">
+                        <p class="text-xs text-gray-500">Monthly Total</p>
+                        <p class="font-display font-bold text-2xl text-primary" id="bills-monthly-total">—</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-3 shadow-sm text-center">
+                        <p class="text-xs text-gray-500">Due This Week</p>
+                        <p class="font-display font-bold text-2xl text-warning" id="bills-week-count">0</p>
+                    </div>
+                </div>
+
+                <div id="bills-list" class="space-y-3">
+                    <!-- Empty state filled dynamically -->
+                </div>
+            </div>
+
+            <!-- ==================== CREATE BILL MODAL ==================== -->
+            <div id="bill-modal" class="fixed inset-0 bg-black/60 z-[180] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl slide-up">
+                    <div class="text-center mb-5">
+                        <div class="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-file-invoice text-2xl text-warning"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-gray-800">New Recurring Bill</h3>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex gap-2">
+                            <input type="text" id="bill-emoji" maxlength="2" value="📄"
+                                   class="w-16 p-3 text-center text-2xl rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                            <input type="text" id="bill-name" maxlength="40" placeholder="e.g. Netflix, Rent, Gym"
+                                   class="flex-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Amount</label>
+                            <input type="number" id="bill-amount" min="0" step="0.01" placeholder="0.00"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none text-lg font-bold">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Category</label>
+                            <select id="bill-category" class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                                <option value="bills">Bills</option>
+                                <option value="entertainment">Entertainment (Netflix, Spotify)</option>
+                                <option value="health">Health (Gym, Insurance)</option>
+                                <option value="transport">Transport</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Frequency</label>
+                                <select id="bill-frequency" class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                                    <option value="monthly">Monthly</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="yearly">Yearly</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Due Day</label>
+                                <input type="number" id="bill-due-day" min="1" max="31" value="1"
+                                       class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Remind Me Days Before</label>
+                            <input type="number" id="bill-reminder" min="0" max="14" value="3"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                        </div>
+                        <p id="bill-error" class="hidden text-xs text-danger"></p>
+                    </div>
+
+                    <button onclick="submitBill()"
+                            class="w-full mt-5 bg-primary text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition">
+                        Add Bill
+                    </button>
+                    <button onclick="closeBillModal()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
             <!-- ==================== PAYMENT / FUND BUDGET ==================== -->
             <div id="payment-screen" class="screen p-4">
                 <div class="flex items-center mb-6">
@@ -1533,6 +1790,36 @@
                         </div>
                     </div>
 
+                    <!-- Savings Goals card -->
+                    <div class="bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:bg-gray-50 transition"
+                         onclick="showGoalsScreen()">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                                <i class="fas fa-bullseye text-primary text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-gray-800 text-base">Savings Goals</h3>
+                                <p class="text-xs text-gray-500" id="settings-goals-summary">Set targets and track progress</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400 shrink-0"></i>
+                        </div>
+                    </div>
+
+                    <!-- Recurring Bills card -->
+                    <div class="bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:bg-gray-50 transition"
+                         onclick="showBillsScreen()">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
+                                <i class="fas fa-calendar-check text-warning text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-gray-800 text-base">Recurring Bills</h3>
+                                <p class="text-xs text-gray-500" id="settings-bills-summary">Track subscriptions &amp; get reminders</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400 shrink-0"></i>
+                        </div>
+                    </div>
+
                     <!-- Refer & Earn card — gradient highlight, stats inline -->
                     <div class="bg-gradient-to-br from-primary to-indigo-600 rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-lg transition text-white lift-on-hover"
                          onclick="showReferralScreen()">
@@ -1726,6 +2013,16 @@
     let categoryChartInstance = null;
     let dailyChartInstance    = null;
 
+    // Engagement features state (all persisted to localStorage)
+    const GOALS_KEY      = 'safespend_goals';
+    const BILLS_KEY      = 'safespend_bills';
+    const FAVORITES_KEY  = 'safespend_favorites';
+    const DAILY_STREAK_KEY = 'safespend_daily_streak';
+    let goals     = [];
+    let bills     = [];
+    let favorites = [];
+    let dailyStreak = { count: 0, lastDate: null, bestStreak: 0 };
+
     // ── Helpers ───────────────────────────────────────────────────
     function fmt(amount) {
         const sym = CURRENCIES[profile.currency] || '$';
@@ -1789,6 +2086,12 @@
         if (rawProfile)  profile     = JSON.parse(rawProfile);
         if (rawHistory)  weekHistory = JSON.parse(rawHistory);
 
+        // Engagement features — independent persistence
+        try { goals       = JSON.parse(localStorage.getItem(GOALS_KEY))      || []; } catch { goals = []; }
+        try { bills       = JSON.parse(localStorage.getItem(BILLS_KEY))      || []; } catch { bills = []; }
+        try { favorites   = JSON.parse(localStorage.getItem(FAVORITES_KEY))  || []; } catch { favorites = []; }
+        try { dailyStreak = JSON.parse(localStorage.getItem(DAILY_STREAK_KEY)) || { count: 0, lastDate: null, bestStreak: 0 }; } catch { dailyStreak = { count: 0, lastDate: null, bestStreak: 0 }; }
+
         if (rawData) {
             const saved = JSON.parse(rawData);
             const currentWeekId = getWeekId(new Date());
@@ -1834,6 +2137,532 @@
         localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
         localStorage.setItem(DATA_KEY,    JSON.stringify(appState));
         localStorage.setItem(HISTORY_KEY, JSON.stringify(weekHistory));
+        localStorage.setItem(GOALS_KEY,     JSON.stringify(goals));
+        localStorage.setItem(BILLS_KEY,     JSON.stringify(bills));
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+        localStorage.setItem(DAILY_STREAK_KEY, JSON.stringify(dailyStreak));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  ENGAGEMENT ENGINES — Savings Goals, Recurring Bills,
+    //  Quick Favorites, Daily Streak
+    //
+    //  All store to localStorage. Designed to be device-independent
+    //  so offline mode works perfectly. A future sync to Firestore can
+    //  be added without changing the data shape.
+    // ═══════════════════════════════════════════════════════════════
+
+    // ── SAVINGS GOALS ─────────────────────────────────────────────
+    function createGoal({ name, emoji, targetAmount, deadline }) {
+        const goal = {
+            id:             'goal_' + Date.now(),
+            name:           (name || 'My Goal').slice(0, 40),
+            emoji:          emoji || '🎯',
+            targetAmount:   Math.max(1, parseFloat(targetAmount) || 0),
+            currentAmount:  0,
+            deadline:       deadline || null,  // ISO string or null
+            createdAt:      Date.now(),
+            completedAt:    null,
+            contributions:  []
+        };
+        goals.unshift(goal);
+        saveData();
+        return goal;
+    }
+
+    function contributeToGoal(goalId, amount, note = '') {
+        const g = goals.find(x => x.id === goalId);
+        if (!g || g.completedAt) return null;
+        amount = parseFloat(amount);
+        if (!amount || amount <= 0) return null;
+        g.currentAmount = Math.min(g.targetAmount, (g.currentAmount || 0) + amount);
+        g.contributions.unshift({ amount, note: note.slice(0, 50), date: Date.now() });
+        if (g.currentAmount >= g.targetAmount && !g.completedAt) {
+            g.completedAt = Date.now();
+            showPayToast(`🎉 Goal completed: ${g.emoji} ${g.name}!`);
+        }
+        saveData();
+        return g;
+    }
+
+    function withdrawFromGoal(goalId, amount) {
+        const g = goals.find(x => x.id === goalId);
+        if (!g) return null;
+        amount = parseFloat(amount);
+        if (!amount || amount <= 0) return null;
+        g.currentAmount = Math.max(0, (g.currentAmount || 0) - amount);
+        g.contributions.unshift({ amount: -amount, note: 'withdraw', date: Date.now() });
+        if (g.completedAt && g.currentAmount < g.targetAmount) g.completedAt = null;
+        saveData();
+        return g;
+    }
+
+    function deleteGoal(goalId) {
+        goals = goals.filter(g => g.id !== goalId);
+        saveData();
+    }
+
+    function getTopGoal() {
+        // Highest-progress unfinished goal, or most recent completed
+        const active = goals.filter(g => !g.completedAt);
+        if (active.length === 0) return goals[0] || null;
+        return active.sort((a, b) => (b.currentAmount / b.targetAmount) - (a.currentAmount / a.targetAmount))[0];
+    }
+
+    // ── RECURRING BILLS ───────────────────────────────────────────
+    function createBill({ name, emoji, amount, category, frequency, dueDay, reminderDays }) {
+        const bill = {
+            id:              'bill_' + Date.now(),
+            name:            (name || 'Bill').slice(0, 40),
+            emoji:           emoji || '📄',
+            amount:          Math.max(0, parseFloat(amount) || 0),
+            category:        category || 'bills',
+            frequency:       frequency || 'monthly',   // 'weekly' | 'monthly' | 'yearly'
+            dueDay:          Math.max(1, Math.min(31, parseInt(dueDay, 10) || 1)),
+            reminderDays:    Math.max(0, Math.min(14, parseInt(reminderDays, 10) || 3)),
+            lastPaidDate:    null,
+            paidHistory:     [],
+            createdAt:       Date.now(),
+            enabled:         true
+        };
+        bill.nextDueDate = computeNextDueDate(bill);
+        bills.unshift(bill);
+        saveData();
+        return bill;
+    }
+
+    function computeNextDueDate(bill) {
+        const now = new Date(); now.setHours(0, 0, 0, 0);
+        const d   = new Date(now);
+        if (bill.frequency === 'weekly') {
+            const target = bill.dueDay % 7;  // reuse dueDay as weekday (0=Sun)
+            const diff = (target - d.getDay() + 7) % 7;
+            d.setDate(d.getDate() + (diff === 0 ? 7 : diff));
+        } else if (bill.frequency === 'yearly') {
+            d.setMonth(0, Math.min(bill.dueDay, 28));
+            if (d < now) d.setFullYear(d.getFullYear() + 1);
+        } else {
+            // monthly (default)
+            d.setDate(Math.min(bill.dueDay, 28));
+            if (d <= now) d.setMonth(d.getMonth() + 1);
+        }
+        return d.toISOString().split('T')[0];
+    }
+
+    function markBillPaid(billId) {
+        const b = bills.find(x => x.id === billId);
+        if (!b) return null;
+        b.lastPaidDate = new Date().toISOString().split('T')[0];
+        b.paidHistory.unshift({ date: b.lastPaidDate, amount: b.amount });
+        // Log as expense
+        addTransaction(
+            b.amount,
+            b.category,
+            `${b.emoji} ${b.name} (auto)`,
+            b.lastPaidDate,
+            ['bill', 'recurring'],
+            false
+        );
+        // Roll to next due date
+        b.nextDueDate = computeNextDueDate({ ...b, dueDay: b.dueDay });
+        // If monthly and paid, ensure next is definitely in the future
+        while (b.nextDueDate <= b.lastPaidDate) {
+            const tmp = new Date(b.nextDueDate);
+            if (b.frequency === 'weekly')      tmp.setDate(tmp.getDate() + 7);
+            else if (b.frequency === 'yearly') tmp.setFullYear(tmp.getFullYear() + 1);
+            else                               tmp.setMonth(tmp.getMonth() + 1);
+            b.nextDueDate = tmp.toISOString().split('T')[0];
+        }
+        saveData();
+        return b;
+    }
+
+    function deleteBill(billId) {
+        bills = bills.filter(b => b.id !== billId);
+        saveData();
+    }
+
+    function getUpcomingBills(maxDays = 30) {
+        const now = new Date(); now.setHours(0, 0, 0, 0);
+        return bills
+            .filter(b => b.enabled)
+            .map(b => {
+                const due = new Date(b.nextDueDate);
+                const daysUntil = Math.ceil((due - now) / 86400000);
+                return { ...b, daysUntil };
+            })
+            .filter(b => b.daysUntil <= maxDays)
+            .sort((a, b) => a.daysUntil - b.daysUntil);
+    }
+
+    function getNextBill() {
+        const list = getUpcomingBills(60);
+        return list[0] || null;
+    }
+
+    // ── QUICK ADD FAVORITES ───────────────────────────────────────
+    function addFavorite({ amount, category, note, emoji }) {
+        if (favorites.length >= 6) favorites.pop();
+        favorites.unshift({
+            id:       'fav_' + Date.now(),
+            amount:   parseFloat(amount) || 0,
+            category: category || 'other',
+            note:     (note || '').slice(0, 30),
+            emoji:    emoji || (categories[category]?.icon === 'utensils' ? '🍽️' : '⭐'),
+            useCount: 0
+        });
+        saveData();
+    }
+
+    function removeFavorite(favId) {
+        favorites = favorites.filter(f => f.id !== favId);
+        saveData();
+    }
+
+    function useFavorite(favId) {
+        const f = favorites.find(x => x.id === favId);
+        if (!f) return;
+        f.useCount = (f.useCount || 0) + 1;
+        const today = new Date().toISOString().split('T')[0];
+        addTransaction(f.amount, f.category, f.note, today, ['quick-add'], false);
+        // Bubble up most-used
+        favorites.sort((a, b) => (b.useCount || 0) - (a.useCount || 0));
+        saveData();
+        showPayToast(`✅ ${fmt(f.amount)} · ${f.note || categories[f.category]?.label || 'Expense'}`);
+        updateUI();
+    }
+
+    // ── DAILY STREAK ──────────────────────────────────────────────
+    function touchDailyStreak() {
+        const today = new Date().toISOString().split('T')[0];
+        if (dailyStreak.lastDate === today) return;  // already logged today
+
+        const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+        const yISO = yesterday.toISOString().split('T')[0];
+
+        if (dailyStreak.lastDate === yISO) {
+            dailyStreak.count = (dailyStreak.count || 0) + 1;
+        } else {
+            dailyStreak.count = 1;  // streak broken — restart
+        }
+        dailyStreak.lastDate = today;
+        dailyStreak.bestStreak = Math.max(dailyStreak.bestStreak || 0, dailyStreak.count);
+
+        // Celebrate streak milestones
+        if ([3, 7, 14, 30, 60, 100].includes(dailyStreak.count)) {
+            showPayToast(`🔥 ${dailyStreak.count}-day streak! Keep it going!`);
+        }
+        saveData();
+    }
+
+    // Daily streak grace window — if user missed yesterday but logged today,
+    // their streak resets. Called whenever the home screen renders.
+    function checkDailyStreakContinuity() {
+        if (!dailyStreak.lastDate) return;
+        const today = new Date().toISOString().split('T')[0];
+        const last  = new Date(dailyStreak.lastDate);
+        const now   = new Date(today);
+        const daysGap = Math.round((now - last) / 86400000);
+        if (daysGap > 1) {
+            // User missed a day, streak broken (but preserve bestStreak)
+            dailyStreak.count = 0;
+            saveData();
+        }
+    }
+
+    // ── GOALS UI ──────────────────────────────────────────────────
+    function showGoalsScreen() {
+        renderGoalsScreen();
+        showScreen('goals');
+    }
+
+    function renderGoalsScreen() {
+        const active    = goals.filter(g => !g.completedAt);
+        const completed = goals.filter(g =>  g.completedAt);
+        const totalSaved = goals.reduce((s, g) => s + (g.currentAmount || 0), 0);
+
+        setText('goals-active-count',    active.length);
+        setText('goals-completed-count', completed.length);
+        setText('goals-total-saved',     fmt(totalSaved));
+
+        const list = document.getElementById('goals-list');
+        if (!list) return;
+        if (goals.length === 0) {
+            list.innerHTML = `
+                <div class="bg-white rounded-2xl p-8 text-center">
+                    <div class="text-5xl mb-3">🎯</div>
+                    <h4 class="font-display font-bold text-gray-800">No goals yet</h4>
+                    <p class="text-sm text-gray-500 mt-1 mb-4">Set your first savings goal and start building wealth one contribution at a time.</p>
+                    <button onclick="openCreateGoalModal()"
+                            class="bg-primary text-white font-semibold px-6 py-2 rounded-xl hover:bg-blue-800 transition">
+                        <i class="fas fa-plus mr-1"></i> Create First Goal
+                    </button>
+                </div>`;
+            return;
+        }
+
+        list.innerHTML = [...active, ...completed].map(g => {
+            const pct = Math.min(100, (g.currentAmount / g.targetAmount) * 100);
+            const done = !!g.completedAt;
+            let deadlineLabel = '';
+            if (g.deadline) {
+                const days = Math.ceil((new Date(g.deadline) - new Date()) / 86400000);
+                if (days > 0)       deadlineLabel = `${days} day${days !== 1 ? 's' : ''} left`;
+                else if (days === 0) deadlineLabel = 'Due today';
+                else                 deadlineLabel = `${-days} day${-days !== 1 ? 's' : ''} overdue`;
+            }
+            return `
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden ${done ? 'opacity-80' : ''}">
+                <div class="p-4 flex items-center gap-3">
+                    <div class="text-3xl shrink-0">${g.emoji}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <h4 class="font-display font-bold text-gray-800 truncate">${g.name}</h4>
+                            ${done ? '<span class="text-[10px] bg-green-100 text-safe px-2 py-0.5 rounded-full font-semibold">Completed ✓</span>' : ''}
+                        </div>
+                        <p class="text-xs text-gray-500">
+                            ${fmt(g.currentAmount)} of ${fmt(g.targetAmount)} ${deadlineLabel ? '· ' + deadlineLabel : ''}
+                        </p>
+                    </div>
+                    <div class="flex flex-col gap-1 shrink-0">
+                        ${done ? '' : `<button onclick="openContributeModal('${g.id}')" class="text-xs bg-primary text-white px-3 py-1.5 rounded-full font-semibold">Add</button>`}
+                        <button onclick="confirmDeleteGoal('${g.id}')" class="text-xs text-gray-400 hover:text-danger">Delete</button>
+                    </div>
+                </div>
+                <div class="px-4 pb-4">
+                    <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-500 ${done ? 'bg-safe' : 'bg-gradient-to-r from-blue-500 to-primary'}"
+                             style="width:${pct}%"></div>
+                    </div>
+                    <p class="text-right text-xs text-gray-500 mt-1">${Math.round(pct)}%</p>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function openCreateGoalModal() {
+        document.getElementById('goal-name').value = '';
+        document.getElementById('goal-emoji').value = '🎯';
+        document.getElementById('goal-target').value = '';
+        document.getElementById('goal-deadline').value = '';
+        const err = document.getElementById('goal-error');
+        err.textContent = ''; err.classList.add('hidden');
+        document.getElementById('goal-modal').classList.remove('hidden');
+    }
+    function closeGoalModal() { document.getElementById('goal-modal').classList.add('hidden'); }
+
+    function submitGoal() {
+        const name = document.getElementById('goal-name').value.trim();
+        const emoji = document.getElementById('goal-emoji').value.trim() || '🎯';
+        const target = parseFloat(document.getElementById('goal-target').value);
+        const deadline = document.getElementById('goal-deadline').value;
+        const err = document.getElementById('goal-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+
+        if (!name)                       return showErr('Give your goal a name');
+        if (!target || target <= 0)      return showErr('Enter a target amount');
+
+        createGoal({ name, emoji, targetAmount: target, deadline: deadline || null });
+        closeGoalModal();
+        renderGoalsScreen();
+        updateUI();
+        showPayToast(`🎯 Goal "${name}" created — start saving!`);
+    }
+
+    let contribState = { goalId: null };
+
+    function openContributeModal(goalId) {
+        const g = goals.find(x => x.id === goalId);
+        if (!g) return;
+        contribState.goalId = goalId;
+        setText('contrib-goal-emoji', g.emoji);
+        setText('contrib-goal-name',  g.name);
+        setText('contrib-current',    fmt(g.currentAmount));
+        setText('contrib-target',     fmt(g.targetAmount));
+        document.getElementById('contrib-amount').value = '';
+        const err = document.getElementById('contrib-error');
+        err.textContent = ''; err.classList.add('hidden');
+        document.getElementById('contribute-modal').classList.remove('hidden');
+    }
+    function closeContributeModal() { document.getElementById('contribute-modal').classList.add('hidden'); }
+
+    function quickContrib(amt) {
+        const input = document.getElementById('contrib-amount');
+        input.value = ((parseFloat(input.value) || 0) + amt).toFixed(2);
+    }
+
+    function submitContribution() {
+        const amt = parseFloat(document.getElementById('contrib-amount').value);
+        const err = document.getElementById('contrib-error');
+        if (!amt || amt <= 0) { err.textContent = 'Enter a valid amount'; err.classList.remove('hidden'); return; }
+        contributeToGoal(contribState.goalId, amt);
+        closeContributeModal();
+        renderGoalsScreen();
+        updateUI();
+    }
+
+    function confirmDeleteGoal(goalId) {
+        if (!confirm('Delete this goal? This cannot be undone.')) return;
+        deleteGoal(goalId);
+        renderGoalsScreen();
+        updateUI();
+    }
+
+    // ── BILLS UI ──────────────────────────────────────────────────
+    function showBillsScreen() {
+        renderBillsScreen();
+        showScreen('bills');
+    }
+
+    function renderBillsScreen() {
+        // Totals
+        const monthlyTotal = bills.filter(b => b.enabled).reduce((s, b) => {
+            const m = b.frequency === 'weekly' ? 4.33
+                    : b.frequency === 'yearly' ? (1 / 12)
+                    : 1;
+            return s + (b.amount || 0) * m;
+        }, 0);
+        const upcoming = getUpcomingBills(7);
+        setText('bills-monthly-total', fmt(monthlyTotal));
+        setText('bills-week-count',    upcoming.length);
+
+        const list = document.getElementById('bills-list');
+        if (!list) return;
+        if (bills.length === 0) {
+            list.innerHTML = `
+                <div class="bg-white rounded-2xl p-8 text-center">
+                    <div class="text-5xl mb-3">📅</div>
+                    <h4 class="font-display font-bold text-gray-800">No bills tracked</h4>
+                    <p class="text-sm text-gray-500 mt-1 mb-4">Add subscriptions, rent, or any recurring payment. SafeSpend reminds you and one-tap logs them as expenses.</p>
+                    <button onclick="openCreateBillModal()"
+                            class="bg-primary text-white font-semibold px-6 py-2 rounded-xl hover:bg-blue-800 transition">
+                        <i class="fas fa-plus mr-1"></i> Add First Bill
+                    </button>
+                </div>`;
+            return;
+        }
+
+        const sorted = getUpcomingBills(365);
+        list.innerHTML = sorted.map(b => {
+            const daysUntil = b.daysUntil;
+            let urgency, urgencyLbl;
+            if (daysUntil < 0)        { urgency = 'bg-red-100 text-danger';    urgencyLbl = `${-daysUntil}d overdue`; }
+            else if (daysUntil === 0) { urgency = 'bg-red-100 text-danger';    urgencyLbl = 'Due today'; }
+            else if (daysUntil <= 3)  { urgency = 'bg-amber-100 text-amber-700'; urgencyLbl = `In ${daysUntil}d`; }
+            else if (daysUntil <= 7)  { urgency = 'bg-yellow-100 text-yellow-700'; urgencyLbl = `In ${daysUntil}d`; }
+            else                      { urgency = 'bg-gray-100 text-gray-500'; urgencyLbl = `In ${daysUntil}d`; }
+            return `
+            <div class="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-3">
+                <div class="text-3xl shrink-0">${b.emoji}</div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h4 class="font-display font-bold text-gray-800 truncate">${b.name}</h4>
+                        <span class="text-[10px] ${urgency} px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">${urgencyLbl}</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-0.5">${fmt(b.amount)} · ${b.frequency} · Due ${b.nextDueDate}</p>
+                </div>
+                <div class="flex flex-col gap-1 shrink-0">
+                    <button onclick="handleMarkBillPaid('${b.id}')"
+                            class="text-xs bg-safe text-white px-3 py-1.5 rounded-full font-semibold hover:bg-green-600 transition">
+                        Paid
+                    </button>
+                    <button onclick="confirmDeleteBill('${b.id}')" class="text-xs text-gray-400 hover:text-danger">Delete</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function openCreateBillModal() {
+        document.getElementById('bill-name').value = '';
+        document.getElementById('bill-emoji').value = '📄';
+        document.getElementById('bill-amount').value = '';
+        document.getElementById('bill-category').value = 'bills';
+        document.getElementById('bill-frequency').value = 'monthly';
+        document.getElementById('bill-due-day').value = '1';
+        document.getElementById('bill-reminder').value = '3';
+        const err = document.getElementById('bill-error');
+        err.textContent = ''; err.classList.add('hidden');
+        document.getElementById('bill-modal').classList.remove('hidden');
+    }
+    function closeBillModal() { document.getElementById('bill-modal').classList.add('hidden'); }
+
+    function submitBill() {
+        const name       = document.getElementById('bill-name').value.trim();
+        const emoji      = document.getElementById('bill-emoji').value.trim() || '📄';
+        const amount     = parseFloat(document.getElementById('bill-amount').value);
+        const category   = document.getElementById('bill-category').value;
+        const frequency  = document.getElementById('bill-frequency').value;
+        const dueDay     = parseInt(document.getElementById('bill-due-day').value, 10);
+        const reminder   = parseInt(document.getElementById('bill-reminder').value, 10);
+        const err = document.getElementById('bill-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+
+        if (!name)                      return showErr('Enter a name for this bill');
+        if (!amount || amount <= 0)     return showErr('Enter the amount');
+
+        createBill({ name, emoji, amount, category, frequency, dueDay, reminderDays: reminder });
+        closeBillModal();
+        renderBillsScreen();
+        updateUI();
+        showPayToast(`📅 "${name}" added to recurring bills`);
+    }
+
+    function handleMarkBillPaid(billId) {
+        const b = bills.find(x => x.id === billId);
+        if (!b) return;
+        if (!confirm(`Mark "${b.name}" as paid? This will log ${fmt(b.amount)} as an expense.`)) return;
+        markBillPaid(billId);
+        renderBillsScreen();
+        updateUI();
+        showPayToast(`✅ ${b.name} marked as paid`);
+    }
+
+    function confirmDeleteBill(billId) {
+        if (!confirm('Delete this recurring bill?')) return;
+        deleteBill(billId);
+        renderBillsScreen();
+        updateUI();
+    }
+
+    // ── QUICK ADD FAVORITES UI ────────────────────────────────────
+    // Auto-suggest adding a favorite if the user logs the same amount/note combo 3+ times
+    function maybeSuggestFavorite(amount, category, note) {
+        if (!note || favorites.length >= 6) return;
+        if (favorites.some(f => f.amount === amount && f.note === note)) return;
+        // Count matches in recent transactions
+        const key = `${amount}|${note.toLowerCase()}`;
+        const count = appState.transactions.filter(t =>
+            !t.isTopUp && t.amount === amount && (t.note || '').toLowerCase() === note.toLowerCase()
+        ).length;
+        if (count >= 3) {
+            addFavorite({ amount, category, note });
+            showPayToast('⭐ Added to Quick Add — one tap to log this next time');
+        }
+    }
+
+    function renderQuickAddRow() {
+        const wrap = document.getElementById('quick-add-row');
+        if (!wrap) return;
+        if (favorites.length === 0) {
+            wrap.classList.add('hidden');
+            return;
+        }
+        wrap.classList.remove('hidden');
+        wrap.innerHTML = favorites.slice(0, 5).map(f => {
+            const cat = categories[f.category] || categories.other;
+            return `
+                <button onclick="useFavorite('${f.id}')"
+                        class="shrink-0 bg-white rounded-2xl px-4 py-3 shadow-sm hover:shadow-md active:scale-95 transition flex flex-col items-center gap-0.5 min-w-[90px]">
+                    <span class="text-xl">${f.emoji}</span>
+                    <span class="text-xs font-semibold text-gray-700 truncate max-w-[80px]">${f.note || cat.label}</span>
+                    <span class="text-[10px] text-primary font-bold">${fmt(f.amount)}</span>
+                </button>`;
+        }).join('') + `
+            <button onclick="showScreen('add')"
+                    class="shrink-0 bg-blue-50 text-primary border-2 border-dashed border-blue-200 rounded-2xl px-4 py-3 hover:bg-blue-100 transition flex flex-col items-center justify-center min-w-[90px]">
+                <i class="fas fa-plus text-lg"></i>
+                <span class="text-xs font-semibold mt-0.5">New</span>
+            </button>`;
     }
 
     function archiveWeek(weekData) {
@@ -3382,6 +4211,78 @@
         updateStreak();
         renderBadges();
         renderRecentTransactions();
+        renderQuickAddRow();
+        renderEngagementStrip();
+        renderBillAlert();
+    }
+
+    // ── Home screen engagement widgets ────────────────────────────
+    function renderEngagementStrip() {
+        const strip = document.getElementById('engagement-strip');
+        if (!strip) return;
+        // Always show the strip (daily streak is always visible)
+        strip.classList.remove('hidden');
+
+        // Daily streak
+        checkDailyStreakContinuity();
+        const count = dailyStreak.count || 0;
+        setText('daily-streak-count', count);
+        const today = new Date().toISOString().split('T')[0];
+        const loggedToday = dailyStreak.lastDate === today;
+        const lbl = document.getElementById('daily-streak-label');
+        if (lbl) {
+            if (count === 0)              lbl.textContent = 'Log today to start';
+            else if (loggedToday)         lbl.textContent = count === 1 ? 'day in a row' : 'days in a row';
+            else                          lbl.textContent = 'Log today to continue';
+        }
+
+        // Top goal
+        const top = getTopGoal();
+        const card = document.getElementById('top-goal-card');
+        if (top && card) {
+            card.classList.remove('hidden');
+            setText('top-goal-emoji', top.emoji);
+            setText('top-goal-name',  top.name);
+            setText('top-goal-progress', `${fmt(top.currentAmount)} / ${fmt(top.targetAmount)}`);
+            const pct = Math.min(100, (top.currentAmount / top.targetAmount) * 100);
+            const bar = document.getElementById('top-goal-bar');
+            if (bar) bar.style.width = `${pct}%`;
+        } else if (card) {
+            card.classList.add('hidden');
+        }
+    }
+
+    function renderBillAlert() {
+        const card = document.getElementById('bill-alert-card');
+        if (!card) return;
+        const upcoming = getUpcomingBills(7);
+        if (upcoming.length === 0) { card.classList.add('hidden'); return; }
+
+        const b = upcoming[0];
+        card.classList.remove('hidden');
+        card.dataset.billId = b.id;
+        setText('bill-alert-emoji', b.emoji);
+        setText('bill-alert-name',  `${b.name} · ${fmt(b.amount)}`);
+        const due = b.daysUntil === 0 ? 'Due today' :
+                    b.daysUntil < 0  ? `${-b.daysUntil} day${-b.daysUntil !== 1 ? 's' : ''} overdue` :
+                    `Due in ${b.daysUntil} day${b.daysUntil !== 1 ? 's' : ''}`;
+        setText('bill-alert-due', due);
+
+        // Update Settings summaries
+        const gs = document.getElementById('settings-goals-summary');
+        if (gs) {
+            const active = goals.filter(g => !g.completedAt).length;
+            gs.textContent = active === 0
+                ? 'Set targets and track progress'
+                : `${active} active goal${active !== 1 ? 's' : ''} · ${fmt(goals.reduce((s, g) => s + (g.currentAmount || 0), 0))} saved`;
+        }
+        const bs = document.getElementById('settings-bills-summary');
+        if (bs) {
+            const count = bills.filter(bl => bl.enabled).length;
+            bs.textContent = count === 0
+                ? 'Track subscriptions & get reminders'
+                : `${count} bill${count !== 1 ? 's' : ''} tracked · ${upcoming.length} due this week`;
+        }
     }
 
     function setText(id, value) {
@@ -3895,6 +4796,11 @@
         });
         appState.spent += amount;
         saveData();
+
+        // Engagement triggers
+        touchDailyStreak();
+        maybeSuggestFavorite(amount, category, note);
+
         updateUI();
 
         // If this is the very first expense this session, activate any pending referral
