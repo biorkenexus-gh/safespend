@@ -71,5 +71,46 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if false;
     }
+
+    // ─── Wallet Transactions ──────────────────────────────────────
+    // Three valid creation paths, each strictly shape-validated:
+    //   1. Deposit   — self credits own wallet from external MoMo
+    //   2. Withdraw  — self debits own wallet to external MoMo
+    //   3. Send      — self debits own wallet, credits another SafeSpend user
+    //
+    // Balance is COMPUTED on the client (sum of incoming − outgoing completed
+    // transactions), so no user can write a balance on anyone else's account.
+    // External MoMo counterparties use the sentinel id format "momo:*".
+    match /walletTransactions/{id} {
+      allow read: if request.auth != null
+                    && (resource.data.senderId    == request.auth.uid
+                        || resource.data.recipientId == request.auth.uid);
+
+      allow create: if request.auth != null
+                    && request.resource.data.amount is number
+                    && request.resource.data.amount > 0
+                    && request.resource.data.amount <= 10000
+                    && request.resource.data.status in ['pending', 'completed']
+                    && (
+                      // Deposit: recipient is self, sender is external MoMo
+                      (request.resource.data.type == 'deposit'
+                        && request.resource.data.recipientId == request.auth.uid
+                        && request.resource.data.senderId.matches('momo:.*'))
+                      ||
+                      // Withdraw: sender is self, recipient is external MoMo
+                      (request.resource.data.type == 'withdraw'
+                        && request.resource.data.senderId == request.auth.uid
+                        && request.resource.data.recipientId.matches('momo:.*'))
+                      ||
+                      // Send: sender is self, recipient is a different real user
+                      (request.resource.data.type == 'send'
+                        && request.resource.data.senderId == request.auth.uid
+                        && request.resource.data.recipientId != request.auth.uid
+                        && !request.resource.data.recipientId.matches('momo:.*'))
+                    );
+
+      // Transactions are an immutable audit trail — no client updates/deletes.
+      allow update, delete: if false;
+    }
   }
 }

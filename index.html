@@ -829,6 +829,283 @@
                 </div>
             </div>
 
+            <!-- ==================== WALLET SCREEN ==================== -->
+            <div id="wallet-screen" class="screen p-4 space-y-4">
+                <div class="flex items-center mb-2">
+                    <button onclick="showScreen('settings')" class="mr-4 text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-2xl font-display font-bold text-gray-800">Wallet</h2>
+                </div>
+
+                <!-- Auth/firestore gate -->
+                <div id="wallet-no-auth" class="hidden bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                    <p class="font-semibold mb-1">🔒 Sign in with Google to use the Wallet</p>
+                    <p class="text-xs leading-relaxed">The wallet needs Firebase Auth + Firestore (already set up). Guest mode can't sync balances across devices.</p>
+                </div>
+
+                <div id="wallet-ready" class="space-y-4 hidden">
+                    <!-- Balance hero card -->
+                    <div class="bg-gradient-to-br from-emerald-500 via-green-600 to-teal-600 rounded-3xl p-6 text-white shadow-xl">
+                        <div class="flex items-center gap-2 mb-1 opacity-90">
+                            <i class="fas fa-wallet"></i>
+                            <p class="text-xs font-semibold uppercase tracking-wide">Wallet Balance</p>
+                        </div>
+                        <p id="wallet-balance" class="font-display font-bold text-4xl mb-1">—</p>
+                        <p id="wallet-week-change" class="text-xs text-green-200">+— this week</p>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="grid grid-cols-3 gap-3">
+                        <button onclick="openDepositModal()"
+                                class="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-3 flex flex-col items-center gap-1 active:scale-95">
+                            <div class="w-10 h-10 bg-green-100 text-safe rounded-full flex items-center justify-center">
+                                <i class="fas fa-arrow-down"></i>
+                            </div>
+                            <span class="text-xs font-semibold text-gray-700">Add Money</span>
+                        </button>
+                        <button onclick="openSendModal()"
+                                class="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-3 flex flex-col items-center gap-1 active:scale-95">
+                            <div class="w-10 h-10 bg-blue-100 text-primary rounded-full flex items-center justify-center">
+                                <i class="fas fa-paper-plane"></i>
+                            </div>
+                            <span class="text-xs font-semibold text-gray-700">Send</span>
+                        </button>
+                        <button onclick="openWalletWithdrawModal()"
+                                class="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-3 flex flex-col items-center gap-1 active:scale-95">
+                            <div class="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center">
+                                <i class="fas fa-arrow-up"></i>
+                            </div>
+                            <span class="text-xs font-semibold text-gray-700">Withdraw</span>
+                        </button>
+                    </div>
+
+                    <!-- Transactions -->
+                    <div class="bg-white rounded-2xl shadow-sm">
+                        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                            <h3 class="font-display font-semibold text-gray-800 text-sm">Recent Activity</h3>
+                            <div class="flex gap-1">
+                                <button data-wallet-filter="all" onclick="setWalletFilter('all')" class="px-3 py-1 rounded-full text-xs font-semibold bg-primary text-white">All</button>
+                                <button data-wallet-filter="in"  onclick="setWalletFilter('in')"  class="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">In</button>
+                                <button data-wallet-filter="out" onclick="setWalletFilter('out')" class="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">Out</button>
+                            </div>
+                        </div>
+                        <div id="wallet-tx-list" class="divide-y divide-gray-100">
+                            <div class="p-8 text-center text-gray-400">
+                                <i class="fas fa-wallet text-3xl mb-2 empty-pulse"></i>
+                                <p class="text-sm">No transactions yet</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mock notice -->
+                    <p class="text-xs text-center text-gray-400 mt-3">
+                        <i class="fas fa-flask"></i> Currently in simulated mode. Real MoMo integration plugs into <code class="bg-gray-100 px-1 rounded">processMomoTransaction()</code>.
+                    </p>
+                </div>
+            </div>
+
+            <!-- ==================== DEPOSIT MODAL ==================== -->
+            <div id="deposit-modal" class="fixed inset-0 bg-black/60 z-[180] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl slide-up">
+                    <div class="text-center mb-5">
+                        <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-arrow-down text-2xl text-safe"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-gray-800">Add Money</h3>
+                        <p class="text-sm text-gray-500 mt-1">Fund your wallet from Mobile Money</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Network</label>
+                            <select id="deposit-network" class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                                <option value="mtn">MTN MoMo</option>
+                                <option value="vodafone">Vodafone Cash</option>
+                                <option value="airteltigo">AirtelTigo Money</option>
+                                <option value="mpesa">M-PESA</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Mobile Money Number</label>
+                            <input type="tel" id="deposit-phone"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                                   placeholder="e.g. +233 XX XXX XXXX">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Amount</label>
+                            <input type="number" id="deposit-amount" min="1" step="0.01"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                                   placeholder="0.00">
+                        </div>
+                        <p id="deposit-error" class="hidden text-xs text-danger"></p>
+                    </div>
+
+                    <button onclick="submitDeposit()"
+                            class="w-full mt-5 bg-safe text-white font-semibold py-3 rounded-xl hover:bg-green-600 transition">
+                        Pay with MoMo
+                    </button>
+                    <button onclick="closeDepositModal()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== SEND MODAL ==================== -->
+            <div id="send-modal" class="fixed inset-0 bg-black/60 z-[180] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl slide-up">
+                    <div class="text-center mb-5">
+                        <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-paper-plane text-2xl text-primary"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-gray-800">Send Money</h3>
+                        <p class="text-sm text-gray-500 mt-1">Available: <span id="send-available" class="font-semibold text-gray-800">—</span></p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Recipient</label>
+                            <input type="text" id="send-recipient-input"
+                                   oninput="lookupSendRecipient()"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                                   placeholder="Email or mobile number">
+                            <p class="text-[11px] text-gray-400 mt-1">Email → SafeSpend user · Number → external MoMo</p>
+                        </div>
+                        <div id="send-recipient-preview" class="hidden"></div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Amount</label>
+                            <input type="number" id="send-amount" min="1" step="0.01"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                                   placeholder="0.00">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Note (Optional)</label>
+                            <input type="text" id="send-note" maxlength="100"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                                   placeholder="What's this for?">
+                        </div>
+                        <p id="send-error" class="hidden text-xs text-danger"></p>
+                    </div>
+
+                    <button id="send-submit" onclick="submitSend()" disabled
+                            class="w-full mt-5 bg-primary text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        Continue
+                    </button>
+                    <button onclick="closeSendModal()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== WALLET WITHDRAW MODAL ==================== -->
+            <div id="wwithdraw-modal" class="fixed inset-0 bg-black/60 z-[180] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl slide-up">
+                    <div class="text-center mb-5">
+                        <div class="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-arrow-up text-2xl text-orange-600"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-gray-800">Withdraw to MoMo</h3>
+                        <p class="text-sm text-gray-500 mt-1">Available: <span id="wwithdraw-available" class="font-semibold text-gray-800">—</span></p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Network</label>
+                            <select id="wwithdraw-network" class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                                <option value="mtn">MTN MoMo</option>
+                                <option value="vodafone">Vodafone Cash</option>
+                                <option value="airteltigo">AirtelTigo Money</option>
+                                <option value="mpesa">M-PESA</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Phone Number</label>
+                            <input type="tel" id="wwithdraw-phone"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                                   placeholder="e.g. +233 XX XXX XXXX">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Amount</label>
+                            <input type="number" id="wwithdraw-amount" min="1" step="0.01"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                                   placeholder="0.00">
+                        </div>
+                        <p id="wwithdraw-error" class="hidden text-xs text-danger"></p>
+                    </div>
+
+                    <button onclick="submitWalletWithdraw()"
+                            class="w-full mt-5 bg-orange-600 text-white font-semibold py-3 rounded-xl hover:bg-orange-700 transition">
+                        Continue
+                    </button>
+                    <button onclick="closeWalletWithdrawModal()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== PIN SETUP MODAL ==================== -->
+            <div id="pin-setup-modal" class="fixed inset-0 bg-black/60 z-[190] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-xs w-full shadow-2xl slide-up text-center">
+                    <div id="pin-setup-step1">
+                        <div class="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-lock text-2xl text-primary"></i>
+                        </div>
+                        <h3 class="text-lg font-display font-bold text-gray-800">Set Wallet PIN</h3>
+                        <p class="text-xs text-gray-500 mt-1 mb-4">A 4-digit PIN secures your wallet transactions.</p>
+                        <input type="password" id="pin-setup-input" inputmode="numeric" maxlength="4" pattern="[0-9]*"
+                               class="w-32 mx-auto text-center text-3xl tracking-[0.5em] font-bold p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                        <p id="pin-setup-error" class="text-xs text-danger mt-2 h-4"></p>
+                        <button onclick="proceedPinSetup()"
+                                class="w-full mt-4 bg-primary text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition">
+                            Continue
+                        </button>
+                    </div>
+                    <div id="pin-setup-step2" class="hidden">
+                        <div class="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-lock text-2xl text-primary"></i>
+                        </div>
+                        <h3 class="text-lg font-display font-bold text-gray-800">Confirm PIN</h3>
+                        <p class="text-xs text-gray-500 mt-1 mb-4">Re-enter your 4-digit PIN</p>
+                        <input type="password" id="pin-setup-confirm" inputmode="numeric" maxlength="4" pattern="[0-9]*"
+                               class="w-32 mx-auto text-center text-3xl tracking-[0.5em] font-bold p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                        <button onclick="confirmPinSetup()"
+                                class="w-full mt-4 bg-primary text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition">
+                            Save PIN
+                        </button>
+                    </div>
+                    <button onclick="closePinGate()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== PIN VERIFY MODAL ==================== -->
+            <div id="pin-verify-modal" class="fixed inset-0 bg-black/60 z-[190] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-xs w-full shadow-2xl slide-up text-center">
+                    <div class="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-shield-halved text-2xl text-primary"></i>
+                    </div>
+                    <h3 class="text-lg font-display font-bold text-gray-800">Enter Wallet PIN</h3>
+                    <p class="text-xs text-gray-500 mt-1 mb-4">Confirm this transaction</p>
+                    <input type="password" id="pin-verify-input" inputmode="numeric" maxlength="4" pattern="[0-9]*"
+                           onkeydown="if(event.key==='Enter')confirmPinVerify()"
+                           class="w-32 mx-auto text-center text-3xl tracking-[0.5em] font-bold p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                    <p id="pin-verify-error" class="text-xs text-danger mt-2 h-4"></p>
+                    <button onclick="confirmPinVerify()"
+                            class="w-full mt-4 bg-primary text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition">
+                        Confirm
+                    </button>
+                    <button onclick="closePinGate()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
             <!-- ==================== PAYMENT / FUND BUDGET ==================== -->
             <div id="payment-screen" class="screen p-4">
                 <div class="flex items-center mb-6">
@@ -1238,6 +1515,21 @@
                                 <p class="text-xs text-gray-500 mt-0.5" id="settings-email-display">Tap to edit profile</p>
                             </div>
                             <i class="fas fa-chevron-right text-gray-400 shrink-0"></i>
+                        </div>
+                    </div>
+
+                    <!-- Wallet card — MoMo-branded gradient -->
+                    <div class="bg-gradient-to-br from-emerald-500 via-green-600 to-teal-600 rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-lg transition text-white lift-on-hover"
+                         onclick="showWalletScreen()">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+                                <i class="fas fa-wallet text-yellow-200 text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-base">Mobile Money Wallet</h3>
+                                <p class="text-xs opacity-90">Save, send, and withdraw</p>
+                            </div>
+                            <i class="fas fa-chevron-right opacity-75 shrink-0"></i>
                         </div>
                     </div>
 
@@ -2187,6 +2479,575 @@
             console.warn('[Withdraw] Failed:', err);
             showErr('Submission failed. Check your connection and retry.');
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  MOBILE MONEY WALLET
+    //
+    //  Model: balance is COMPUTED from /walletTransactions (same safe
+    //  pattern as referral earnings — zero cross-user write paths).
+    //  Types: 'deposit' (from MoMo), 'send' (to another user), 'withdraw' (to MoMo).
+    //  External MoMo parties use the sentinel id format "momo:NETWORK".
+    // ═══════════════════════════════════════════════════════════════
+
+    const WALLET = {
+        MIN_TX:       1,
+        MAX_TX:       10000,
+        PENDING_PIN_KEY: 'safespend_pending_pin_action'
+    };
+    let walletState = {
+        balance:      0,
+        transactions: [],
+        filter:       'all'    // all | in | out
+    };
+    // State for PIN modal — { type: 'deposit'|'send'|'withdraw', payload: {...} }
+    let pendingPinAction = null;
+
+    // ── Mock Mobile Money integration ───────────────────────────────
+    // SWAP POINT: replace this body with a call to your real MoMo provider
+    // (MTN MoMo, Flutterwave, Paystack, etc.) via a Cloud Function. The rest
+    // of the code only needs { success, ref? , error? } back.
+    async function processMomoTransaction({ network, phone, amount, type }) {
+        await new Promise(r => setTimeout(r, 2000));
+        if (Math.random() < 0.08) {
+            return { success: false, error: 'MoMo provider declined the transaction' };
+        }
+        return {
+            success: true,
+            ref: `MOCK-${(network || 'NET').toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+        };
+    }
+
+    // ── PIN crypto (SHA-256 + random salt, stored on user doc) ──────
+    async function hashPin(pin, salt) {
+        const enc = new TextEncoder().encode(pin + ':' + salt);
+        const hash = await crypto.subtle.digest('SHA-256', enc);
+        return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    async function isWalletPinSet() {
+        if (!firestoreReady) return false;
+        const user = firebase.auth().currentUser;
+        if (!user) return false;
+        const snap = await db.collection('users').doc(user.uid).get();
+        return !!(snap.data() && snap.data().walletPinHash);
+    }
+    async function setWalletPin(pin) {
+        const user = firebase.auth().currentUser;
+        const salt = crypto.randomUUID();
+        const hash = await hashPin(pin, salt);
+        await db.collection('users').doc(user.uid).update({
+            walletPinHash: hash,
+            walletPinSalt: salt
+        });
+    }
+    async function verifyWalletPin(pin) {
+        const user = firebase.auth().currentUser;
+        const snap = await db.collection('users').doc(user.uid).get();
+        const d = snap.data() || {};
+        if (!d.walletPinHash || !d.walletPinSalt) return false;
+        const check = await hashPin(pin, d.walletPinSalt);
+        return check === d.walletPinHash;
+    }
+
+    // ── Balance + history ───────────────────────────────────────────
+    async function loadWallet() {
+        if (!firestoreReady) { walletState = { balance: 0, transactions: [], filter: walletState.filter }; return; }
+        const user = firebase.auth().currentUser;
+        if (!user) return;
+        try {
+            const q = await db.collection('walletTransactions')
+                .where('status', '==', 'completed')
+                .get();
+            // Client-side filter + sort (avoids composite index requirement)
+            const txs = q.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(t => t.senderId === user.uid || t.recipientId === user.uid)
+                .sort((a, b) => {
+                    const ta = a.completedAt?.toMillis?.() || a.createdAt?.toMillis?.() || 0;
+                    const tb = b.completedAt?.toMillis?.() || b.createdAt?.toMillis?.() || 0;
+                    return tb - ta;
+                });
+            walletState.transactions = txs;
+            walletState.balance = txs.reduce((bal, t) => {
+                if (t.recipientId === user.uid) return bal + (t.amount || 0);
+                if (t.senderId    === user.uid) return bal - (t.amount || 0);
+                return bal;
+            }, 0);
+        } catch (err) {
+            console.warn('[Wallet] Load failed:', err);
+        }
+    }
+
+    // ── Screen entry point ──────────────────────────────────────────
+    async function showWalletScreen() {
+        // Guest users excluded (can't Firestore-sync)
+        if (profile.isGuest || !firebase.auth().currentUser) {
+            document.getElementById('wallet-no-auth')?.classList.remove('hidden');
+            document.getElementById('wallet-ready')?.classList.add('hidden');
+            showScreen('wallet');
+            return;
+        }
+        if (!firestoreReady) {
+            document.getElementById('wallet-no-auth')?.classList.remove('hidden');
+            document.getElementById('wallet-ready')?.classList.add('hidden');
+            showScreen('wallet');
+            return;
+        }
+        document.getElementById('wallet-no-auth')?.classList.add('hidden');
+        document.getElementById('wallet-ready')?.classList.remove('hidden');
+        showScreen('wallet');
+        await loadWallet();
+        renderWallet();
+    }
+
+    function renderWallet() {
+        setText('wallet-balance', fmt(walletState.balance));
+
+        // This week's net change
+        const weekAgo = Date.now() - 7 * 86400000;
+        const weekNet = walletState.transactions
+            .filter(t => (t.completedAt?.toMillis?.() || t.createdAt?.toMillis?.() || 0) >= weekAgo)
+            .reduce((sum, t) => {
+                const user = firebase.auth().currentUser;
+                if (t.recipientId === user.uid) return sum + (t.amount || 0);
+                if (t.senderId    === user.uid) return sum - (t.amount || 0);
+                return sum;
+            }, 0);
+        const weekLbl = document.getElementById('wallet-week-change');
+        if (weekLbl) {
+            weekLbl.textContent = weekNet >= 0 ? `+${fmt(weekNet)} this week` : `${fmt(weekNet)} this week`;
+            weekLbl.className = weekNet >= 0 ? 'text-xs text-green-200 mt-1' : 'text-xs text-red-200 mt-1';
+        }
+
+        // Filter tabs
+        document.querySelectorAll('[data-wallet-filter]').forEach(btn => {
+            const f = btn.dataset.walletFilter;
+            btn.className = f === walletState.filter
+                ? 'px-3 py-1 rounded-full text-xs font-semibold bg-primary text-white'
+                : 'px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 hover:bg-gray-200';
+        });
+
+        const user = firebase.auth().currentUser;
+        const filtered = walletState.transactions.filter(t => {
+            if (walletState.filter === 'all') return true;
+            const isIn = t.recipientId === user.uid;
+            return walletState.filter === 'in' ? isIn : !isIn;
+        });
+
+        const list = document.getElementById('wallet-tx-list');
+        if (!list) return;
+        if (filtered.length === 0) {
+            list.innerHTML = `
+                <div class="p-8 text-center text-gray-400">
+                    <i class="fas fa-wallet text-3xl mb-2 empty-pulse"></i>
+                    <p class="text-sm">No transactions yet</p>
+                    <p class="text-xs mt-1">Tap Add Money to fund your wallet</p>
+                </div>`;
+            return;
+        }
+        list.innerHTML = filtered.slice(0, 15).map(t => renderWalletTxRow(t, user.uid)).join('');
+    }
+
+    function renderWalletTxRow(t, myUid) {
+        const inbound = t.recipientId === myUid;
+        let icon, iconBg, label, counter;
+        if (t.type === 'deposit') {
+            icon = 'arrow-down'; iconBg = 'bg-green-100 text-safe';
+            label = 'Deposit from MoMo';
+            counter = `${(NETWORKS[t.network]?.label || t.network || 'MoMo')} · ${t.phone || ''}`;
+        } else if (t.type === 'withdraw') {
+            icon = 'arrow-up'; iconBg = 'bg-orange-100 text-orange-600';
+            label = 'Withdraw to MoMo';
+            counter = `${(NETWORKS[t.network]?.label || t.network || 'MoMo')} · ${t.phone || ''}`;
+        } else {
+            // send
+            icon = inbound ? 'arrow-down-long' : 'arrow-up-long';
+            iconBg = inbound ? 'bg-blue-100 text-primary' : 'bg-purple-100 text-purple-600';
+            label = inbound ? `From ${t.senderName || 'SafeSpend user'}` : `To ${t.recipientName || 'SafeSpend user'}`;
+            counter = t.note || (inbound ? 'Received' : 'Sent');
+        }
+        const when = t.completedAt?.toDate?.() ? timeAgo(t.completedAt.toDate())
+                   : t.createdAt?.toDate?.() ? timeAgo(t.createdAt.toDate()) : 'just now';
+        const signedAmt = inbound ? `+${fmt(t.amount)}` : `-${fmt(t.amount)}`;
+        const amtColor  = inbound ? 'text-safe' : 'text-gray-800';
+        return `
+            <div class="flex items-center gap-3 p-3 hover:bg-gray-50 transition">
+                <div class="w-10 h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0">
+                    <i class="fas fa-${icon} text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-800 truncate">${label}</p>
+                    <p class="text-[11px] text-gray-500 truncate">${counter} · ${when}</p>
+                </div>
+                <p class="font-bold text-sm shrink-0 ml-2 ${amtColor}">${signedAmt}</p>
+            </div>`;
+    }
+
+    function setWalletFilter(f) { walletState.filter = f; renderWallet(); }
+
+    // ── Deposit ─────────────────────────────────────────────────────
+    function openDepositModal() {
+        document.getElementById('deposit-network').value = 'mtn';
+        document.getElementById('deposit-phone').value   = '';
+        document.getElementById('deposit-amount').value  = '';
+        const err = document.getElementById('deposit-error');
+        err.textContent = ''; err.classList.add('hidden');
+        document.getElementById('deposit-modal').classList.remove('hidden');
+    }
+    function closeDepositModal() { document.getElementById('deposit-modal').classList.add('hidden'); }
+
+    async function submitDeposit() {
+        const err = document.getElementById('deposit-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+        const network = document.getElementById('deposit-network').value;
+        const phone   = document.getElementById('deposit-phone').value.trim();
+        const amount  = parseFloat(document.getElementById('deposit-amount').value);
+        if (!phone || phone.replace(/\D/g, '').length < 8) return showErr('Enter a valid phone number');
+        if (!amount || amount < WALLET.MIN_TX)             return showErr(`Minimum deposit is ${fmt(WALLET.MIN_TX)}`);
+        if (amount > WALLET.MAX_TX)                        return showErr(`Maximum deposit is ${fmt(WALLET.MAX_TX)}`);
+
+        closeDepositModal();
+        const procEl = document.getElementById('processing-overlay');
+        const msgEl  = document.getElementById('processing-msg');
+        procEl.classList.remove('hidden');
+        if (msgEl) msgEl.textContent = 'Calling Mobile Money provider…';
+
+        const result = await processMomoTransaction({ network, phone, amount, type: 'deposit' });
+        procEl.classList.add('hidden');
+        if (!result.success) {
+            showPayToast(`❌ Deposit failed: ${result.error || 'Provider error'}`);
+            return;
+        }
+
+        try {
+            const user = firebase.auth().currentUser;
+            await db.collection('walletTransactions').add({
+                type:          'deposit',
+                amount,
+                currency:      profile.currency || 'USD',
+                senderId:      `momo:${network}`,
+                recipientId:   user.uid,
+                senderName:    NETWORKS[network]?.label || network,
+                recipientName: user.displayName || profile.name || 'You',
+                phone,
+                network,
+                note:          '',
+                status:        'completed',
+                mockRef:       result.ref,
+                createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
+                completedAt:   firebase.firestore.FieldValue.serverTimestamp()
+            });
+            showPayToast(`✅ ${fmt(amount)} added to your wallet`);
+            await loadWallet(); renderWallet();
+        } catch (e) {
+            console.warn('[Wallet] Deposit write failed:', e);
+            showPayToast('Saved in MoMo but sync failed. Pull to refresh.');
+        }
+    }
+
+    // ── Send money ──────────────────────────────────────────────────
+    let sendState = { recipientType: null, recipient: null };
+
+    function openSendModal() {
+        sendState = { recipientType: null, recipient: null };
+        document.getElementById('send-recipient-input').value = '';
+        document.getElementById('send-amount').value = '';
+        document.getElementById('send-note').value = '';
+        document.getElementById('send-recipient-preview').classList.add('hidden');
+        document.getElementById('send-submit').disabled = true;
+        setText('send-available', fmt(walletState.balance));
+        const err = document.getElementById('send-error');
+        err.textContent = ''; err.classList.add('hidden');
+        document.getElementById('send-modal').classList.remove('hidden');
+    }
+    function closeSendModal() { document.getElementById('send-modal').classList.add('hidden'); }
+
+    async function lookupSendRecipient() {
+        const raw = document.getElementById('send-recipient-input').value.trim();
+        const preview = document.getElementById('send-recipient-preview');
+        const submitBtn = document.getElementById('send-submit');
+        preview.classList.add('hidden');
+        submitBtn.disabled = true;
+        sendState.recipient = null;
+
+        if (!raw) return;
+
+        // Email path: look up SafeSpend user
+        if (raw.includes('@')) {
+            const q = await db.collection('users').where('email', '==', raw.toLowerCase()).limit(1).get();
+            if (q.empty) {
+                preview.innerHTML = `<p class="text-xs text-danger">No SafeSpend user found with this email</p>`;
+                preview.classList.remove('hidden');
+                return;
+            }
+            const u = q.docs[0].data();
+            if (u.uid === firebase.auth().currentUser.uid) {
+                preview.innerHTML = `<p class="text-xs text-danger">You can't send to yourself</p>`;
+                preview.classList.remove('hidden');
+                return;
+            }
+            sendState.recipientType = 'user';
+            sendState.recipient = u;
+            const initial = (u.displayName || u.email || 'U')[0].toUpperCase();
+            const avatar = u.photoURL
+                ? `<img src="${u.photoURL}" class="w-10 h-10 rounded-full object-cover">`
+                : `<div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">${initial}</div>`;
+            preview.innerHTML = `
+                <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
+                    ${avatar}
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-800 truncate">${u.displayName || 'SafeSpend User'}</p>
+                        <p class="text-[11px] text-gray-500 truncate">${u.email}</p>
+                    </div>
+                    <span class="text-[10px] bg-blue-100 text-primary px-2 py-1 rounded-full font-semibold">SafeSpend</span>
+                </div>`;
+            preview.classList.remove('hidden');
+            submitBtn.disabled = false;
+            return;
+        }
+
+        // Phone path: treat as external MoMo recipient
+        if (raw.replace(/\D/g, '').length >= 8) {
+            sendState.recipientType = 'external';
+            sendState.recipient = { phone: raw };
+            preview.innerHTML = `
+                <div class="flex items-center gap-3 p-3 bg-amber-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-amber-200 text-amber-700 flex items-center justify-center">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-800 truncate">External MoMo Number</p>
+                        <p class="text-[11px] text-gray-500 truncate">${raw}</p>
+                    </div>
+                    <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-semibold">External</span>
+                </div>`;
+            preview.classList.remove('hidden');
+            submitBtn.disabled = false;
+            return;
+        }
+
+        preview.innerHTML = `<p class="text-xs text-gray-400">Enter a SafeSpend email or a mobile number</p>`;
+        preview.classList.remove('hidden');
+    }
+
+    async function submitSend() {
+        const err = document.getElementById('send-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+        err.textContent = ''; err.classList.add('hidden');
+
+        if (!sendState.recipient) return showErr('Select a recipient');
+        const amount = parseFloat(document.getElementById('send-amount').value);
+        const note   = document.getElementById('send-note').value.trim().slice(0, 100);
+        if (!amount || amount < WALLET.MIN_TX) return showErr(`Minimum is ${fmt(WALLET.MIN_TX)}`);
+        if (amount > walletState.balance)       return showErr(`You only have ${fmt(walletState.balance)}`);
+        if (amount > WALLET.MAX_TX)             return showErr(`Maximum is ${fmt(WALLET.MAX_TX)}`);
+
+        // Route through PIN gate
+        pendingPinAction = { type: 'send', payload: { amount, note } };
+        closeSendModal();
+        await openPinGate();
+    }
+
+    async function executeSend({ amount, note }) {
+        const user = firebase.auth().currentUser;
+        const procEl = document.getElementById('processing-overlay');
+        const msgEl  = document.getElementById('processing-msg');
+        procEl.classList.remove('hidden');
+        if (msgEl) msgEl.textContent = 'Transferring…';
+
+        try {
+            if (sendState.recipientType === 'user') {
+                // SafeSpend-to-SafeSpend: single transaction doc visible to both
+                const r = sendState.recipient;
+                await db.collection('walletTransactions').add({
+                    type:          'send',
+                    amount,
+                    currency:      profile.currency || 'USD',
+                    senderId:      user.uid,
+                    recipientId:   r.uid,
+                    senderName:    user.displayName || profile.name || 'You',
+                    recipientName: r.displayName || r.email || 'User',
+                    phone:         null,
+                    network:       null,
+                    note,
+                    status:        'completed',
+                    mockRef:       `TRF-${Date.now().toString(36).toUpperCase()}`,
+                    createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
+                    completedAt:   firebase.firestore.FieldValue.serverTimestamp()
+                });
+                procEl.classList.add('hidden');
+                showPayToast(`✅ ${fmt(amount)} sent to ${r.displayName || r.email}`);
+            } else {
+                // External MoMo recipient — goes through provider
+                const phone = sendState.recipient.phone;
+                const result = await processMomoTransaction({ network: 'mtn', phone, amount, type: 'send' });
+                if (!result.success) {
+                    procEl.classList.add('hidden');
+                    showPayToast(`❌ Transfer failed: ${result.error || 'Provider error'}`);
+                    return;
+                }
+                await db.collection('walletTransactions').add({
+                    type:          'withdraw',  // schema-wise, external send = withdraw from wallet
+                    amount,
+                    currency:      profile.currency || 'USD',
+                    senderId:      user.uid,
+                    recipientId:   `momo:external`,
+                    senderName:    user.displayName || profile.name || 'You',
+                    recipientName: phone,
+                    phone,
+                    network:       'mtn',
+                    note:          note || 'Sent to external MoMo',
+                    status:        'completed',
+                    mockRef:       result.ref,
+                    createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
+                    completedAt:   firebase.firestore.FieldValue.serverTimestamp()
+                });
+                procEl.classList.add('hidden');
+                showPayToast(`✅ ${fmt(amount)} sent to ${phone}`);
+            }
+            await loadWallet(); renderWallet();
+        } catch (e) {
+            procEl.classList.add('hidden');
+            console.warn('[Wallet] Send failed:', e);
+            showPayToast('Transfer failed. Check your connection.');
+        }
+    }
+
+    // ── Withdraw ────────────────────────────────────────────────────
+    function openWalletWithdrawModal() {
+        document.getElementById('wwithdraw-network').value = 'mtn';
+        document.getElementById('wwithdraw-phone').value   = '';
+        document.getElementById('wwithdraw-amount').value  = '';
+        setText('wwithdraw-available', fmt(walletState.balance));
+        const err = document.getElementById('wwithdraw-error');
+        err.textContent = ''; err.classList.add('hidden');
+        document.getElementById('wwithdraw-modal').classList.remove('hidden');
+    }
+    function closeWalletWithdrawModal() { document.getElementById('wwithdraw-modal').classList.add('hidden'); }
+
+    async function submitWalletWithdraw() {
+        const err = document.getElementById('wwithdraw-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+        const network = document.getElementById('wwithdraw-network').value;
+        const phone   = document.getElementById('wwithdraw-phone').value.trim();
+        const amount  = parseFloat(document.getElementById('wwithdraw-amount').value);
+        if (!phone || phone.replace(/\D/g, '').length < 8) return showErr('Enter a valid phone number');
+        if (!amount || amount < WALLET.MIN_TX)             return showErr(`Minimum withdrawal is ${fmt(WALLET.MIN_TX)}`);
+        if (amount > walletState.balance)                   return showErr(`You only have ${fmt(walletState.balance)}`);
+
+        pendingPinAction = { type: 'withdraw', payload: { network, phone, amount } };
+        closeWalletWithdrawModal();
+        await openPinGate();
+    }
+
+    async function executeWalletWithdraw({ network, phone, amount }) {
+        const procEl = document.getElementById('processing-overlay');
+        const msgEl  = document.getElementById('processing-msg');
+        procEl.classList.remove('hidden');
+        if (msgEl) msgEl.textContent = 'Sending to Mobile Money…';
+
+        const result = await processMomoTransaction({ network, phone, amount, type: 'withdraw' });
+        if (!result.success) {
+            procEl.classList.add('hidden');
+            showPayToast(`❌ Withdrawal failed: ${result.error || 'Provider error'}`);
+            return;
+        }
+        try {
+            const user = firebase.auth().currentUser;
+            await db.collection('walletTransactions').add({
+                type:          'withdraw',
+                amount,
+                currency:      profile.currency || 'USD',
+                senderId:      user.uid,
+                recipientId:   `momo:${network}`,
+                senderName:    user.displayName || profile.name || 'You',
+                recipientName: NETWORKS[network]?.label || network,
+                phone,
+                network,
+                note:          '',
+                status:        'completed',
+                mockRef:       result.ref,
+                createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
+                completedAt:   firebase.firestore.FieldValue.serverTimestamp()
+            });
+            procEl.classList.add('hidden');
+            showPayToast(`✅ ${fmt(amount)} sent to ${phone}`);
+            await loadWallet(); renderWallet();
+        } catch (e) {
+            procEl.classList.add('hidden');
+            console.warn('[Wallet] Withdraw write failed:', e);
+            showPayToast('Withdrawn from MoMo but sync failed.');
+        }
+    }
+
+    // ── PIN gate (shared by send + withdraw) ────────────────────────
+    async function openPinGate() {
+        const isSet = await isWalletPinSet();
+        if (!isSet) {
+            // First time: setup flow
+            document.getElementById('pin-setup-modal').classList.remove('hidden');
+            document.querySelector('#pin-setup-step1').classList.remove('hidden');
+            document.querySelector('#pin-setup-step2').classList.add('hidden');
+            setText('pin-setup-error', '');
+            document.getElementById('pin-setup-input').value = '';
+            document.getElementById('pin-setup-confirm').value = '';
+            document.getElementById('pin-setup-input').focus();
+        } else {
+            // Normal verify
+            document.getElementById('pin-verify-modal').classList.remove('hidden');
+            document.getElementById('pin-verify-input').value = '';
+            setText('pin-verify-error', '');
+            document.getElementById('pin-verify-input').focus();
+        }
+    }
+    function closePinGate() {
+        document.getElementById('pin-setup-modal').classList.add('hidden');
+        document.getElementById('pin-verify-modal').classList.add('hidden');
+        pendingPinAction = null;
+    }
+
+    async function proceedPinSetup() {
+        const pin = document.getElementById('pin-setup-input').value.trim();
+        if (!/^\d{4}$/.test(pin)) { setText('pin-setup-error', 'PIN must be exactly 4 digits'); return; }
+        document.querySelector('#pin-setup-step1').classList.add('hidden');
+        document.querySelector('#pin-setup-step2').classList.remove('hidden');
+        document.getElementById('pin-setup-confirm').focus();
+    }
+    async function confirmPinSetup() {
+        const pin     = document.getElementById('pin-setup-input').value.trim();
+        const confirm = document.getElementById('pin-setup-confirm').value.trim();
+        if (pin !== confirm) { setText('pin-setup-error', 'PINs do not match'); return; }
+        try {
+            await setWalletPin(pin);
+            closePinGate();
+            showPayToast('🔒 Wallet PIN set');
+            // Now execute the pending action
+            await runPendingPinAction();
+        } catch (e) {
+            console.warn('[PIN] setup failed:', e);
+            setText('pin-setup-error', 'Could not save PIN. Try again.');
+        }
+    }
+    async function confirmPinVerify() {
+        const pin = document.getElementById('pin-verify-input').value.trim();
+        if (!/^\d{4}$/.test(pin)) { setText('pin-verify-error', 'PIN must be 4 digits'); return; }
+        const ok = await verifyWalletPin(pin);
+        if (!ok) {
+            setText('pin-verify-error', 'Incorrect PIN');
+            const el = document.getElementById('pin-verify-input');
+            el.value = ''; el.classList.add('shake');
+            setTimeout(() => el.classList.remove('shake'), 500);
+            return;
+        }
+        closePinGate();
+        await runPendingPinAction();
+    }
+    async function runPendingPinAction() {
+        const a = pendingPinAction;
+        pendingPinAction = null;
+        if (!a) return;
+        if (a.type === 'send')     return executeSend(a.payload);
+        if (a.type === 'withdraw') return executeWalletWithdraw(a.payload);
     }
 
     function showLoginError(msg) {
