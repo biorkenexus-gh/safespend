@@ -1017,8 +1017,15 @@
                         <div>
                             <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Amount</label>
                             <input type="number" id="send-amount" min="1" step="0.01"
+                                   oninput="updateSendFeePreview()"
                                    class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
                                    placeholder="0.00">
+                            <!-- Live fee preview — keeps pricing transparent before user confirms -->
+                            <div id="send-fee-preview" class="hidden mt-2 bg-gray-50 rounded-lg p-2.5 text-xs text-gray-600 space-y-0.5">
+                                <div class="flex justify-between"><span>Recipient gets</span><span id="send-fee-receive" class="font-semibold text-gray-800">—</span></div>
+                                <div class="flex justify-between"><span>SafeSpend fee (<span id="send-fee-rate">1%</span>)</span><span id="send-fee-amount" class="font-semibold text-warning">—</span></div>
+                                <div class="flex justify-between pt-1 border-t border-gray-200"><span class="font-semibold">You pay</span><span id="send-fee-total" class="font-bold text-gray-800">—</span></div>
+                            </div>
                         </div>
                         <div>
                             <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Note (Optional)</label>
@@ -1070,8 +1077,14 @@
                         <div>
                             <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Amount</label>
                             <input type="number" id="wwithdraw-amount" min="1" step="0.01"
+                                   oninput="updateWithdrawFeePreview()"
                                    class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
                                    placeholder="0.00">
+                            <div id="wwithdraw-fee-preview" class="hidden mt-2 bg-gray-50 rounded-lg p-2.5 text-xs text-gray-600 space-y-0.5">
+                                <div class="flex justify-between"><span>You receive at MoMo</span><span id="wwithdraw-fee-receive" class="font-semibold text-gray-800">—</span></div>
+                                <div class="flex justify-between"><span>SafeSpend fee (2%)</span><span id="wwithdraw-fee-amount" class="font-semibold text-warning">—</span></div>
+                                <div class="flex justify-between pt-1 border-t border-gray-200"><span class="font-semibold">Debited from wallet</span><span id="wwithdraw-fee-total" class="font-bold text-gray-800">—</span></div>
+                            </div>
                         </div>
                         <p id="wwithdraw-error" class="hidden text-xs text-danger"></p>
                     </div>
@@ -1143,6 +1156,167 @@
                     <button onclick="closePinGate()"
                             class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
                         Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== ADMIN DASHBOARD SCREEN ==================== -->
+            <div id="admin-screen" class="screen p-4 space-y-4">
+                <div class="flex items-center mb-2">
+                    <button onclick="showScreen('settings')" class="mr-4 text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-2xl font-display font-bold text-gray-800">Admin Dashboard</h2>
+                </div>
+
+                <!-- Unauthorized notice -->
+                <div id="admin-no-auth" class="hidden bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-danger">
+                    <p class="font-semibold mb-1">🚫 Access denied</p>
+                    <p class="text-xs">You must be listed in <code class="bg-red-100 px-1 rounded">ADMIN_UIDS</code> in <code>index.html</code>. Find your UID in Firebase Console → Authentication → Users.</p>
+                </div>
+
+                <div id="admin-ready" class="space-y-4 hidden">
+                    <!-- Hero: Net revenue -->
+                    <div class="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-6 text-white shadow-xl">
+                        <div class="flex items-center gap-2 mb-1 opacity-90">
+                            <i class="fas fa-sack-dollar"></i>
+                            <p class="text-xs font-semibold uppercase tracking-wide">Net Revenue (Owner Balance)</p>
+                        </div>
+                        <p id="admin-net-revenue" class="font-display font-bold text-4xl mb-1">—</p>
+                        <p class="text-xs opacity-90"><span id="admin-total-revenue">—</span> earned · <span id="admin-total-withdrawn">—</span> withdrawn</p>
+                        <button onclick="openOwnerWithdrawModal()"
+                                class="mt-3 w-full bg-white/20 hover:bg-white/30 backdrop-blur text-white rounded-xl py-2.5 text-sm font-semibold transition flex items-center justify-center gap-2">
+                            <i class="fas fa-money-bill-transfer"></i>
+                            Withdraw Earnings
+                        </button>
+                    </div>
+
+                    <!-- Breakdown by period -->
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="bg-white rounded-2xl p-3 shadow-sm text-center">
+                            <p class="text-xs text-gray-500">Today</p>
+                            <p class="font-display font-bold text-xl text-gray-800" id="admin-rev-today">—</p>
+                        </div>
+                        <div class="bg-white rounded-2xl p-3 shadow-sm text-center">
+                            <p class="text-xs text-gray-500">This Week</p>
+                            <p class="font-display font-bold text-xl text-gray-800" id="admin-rev-week">—</p>
+                        </div>
+                        <div class="bg-white rounded-2xl p-3 shadow-sm text-center">
+                            <p class="text-xs text-gray-500">This Month</p>
+                            <p class="font-display font-bold text-xl text-gray-800" id="admin-rev-month">—</p>
+                        </div>
+                    </div>
+
+                    <!-- Revenue by source -->
+                    <div class="bg-white rounded-2xl p-4 shadow-sm">
+                        <h3 class="font-display font-semibold text-gray-800 text-sm mb-3 flex items-center gap-2">
+                            <i class="fas fa-chart-pie text-primary"></i> Revenue by Source
+                        </h3>
+                        <div id="admin-source-breakdown" class="space-y-2">—</div>
+                    </div>
+
+                    <!-- 14-day chart -->
+                    <div class="bg-white rounded-2xl p-4 shadow-sm">
+                        <h3 class="font-display font-semibold text-gray-800 text-sm mb-3 flex items-center gap-2">
+                            <i class="fas fa-chart-line text-primary"></i> Last 14 Days
+                        </h3>
+                        <canvas id="admin-revenue-chart" height="140"></canvas>
+                    </div>
+
+                    <!-- Revenue log -->
+                    <div class="bg-white rounded-2xl shadow-sm">
+                        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                            <h3 class="font-display font-semibold text-gray-800 text-sm">Recent Revenue Events</h3>
+                            <button onclick="exportRevenueCSV()" class="text-xs text-primary hover:underline">Export CSV</button>
+                        </div>
+                        <div id="admin-revenue-log" class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                            <div class="p-6 text-center text-gray-400 text-sm">
+                                <i class="fas fa-file-invoice-dollar text-2xl mb-2"></i>
+                                <p>No revenue events yet</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pending owner withdrawals -->
+                    <div id="admin-withdrawals-card" class="bg-white rounded-2xl shadow-sm hidden">
+                        <div class="px-4 py-3 border-b border-gray-100">
+                            <h3 class="font-display font-semibold text-gray-800 text-sm">Your Withdrawal Requests</h3>
+                        </div>
+                        <div id="admin-withdrawals-list" class="divide-y divide-gray-100"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== OWNER WITHDRAW MODAL ==================== -->
+            <div id="owner-withdraw-modal" class="fixed inset-0 bg-black/60 z-[180] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl slide-up">
+                    <div class="text-center mb-5">
+                        <div class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-sack-dollar text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-gray-800">Withdraw Earnings</h3>
+                        <p class="text-sm text-gray-500 mt-1">Available: <span id="owner-withdraw-available" class="font-semibold text-gray-800">—</span></p>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Method</label>
+                            <select id="owner-withdraw-method" class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                                <option value="momo">Mobile Money</option>
+                                <option value="bank">Bank Transfer</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Account Details</label>
+                            <input type="text" id="owner-withdraw-account"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                                   placeholder="Phone or bank info">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Amount</label>
+                            <input type="number" id="owner-withdraw-amount" min="0.01" step="0.01"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                                   placeholder="0.00">
+                        </div>
+                        <p id="owner-withdraw-error" class="hidden text-xs text-danger"></p>
+                    </div>
+                    <button onclick="submitOwnerWithdraw()"
+                            class="w-full mt-5 bg-primary text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition">
+                        Submit Request
+                    </button>
+                    <button onclick="closeOwnerWithdrawModal()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== PREMIUM UPGRADE MODAL ==================== -->
+            <div id="premium-modal" class="fixed inset-0 bg-black/60 z-[180] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl slide-up">
+                    <div class="text-center mb-5">
+                        <div class="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
+                            <i class="fas fa-crown text-3xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-gray-800">SafeSpend Premium</h3>
+                        <p class="text-3xl font-display font-bold text-primary mt-2" id="premium-price">—</p>
+                        <p class="text-xs text-gray-500">One-time lifetime purchase · No subscriptions</p>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-700 mb-5">
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-safe"></i> ✨ Premium badge on your profile</li>
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-safe"></i> 🎯 Unlimited savings goals</li>
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-safe"></i> 📊 Advanced analytics &amp; insights</li>
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-safe"></i> 📄 Priority PDF export styling</li>
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-safe"></i> 💬 Priority support channel</li>
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-safe"></i> 🎨 Exclusive theme customization</li>
+                    </ul>
+                    <p id="premium-error" class="hidden text-xs text-danger mb-2"></p>
+                    <button onclick="purchasePremium()"
+                            class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold py-3 rounded-xl shadow-md hover:shadow-lg transition">
+                        <i class="fas fa-crown mr-1"></i> Upgrade Now
+                    </button>
+                    <button onclick="closePremiumModal()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Maybe later
                     </button>
                 </div>
             </div>
@@ -1772,6 +1946,48 @@
                                 <p class="text-xs text-gray-500 mt-0.5" id="settings-email-display">Tap to edit profile</p>
                             </div>
                             <i class="fas fa-chevron-right text-gray-400 shrink-0"></i>
+                        </div>
+                    </div>
+
+                    <!-- Premium upgrade card (hidden if already premium) -->
+                    <div id="settings-premium-card" class="bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-lg transition text-white lift-on-hover"
+                         onclick="openPremiumModal()">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+                                <i class="fas fa-crown text-white text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-base">Go Premium</h3>
+                                <p class="text-xs opacity-95">Unlock exclusive features · <span id="settings-premium-price">—</span></p>
+                            </div>
+                            <i class="fas fa-chevron-right opacity-75 shrink-0"></i>
+                        </div>
+                    </div>
+                    <!-- Premium active badge (shown instead when user is premium) -->
+                    <div id="settings-premium-active" class="hidden bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl p-4 shadow-sm text-white">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+                                <i class="fas fa-crown text-white text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-base">Premium Member ✓</h3>
+                                <p class="text-xs opacity-95">Thank you for your support</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Admin Dashboard (hidden unless user is admin) -->
+                    <div id="settings-admin-card" class="hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-lg transition text-white lift-on-hover"
+                         onclick="showAdminScreen()">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+                                <i class="fas fa-sack-dollar text-yellow-200 text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-base">Admin Dashboard</h3>
+                                <p class="text-xs opacity-95">Revenue · Analytics · Withdrawals</p>
+                            </div>
+                            <i class="fas fa-chevron-right opacity-75 shrink-0"></i>
                         </div>
                     </div>
 
@@ -2665,6 +2881,380 @@
             </button>`;
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    //  ADMIN DASHBOARD — revenue analytics + owner withdrawal
+    // ═══════════════════════════════════════════════════════════════
+
+    let revenueChartInstance = null;
+    let adminState = {
+        events:       [],
+        withdrawals:  [],
+        totalRevenue: 0,
+        withdrawn:    0,
+        net:          0
+    };
+
+    async function showAdminScreen() {
+        const notAuth = document.getElementById('admin-no-auth');
+        const ready   = document.getElementById('admin-ready');
+
+        if (!isCurrentUserAdmin()) {
+            notAuth?.classList.remove('hidden');
+            ready?.classList.add('hidden');
+            showScreen('admin');
+            return;
+        }
+        if (!firestoreReady) {
+            notAuth?.classList.remove('hidden');
+            ready?.classList.add('hidden');
+            showScreen('admin');
+            return;
+        }
+
+        notAuth?.classList.add('hidden');
+        ready?.classList.remove('hidden');
+        showScreen('admin');
+
+        await loadAdminData();
+        renderAdminDashboard();
+    }
+
+    async function loadAdminData() {
+        try {
+            // All revenue events
+            const revQ = await db.collection('revenueEvents').get();
+            adminState.events = revQ.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => {
+                    const ta = a.createdAt?.toMillis?.() || 0;
+                    const tb = b.createdAt?.toMillis?.() || 0;
+                    return tb - ta;
+                });
+            adminState.totalRevenue = adminState.events.reduce((s, e) => s + (e.amount || 0), 0);
+
+            // All owner withdrawals
+            const wQ = await db.collection('ownerWithdrawals').get();
+            adminState.withdrawals = wQ.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => {
+                    const ta = a.requestedAt?.toMillis?.() || 0;
+                    const tb = b.requestedAt?.toMillis?.() || 0;
+                    return tb - ta;
+                });
+            adminState.withdrawn = adminState.withdrawals
+                .filter(w => ['pending', 'approved', 'paid'].includes(w.status))
+                .reduce((s, w) => s + (w.amount || 0), 0);
+
+            adminState.net = Math.max(0, adminState.totalRevenue - adminState.withdrawn);
+        } catch (err) {
+            console.warn('[Admin] Load failed:', err);
+        }
+    }
+
+    function renderAdminDashboard() {
+        setText('admin-total-revenue', fmt(adminState.totalRevenue));
+        setText('admin-total-withdrawn', fmt(adminState.withdrawn));
+        setText('admin-net-revenue', fmt(adminState.net));
+
+        // Period buckets
+        const now   = new Date();
+        const today = new Date(now); today.setHours(0, 0, 0, 0);
+        const dow   = today.getDay();
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        let rToday = 0, rWeek = 0, rMonth = 0;
+        adminState.events.forEach(e => {
+            const t = e.createdAt?.toDate?.();
+            if (!t) return;
+            if (t >= today)      rToday += e.amount;
+            if (t >= weekStart)  rWeek  += e.amount;
+            if (t >= monthStart) rMonth += e.amount;
+        });
+        setText('admin-rev-today', fmt(rToday));
+        setText('admin-rev-week',  fmt(rWeek));
+        setText('admin-rev-month', fmt(rMonth));
+
+        // Source breakdown
+        const bySource = {};
+        adminState.events.forEach(e => {
+            bySource[e.type] = (bySource[e.type] || 0) + (e.amount || 0);
+        });
+        const labels = {
+            fee_send:     ['💸', 'Send fees',       'bg-blue-100 text-primary'],
+            fee_withdraw: ['🏦', 'Withdrawal fees', 'bg-orange-100 text-orange-600'],
+            fee_deposit:  ['⬇️', 'Deposit fees',    'bg-green-100 text-safe'],
+            subscription: ['👑', 'Premium',         'bg-yellow-100 text-yellow-700']
+        };
+        const sourceBox = document.getElementById('admin-source-breakdown');
+        if (sourceBox) {
+            const entries = Object.entries(bySource).sort((a, b) => b[1] - a[1]);
+            if (entries.length === 0) {
+                sourceBox.innerHTML = '<p class="text-sm text-gray-400 text-center py-3">No revenue yet</p>';
+            } else {
+                sourceBox.innerHTML = entries.map(([src, amt]) => {
+                    const [emoji, lbl, cls] = labels[src] || ['❓', src, 'bg-gray-100 text-gray-600'];
+                    const pct = Math.round((amt / adminState.totalRevenue) * 100);
+                    return `
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full ${cls} flex items-center justify-center shrink-0">${emoji}</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-800 font-semibold">${lbl}</span>
+                                <span class="text-gray-800 font-bold">${fmt(amt)}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden mt-0.5">
+                                <div class="h-full bg-primary rounded-full" style="width:${pct}%"></div>
+                            </div>
+                        </div>
+                        <span class="text-xs text-gray-500 shrink-0">${pct}%</span>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        // 14-day chart
+        renderRevenueChart();
+
+        // Recent events log
+        const log = document.getElementById('admin-revenue-log');
+        if (log) {
+            if (adminState.events.length === 0) {
+                log.innerHTML = `
+                    <div class="p-6 text-center text-gray-400 text-sm">
+                        <i class="fas fa-file-invoice-dollar text-2xl mb-2"></i>
+                        <p>No revenue events yet</p>
+                        <p class="text-xs mt-1">Revenue appears when users pay fees or purchase Premium</p>
+                    </div>`;
+            } else {
+                log.innerHTML = adminState.events.slice(0, 50).map(e => {
+                    const [emoji, lbl] = labels[e.type] || ['❓', e.type];
+                    const when = e.createdAt?.toDate?.() ? timeAgo(e.createdAt.toDate()) : '—';
+                    return `
+                    <div class="p-3 flex items-center gap-3">
+                        <div class="text-xl shrink-0">${emoji}</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-800 truncate">${lbl}</p>
+                            <p class="text-[11px] text-gray-500 truncate">${e.description || ''} · ${when}</p>
+                        </div>
+                        <p class="font-bold text-safe text-sm shrink-0">+${fmt(e.amount)}</p>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        // Withdrawals list
+        const wCard = document.getElementById('admin-withdrawals-card');
+        const wList = document.getElementById('admin-withdrawals-list');
+        if (adminState.withdrawals.length > 0 && wCard && wList) {
+            wCard.classList.remove('hidden');
+            wList.innerHTML = adminState.withdrawals.slice(0, 10).map(w => {
+                const when = w.requestedAt?.toDate?.() ? timeAgo(w.requestedAt.toDate()) : '—';
+                const statusColors = {
+                    pending:  'bg-amber-100 text-amber-700',
+                    approved: 'bg-blue-100 text-primary',
+                    paid:     'bg-green-100 text-safe',
+                    rejected: 'bg-red-100 text-danger'
+                };
+                return `
+                <div class="p-3 flex items-center gap-3">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-800">${fmt(w.amount)} via ${w.method === 'bank' ? 'Bank' : 'Mobile Money'}</p>
+                        <p class="text-[11px] text-gray-500 truncate">${w.accountDetails} · ${when}</p>
+                    </div>
+                    <span class="text-[10px] ${statusColors[w.status] || 'bg-gray-100 text-gray-500'} px-2 py-0.5 rounded-full font-semibold">${w.status}</span>
+                </div>`;
+            }).join('');
+        } else if (wCard) {
+            wCard.classList.add('hidden');
+        }
+    }
+
+    function renderRevenueChart() {
+        const canvas = document.getElementById('admin-revenue-chart');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        // Build 14-day buckets
+        const labels = [];
+        const data   = [];
+        const today  = new Date(); today.setHours(0, 0, 0, 0);
+        for (let i = 13; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(today.getDate() - i);
+            const next = new Date(d); next.setDate(d.getDate() + 1);
+            const total = adminState.events.reduce((s, e) => {
+                const t = e.createdAt?.toDate?.();
+                if (!t) return s;
+                if (t >= d && t < next) return s + (e.amount || 0);
+                return s;
+            }, 0);
+            labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            data.push(+total.toFixed(2));
+        }
+        if (revenueChartInstance) revenueChartInstance.destroy();
+        revenueChartInstance = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Revenue',
+                    data,
+                    borderColor: '#1E3A8A',
+                    backgroundColor: 'rgba(30,58,138,0.12)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#1E3A8A'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { font: { size: 10 } } },
+                    x: { ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 45 } }
+                }
+            }
+        });
+    }
+
+    // ── Revenue CSV export (admin) ─────────────────────────────────
+    function exportRevenueCSV() {
+        if (adminState.events.length === 0) { showPayToast('No revenue data to export'); return; }
+        const header = ['Date', 'Type', 'Amount', 'Currency', 'SourceUserId', 'Description'];
+        const rows = adminState.events.map(e => [
+            e.createdAt?.toDate?.().toISOString().split('T')[0] || '',
+            e.type,
+            (e.amount || 0).toFixed(2),
+            e.currency || 'USD',
+            e.sourceUserId || '',
+            csvEscape(e.description || '')
+        ]);
+        const csv = [header, ...rows].map(r => r.join(',')).join('\n');
+        downloadBlob(csv, `safespend-revenue-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv;charset=utf-8');
+        showPayToast('Revenue CSV downloaded');
+    }
+
+    // ── Owner Withdrawal ───────────────────────────────────────────
+    function openOwnerWithdrawModal() {
+        setText('owner-withdraw-available', fmt(adminState.net));
+        document.getElementById('owner-withdraw-method').value = 'momo';
+        document.getElementById('owner-withdraw-account').value = '';
+        document.getElementById('owner-withdraw-amount').value = '';
+        const err = document.getElementById('owner-withdraw-error');
+        err.textContent = ''; err.classList.add('hidden');
+        document.getElementById('owner-withdraw-modal').classList.remove('hidden');
+    }
+    function closeOwnerWithdrawModal() { document.getElementById('owner-withdraw-modal').classList.add('hidden'); }
+
+    async function submitOwnerWithdraw() {
+        const user = firebase.auth().currentUser;
+        if (!user || !isCurrentUserAdmin()) return;
+
+        const method  = document.getElementById('owner-withdraw-method').value;
+        const account = document.getElementById('owner-withdraw-account').value.trim();
+        const amount  = parseFloat(document.getElementById('owner-withdraw-amount').value);
+        const err     = document.getElementById('owner-withdraw-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+
+        if (!account || account.length < 6)   return showErr('Enter valid account details');
+        if (!amount || amount <= 0)            return showErr('Enter a valid amount');
+        if (amount > adminState.net)           return showErr(`Available is only ${fmt(adminState.net)}`);
+
+        try {
+            await db.collection('ownerWithdrawals').add({
+                adminUid:       user.uid,
+                amount:         amount,
+                currency:       profile.currency || 'USD',
+                method:         method,
+                accountDetails: account,
+                status:         'pending',
+                requestedAt:    firebase.firestore.FieldValue.serverTimestamp(),
+                processedAt:    null
+            });
+            closeOwnerWithdrawModal();
+            showPayToast(`✅ Withdrawal request for ${fmt(amount)} submitted`);
+            await loadAdminData();
+            renderAdminDashboard();
+        } catch (e) {
+            console.warn('[OwnerWithdraw] Failed:', e);
+            showErr('Submission failed. Check Firestore rules.');
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  PREMIUM SUBSCRIPTION
+    // ═══════════════════════════════════════════════════════════════
+
+    function openPremiumModal() {
+        setText('premium-price', fmt(PREMIUM_PRICE));
+        const err = document.getElementById('premium-error');
+        err.textContent = ''; err.classList.add('hidden');
+        document.getElementById('premium-modal').classList.remove('hidden');
+    }
+    function closePremiumModal() { document.getElementById('premium-modal').classList.add('hidden'); }
+
+    async function purchasePremium() {
+        const user = firebase.auth().currentUser;
+        const err  = document.getElementById('premium-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+
+        if (!user || !firestoreReady) return showErr('Sign in with Google to purchase');
+        if (profile.isPremium)         return showErr('You are already Premium');
+
+        // Pay via wallet balance if available
+        if (walletState.balance >= PREMIUM_PRICE) {
+            try {
+                // Create wallet transaction (debit from user's wallet)
+                await db.collection('walletTransactions').add({
+                    type:          'withdraw',
+                    amount:        PREMIUM_PRICE,
+                    currency:      profile.currency || 'USD',
+                    senderId:      user.uid,
+                    recipientId:   'momo:premium',
+                    senderName:    user.displayName || profile.name || 'You',
+                    recipientName: 'SafeSpend Premium',
+                    phone:         null,
+                    network:       null,
+                    note:          'Premium upgrade (lifetime)',
+                    status:        'completed',
+                    mockRef:       `PREM-${Date.now().toString(36).toUpperCase()}`,
+                    createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
+                    completedAt:   firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Record revenue event — this is money for the app
+                await recordRevenueEvent({
+                    type:         'subscription',
+                    amount:       PREMIUM_PRICE,
+                    sourceUserId: user.uid,
+                    description:  'Premium lifetime upgrade'
+                });
+
+                // Flip user to premium
+                profile.isPremium = true;
+                profile.premiumSince = Date.now();
+                saveData();
+                await db.collection('users').doc(user.uid).update({
+                    isPremium:     true,
+                    premiumSince:  firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                closePremiumModal();
+                showPayToast('👑 Welcome to SafeSpend Premium!');
+                await loadWallet();
+                updateUI();
+                updateProfilePhoto();
+            } catch (e) {
+                console.warn('[Premium] Purchase failed:', e);
+                showErr('Purchase failed. Try again.');
+            }
+        } else {
+            showErr(`Insufficient wallet balance. You have ${fmt(walletState.balance)}. Top up your Wallet or fund ${fmt(PREMIUM_PRICE - walletState.balance)} more.`);
+        }
+    }
+
     function archiveWeek(weekData) {
         weekHistory.unshift({
             weekId:       weekData.weekId,
@@ -3333,6 +3923,64 @@
         MAX_TX:       10000,
         PENDING_PIN_KEY: 'safespend_pending_pin_action'
     };
+
+    // ═══════════════════════════════════════════════════════════════
+    //  MONETIZATION CONFIG
+    //  Revenue is generated from:
+    //    1. Transaction fees on wallet send/withdraw (0% on deposits)
+    //    2. Premium subscription purchases (one-time lifetime)
+    //  All revenue flows into /revenueEvents (Firestore) — immutable log
+    //  that only admins can read. User funds stay in /walletTransactions
+    //  — totally separate from app earnings.
+    // ═══════════════════════════════════════════════════════════════
+
+    // IMPORTANT — Replace this with your own Firebase Auth UID(s) to access
+    // the Admin Dashboard. Find it in Firebase Console → Authentication → Users.
+    // The same list must also be in firestore.rules (see isAdmin() function).
+    const ADMIN_UIDS = [
+        'REPLACE_WITH_YOUR_FIREBASE_UID'
+    ];
+
+    const FEES = {
+        deposit:  { percent: 0,   flat: 0 },     // Free — encourages users to fund wallet
+        send:     { percent: 1,   flat: 0 },     // 1% on internal + external sends
+        withdraw: { percent: 2,   flat: 0 }      // 2% on cash-out to MoMo
+    };
+
+    const PREMIUM_PRICE  = 9.99;                 // One-time lifetime purchase
+    const PREMIUM_LABEL  = 'SafeSpend Premium';
+
+    // Compute fee for a given operation.
+    function calculateFee(type, amount) {
+        const cfg = FEES[type] || { percent: 0, flat: 0 };
+        const pct  = (cfg.percent / 100) * amount;
+        const fee  = +(pct + (cfg.flat || 0)).toFixed(2);
+        return Math.max(0, Math.min(fee, amount));  // fee can't exceed amount
+    }
+
+    // Record a revenue event in Firestore. This is the ONE source of truth
+    // for app earnings. The Admin Dashboard sums these to compute revenue.
+    async function recordRevenueEvent({ type, amount, sourceUserId, sourceTxId, description }) {
+        if (!firestoreReady || !amount || amount <= 0) return;
+        try {
+            await db.collection('revenueEvents').add({
+                type:         type,                                   // 'fee_send' | 'fee_withdraw' | 'subscription' etc
+                amount:       +amount.toFixed(2),
+                currency:     profile.currency || 'USD',
+                sourceUserId: sourceUserId || null,
+                sourceTxId:   sourceTxId   || null,
+                description:  (description || '').slice(0, 200),
+                createdAt:    firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (err) {
+            console.warn('[Revenue] Log failed:', err);
+        }
+    }
+
+    function isCurrentUserAdmin() {
+        const u = firebase.auth().currentUser;
+        return !!(u && ADMIN_UIDS.includes(u.uid));
+    }
     let walletState = {
         balance:      0,
         transactions: [],
@@ -3594,9 +4242,39 @@
         document.getElementById('send-recipient-preview').classList.add('hidden');
         document.getElementById('send-submit').disabled = true;
         setText('send-available', fmt(walletState.balance));
+        setText('send-fee-rate', `${FEES.send.percent}%`);
+        document.getElementById('send-fee-preview')?.classList.add('hidden');
         const err = document.getElementById('send-error');
         err.textContent = ''; err.classList.add('hidden');
         document.getElementById('send-modal').classList.remove('hidden');
+    }
+
+    // Live fee preview for send modal — keeps charges transparent
+    function updateSendFeePreview() {
+        const amount = parseFloat(document.getElementById('send-amount').value);
+        const box = document.getElementById('send-fee-preview');
+        if (!box) return;
+        if (!amount || amount <= 0) { box.classList.add('hidden'); return; }
+        const fee = calculateFee('send', amount);
+        const net = +(amount - fee).toFixed(2);
+        setText('send-fee-receive', fmt(net));
+        setText('send-fee-amount',  fmt(fee));
+        setText('send-fee-total',   fmt(amount));
+        box.classList.remove('hidden');
+    }
+
+    // Live fee preview for wallet withdraw modal
+    function updateWithdrawFeePreview() {
+        const amount = parseFloat(document.getElementById('wwithdraw-amount').value);
+        const box = document.getElementById('wwithdraw-fee-preview');
+        if (!box) return;
+        if (!amount || amount <= 0) { box.classList.add('hidden'); return; }
+        const fee = calculateFee('withdraw', amount);
+        const net = +(amount - fee).toFixed(2);
+        setText('wwithdraw-fee-receive', fmt(net));
+        setText('wwithdraw-fee-amount',  fmt(fee));
+        setText('wwithdraw-fee-total',   fmt(amount));
+        box.classList.remove('hidden');
     }
     function closeSendModal() { document.getElementById('send-modal').classList.add('hidden'); }
 
@@ -3693,13 +4371,21 @@
         procEl.classList.remove('hidden');
         if (msgEl) msgEl.textContent = 'Transferring…';
 
+        // Fee model: user is debited `amount`; recipient gets `amount - fee`;
+        // the `fee` is recorded as revenue for the app. Keeps user-funds and
+        // app-earnings strictly separated (different Firestore collections).
+        const fee         = calculateFee('send', amount);
+        const netAmount   = +(amount - fee).toFixed(2);
+
         try {
+            let txRefId = null;
             if (sendState.recipientType === 'user') {
-                // SafeSpend-to-SafeSpend: single transaction doc visible to both
                 const r = sendState.recipient;
-                await db.collection('walletTransactions').add({
+                const ref = await db.collection('walletTransactions').add({
                     type:          'send',
-                    amount,
+                    amount:        netAmount,       // recipient receives NET of fee
+                    fee:           fee,             // transparency — fee recorded on the tx
+                    grossAmount:   amount,          // what the sender was debited in total
                     currency:      profile.currency || 'USD',
                     senderId:      user.uid,
                     recipientId:   r.uid,
@@ -3713,20 +4399,44 @@
                     createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
                     completedAt:   firebase.firestore.FieldValue.serverTimestamp()
                 });
+                txRefId = ref.id;
+                // Debit sender for the FEE portion as a separate withdraw-type entry
+                // so balance computation subtracts it. This keeps the "recipient gets
+                // exactly X" model clean while still charging the fee client-side.
+                if (fee > 0) {
+                    await db.collection('walletTransactions').add({
+                        type:          'withdraw',
+                        amount:        fee,
+                        currency:      profile.currency || 'USD',
+                        senderId:      user.uid,
+                        recipientId:   'momo:fee',
+                        senderName:    user.displayName || profile.name || 'You',
+                        recipientName: 'SafeSpend Fee',
+                        phone:         null,
+                        network:       null,
+                        note:          `Fee for sending to ${r.displayName || r.email}`,
+                        status:        'completed',
+                        mockRef:       `FEE-${Date.now().toString(36).toUpperCase()}`,
+                        createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
+                        completedAt:   firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
                 procEl.classList.add('hidden');
-                showPayToast(`✅ ${fmt(amount)} sent to ${r.displayName || r.email}`);
+                showPayToast(`✅ ${fmt(netAmount)} sent to ${r.displayName || r.email}${fee > 0 ? ` · ${fmt(fee)} fee` : ''}`);
             } else {
-                // External MoMo recipient — goes through provider
                 const phone = sendState.recipient.phone;
-                const result = await processMomoTransaction({ network: 'mtn', phone, amount, type: 'send' });
+                const result = await processMomoTransaction({ network: 'mtn', phone, amount: netAmount, type: 'send' });
                 if (!result.success) {
                     procEl.classList.add('hidden');
                     showPayToast(`❌ Transfer failed: ${result.error || 'Provider error'}`);
                     return;
                 }
-                await db.collection('walletTransactions').add({
-                    type:          'withdraw',  // schema-wise, external send = withdraw from wallet
-                    amount,
+                const ref = await db.collection('walletTransactions').add({
+                    type:          'withdraw',
+                    amount:        amount,          // total debited
+                    fee:           fee,
+                    grossAmount:   amount,
+                    netToRecipient: netAmount,
                     currency:      profile.currency || 'USD',
                     senderId:      user.uid,
                     recipientId:   `momo:external`,
@@ -3740,8 +4450,20 @@
                     createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
                     completedAt:   firebase.firestore.FieldValue.serverTimestamp()
                 });
+                txRefId = ref.id;
                 procEl.classList.add('hidden');
-                showPayToast(`✅ ${fmt(amount)} sent to ${phone}`);
+                showPayToast(`✅ ${fmt(netAmount)} sent to ${phone}${fee > 0 ? ` · ${fmt(fee)} fee` : ''}`);
+            }
+
+            // Log revenue — the ONE source of truth for app earnings
+            if (fee > 0) {
+                await recordRevenueEvent({
+                    type:         'fee_send',
+                    amount:       fee,
+                    sourceUserId: user.uid,
+                    sourceTxId:   txRefId,
+                    description:  `Send fee (${FEES.send.percent}%) on ${fmt(amount)}`
+                });
             }
             await loadWallet(); renderWallet();
         } catch (e) {
@@ -3784,7 +4506,12 @@
         procEl.classList.remove('hidden');
         if (msgEl) msgEl.textContent = 'Sending to Mobile Money…';
 
-        const result = await processMomoTransaction({ network, phone, amount, type: 'withdraw' });
+        // Fee model: user is debited full amount; they receive netAmount at MoMo;
+        // fee is retained as app revenue.
+        const fee       = calculateFee('withdraw', amount);
+        const netAmount = +(amount - fee).toFixed(2);
+
+        const result = await processMomoTransaction({ network, phone, amount: netAmount, type: 'withdraw' });
         if (!result.success) {
             procEl.classList.add('hidden');
             showPayToast(`❌ Withdrawal failed: ${result.error || 'Provider error'}`);
@@ -3792,24 +4519,36 @@
         }
         try {
             const user = firebase.auth().currentUser;
-            await db.collection('walletTransactions').add({
-                type:          'withdraw',
-                amount,
-                currency:      profile.currency || 'USD',
-                senderId:      user.uid,
-                recipientId:   `momo:${network}`,
-                senderName:    user.displayName || profile.name || 'You',
-                recipientName: NETWORKS[network]?.label || network,
+            const ref = await db.collection('walletTransactions').add({
+                type:           'withdraw',
+                amount:         amount,              // total debited from wallet
+                fee:            fee,
+                grossAmount:    amount,
+                netToRecipient: netAmount,
+                currency:       profile.currency || 'USD',
+                senderId:       user.uid,
+                recipientId:    `momo:${network}`,
+                senderName:     user.displayName || profile.name || 'You',
+                recipientName:  NETWORKS[network]?.label || network,
                 phone,
                 network,
-                note:          '',
-                status:        'completed',
-                mockRef:       result.ref,
-                createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
-                completedAt:   firebase.firestore.FieldValue.serverTimestamp()
+                note:           '',
+                status:         'completed',
+                mockRef:        result.ref,
+                createdAt:      firebase.firestore.FieldValue.serverTimestamp(),
+                completedAt:    firebase.firestore.FieldValue.serverTimestamp()
             });
+            if (fee > 0) {
+                await recordRevenueEvent({
+                    type:         'fee_withdraw',
+                    amount:       fee,
+                    sourceUserId: user.uid,
+                    sourceTxId:   ref.id,
+                    description:  `Withdraw fee (${FEES.withdraw.percent}%) on ${fmt(amount)}`
+                });
+            }
             procEl.classList.add('hidden');
-            showPayToast(`✅ ${fmt(amount)} sent to ${phone}`);
+            showPayToast(`✅ ${fmt(netAmount)} sent to ${phone}${fee > 0 ? ` · ${fmt(fee)} fee` : ''}`);
             await loadWallet(); renderWallet();
         } catch (e) {
             procEl.classList.add('hidden');
@@ -4131,10 +4870,28 @@
 
     function updateProfileDisplay() {
         const greetEl = document.getElementById('user-greeting');
-        if (greetEl) greetEl.textContent = `${profile.name || 'User'} 👋`;
+        if (greetEl) greetEl.textContent = `${profile.name || 'User'} 👋${profile.isPremium ? ' 👑' : ''}`;
         const greetTime = document.getElementById('greeting-time');
         if (greetTime) greetTime.textContent = timeOfDayGreeting();
         updateProfilePhoto();
+
+        // Premium card: show "Go Premium" or "Premium Member ✓"
+        const premiumCard   = document.getElementById('settings-premium-card');
+        const premiumActive = document.getElementById('settings-premium-active');
+        if (profile.isPremium) {
+            premiumCard?.classList.add('hidden');
+            premiumActive?.classList.remove('hidden');
+        } else {
+            premiumCard?.classList.remove('hidden');
+            premiumActive?.classList.add('hidden');
+            setText('settings-premium-price', fmt(PREMIUM_PRICE));
+        }
+
+        // Admin card: show only if current user's UID is in ADMIN_UIDS
+        const adminCard = document.getElementById('settings-admin-card');
+        if (adminCard) {
+            adminCard.classList.toggle('hidden', !isCurrentUserAdmin());
+        }
     }
 
     // ── Screen navigation ─────────────────────────────────────────

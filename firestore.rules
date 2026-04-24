@@ -16,6 +16,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ─── Admin check ──────────────────────────────────────────────
+    // Admin UIDs are hard-coded here for simplicity. Must match the
+    // ADMIN_UIDS array in index.html. To add an admin:
+    //   1. Find their UID in Firebase Console → Authentication → Users
+    //   2. Add to both this list AND the ADMIN_UIDS const in index.html
+    //   3. Publish updated rules.
+    function isAdmin() {
+      return request.auth != null && request.auth.uid in [
+        'REPLACE_WITH_YOUR_FIREBASE_UID'
+      ];
+    }
+
     // ─── Users ────────────────────────────────────────────────────
     // Any authenticated user can READ user docs (needed to look up a
     // referrer by referralCode). Write is restricted to the owner.
@@ -110,6 +122,40 @@ service cloud.firestore {
                     );
 
       // Transactions are an immutable audit trail — no client updates/deletes.
+      allow update, delete: if false;
+    }
+
+    // ─── Revenue Events (APP EARNINGS) ────────────────────────────
+    // This is the source of truth for SafeSpend's earnings. User funds live
+    // in /walletTransactions — app earnings live HERE, strictly separated.
+    //
+    // Create: any authenticated user (fee events are logged from the
+    //   client when they pay fees). Client-side validation prevents
+    //   inflated events via amount bounds below.
+    // Read:   admin only (privacy — revenue data is the owner's business).
+    // Update/Delete: never — immutable audit trail.
+    match /revenueEvents/{id} {
+      allow read: if isAdmin();
+
+      allow create: if request.auth != null
+                    && request.resource.data.amount is number
+                    && request.resource.data.amount > 0
+                    && request.resource.data.amount <= 100
+                    && request.resource.data.type in ['fee_deposit', 'fee_send', 'fee_withdraw', 'subscription'];
+
+      allow update, delete: if false;
+    }
+
+    // ─── Owner Withdrawals ────────────────────────────────────────
+    // Admin-only collection where the app owner requests payouts of their
+    // earnings. Read/create restricted to admins; updates manual via
+    // Firebase Console (change status → 'paid' after sending the money).
+    match /ownerWithdrawals/{id} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+                    && request.resource.data.amount is number
+                    && request.resource.data.amount > 0
+                    && request.resource.data.status == 'pending';
       allow update, delete: if false;
     }
   }
