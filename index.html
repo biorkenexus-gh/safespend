@@ -538,39 +538,16 @@
                         </div>
                     </div>
 
-                    <!-- Category -->
+                    <!-- Category — rendered dynamically from `categories` state -->
                     <div>
-                        <label class="text-gray-700 font-medium mb-3 block">Category</label>
-                        <div class="grid grid-cols-3 gap-3">
-                            <button class="category-btn p-3 rounded-xl border-2 border-gray-200 flex flex-col items-center gap-2" onclick="selectCategory(this,'food')">
-                                <i class="fas fa-utensils text-xl"></i>
-                                <span class="text-xs font-medium">Food</span>
-                            </button>
-                            <button class="category-btn p-3 rounded-xl border-2 border-gray-200 flex flex-col items-center gap-2" onclick="selectCategory(this,'transport')">
-                                <i class="fas fa-car text-xl"></i>
-                                <span class="text-xs font-medium">Transport</span>
-                            </button>
-                            <button class="category-btn p-3 rounded-xl border-2 border-gray-200 flex flex-col items-center gap-2" onclick="selectCategory(this,'bills')">
-                                <i class="fas fa-file-invoice text-xl"></i>
-                                <span class="text-xs font-medium">Bills</span>
-                            </button>
-                            <button class="category-btn p-3 rounded-xl border-2 border-gray-200 flex flex-col items-center gap-2" onclick="selectCategory(this,'shopping')">
-                                <i class="fas fa-shopping-bag text-xl"></i>
-                                <span class="text-xs font-medium">Shopping</span>
-                            </button>
-                            <button class="category-btn p-3 rounded-xl border-2 border-gray-200 flex flex-col items-center gap-2" onclick="selectCategory(this,'entertainment')">
-                                <i class="fas fa-film text-xl"></i>
-                                <span class="text-xs font-medium">Fun</span>
-                            </button>
-                            <button class="category-btn p-3 rounded-xl border-2 border-gray-200 flex flex-col items-center gap-2" onclick="selectCategory(this,'health')">
-                                <i class="fas fa-heart-pulse text-xl"></i>
-                                <span class="text-xs font-medium">Health</span>
-                            </button>
-                            <button class="category-btn p-3 rounded-xl border-2 border-gray-200 flex flex-col items-center gap-2" onclick="selectCategory(this,'other')">
-                                <i class="fas fa-ellipsis-h text-xl"></i>
-                                <span class="text-xs font-medium">Other</span>
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="text-gray-700 font-medium">Category</label>
+                            <button type="button" onclick="showCategoriesScreen()"
+                                    class="text-xs text-primary hover:underline flex items-center gap-1">
+                                <i class="fas fa-pen-to-square"></i> Manage
                             </button>
                         </div>
+                        <div id="add-category-grid" class="grid grid-cols-3 gap-3"></div>
                         <!-- AI-powered category suggestions (chips) -->
                         <div id="ai-cat-suggestions" class="hidden mt-3">
                             <div class="flex items-center gap-1.5 mb-1.5">
@@ -1171,6 +1148,112 @@
                 </div>
             </div>
 
+            <!-- ==================== CATEGORIES SCREEN ==================== -->
+            <div id="categories-screen" class="screen p-4 space-y-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <button onclick="showScreen('settings')" class="mr-4 text-gray-600 hover:text-gray-800">
+                            <i class="fas fa-arrow-left text-xl"></i>
+                        </button>
+                        <h2 class="text-2xl font-display font-bold text-gray-800">Categories</h2>
+                    </div>
+                    <button id="cat-new-btn" onclick="openCategoryModal(null)" title="New category"
+                            class="w-10 h-10 bg-primary text-white rounded-full shadow-lg hover:bg-blue-800 transition flex items-center justify-center">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+
+                <p class="text-xs text-gray-500 px-1">
+                    Rename, recolor, or add your own categories. Built-in categories can be edited but not deleted.
+                </p>
+
+                <div id="cat-list" class="bg-white rounded-2xl shadow-sm divide-y divide-gray-100"></div>
+
+                <p id="cat-count-info" class="text-[11px] text-center text-gray-400 mt-2">—</p>
+            </div>
+
+            <!-- ==================== CATEGORY CREATE/EDIT MODAL ==================== -->
+            <div id="category-modal" class="fixed inset-0 bg-black/60 z-[180] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-5 max-w-md w-full shadow-2xl slide-up max-h-[90vh] overflow-y-auto">
+                    <div class="text-center mb-4">
+                        <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3" id="cat-modal-preview-icon">
+                            <i class="fas fa-tag text-2xl text-primary"></i>
+                        </div>
+                        <h3 id="cat-modal-title" class="text-xl font-display font-bold text-gray-800">New Category</h3>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Name</label>
+                            <input type="text" id="cat-label" maxlength="20"
+                                   oninput="updateCatModalPreview()"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                                   placeholder="e.g. Groceries, Coffee, Kids">
+                        </div>
+
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2 block">Icon</label>
+                            <div id="cat-icon-picker" class="grid grid-cols-7 gap-2"></div>
+                        </div>
+
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2 block">Color</label>
+                            <div id="cat-color-picker" class="flex gap-2 flex-wrap"></div>
+                        </div>
+
+                        <p id="cat-modal-error" class="hidden text-xs text-danger"></p>
+                    </div>
+
+                    <div class="flex gap-2 mt-5">
+                        <button id="cat-modal-delete-btn"
+                                onclick="handleDeleteCategoryFromModal()"
+                                class="hidden flex-1 py-3 rounded-xl text-sm font-semibold bg-red-50 text-danger hover:bg-red-100 transition">
+                            Delete
+                        </button>
+                        <button id="cat-modal-reset-btn"
+                                onclick="handleResetCategoryFromModal()"
+                                class="hidden flex-1 py-3 rounded-xl text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+                            Reset to default
+                        </button>
+                        <button onclick="submitCategoryModal()"
+                                class="flex-1 py-3 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-blue-800 transition">
+                            Save
+                        </button>
+                    </div>
+                    <button onclick="closeCategoryModal()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== CATEGORY DELETE CONFIRM MODAL ==================== -->
+            <div id="category-delete-modal" class="fixed inset-0 bg-black/60 z-[190] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl slide-up">
+                    <div class="text-center mb-4">
+                        <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-triangle-exclamation text-2xl text-danger"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-gray-800">Delete category?</h3>
+                        <p class="text-sm text-gray-500 mt-1">
+                            <span id="cat-del-count">0</span> existing transaction<span id="cat-del-plural">s</span>
+                            will be moved to the category below.
+                        </p>
+                    </div>
+                    <label class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1 block">Move transactions to</label>
+                    <select id="cat-del-reassign"
+                            class="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"></select>
+                    <button onclick="confirmDeleteCategory()"
+                            class="w-full mt-4 bg-danger text-white font-semibold py-3 rounded-xl hover:bg-red-700 transition">
+                        Delete &amp; move transactions
+                    </button>
+                    <button onclick="closeCategoryDeleteModal()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
             <!-- ==================== HELP CENTER SCREEN ==================== -->
             <div id="help-screen" class="screen p-4 space-y-4">
                 <div class="flex items-center mb-2">
@@ -1760,6 +1843,96 @@
                 </div>
             </div>
 
+            <!-- ==================== SMART IMPORT (SMS) SCREEN ==================== -->
+            <div id="import-screen" class="screen p-4 space-y-4">
+                <div class="flex items-center mb-2">
+                    <button onclick="showScreen('settings')" class="mr-4 text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-2xl font-display font-bold text-gray-800">Smart Import</h2>
+                </div>
+
+                <!-- Hero / explainer -->
+                <div class="bg-gradient-to-br from-primary via-blue-600 to-indigo-600 rounded-3xl p-5 text-white shadow-lg">
+                    <div class="flex items-start gap-3">
+                        <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
+                            <i class="fas fa-wand-magic-sparkles text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-bold text-base">Import Mobile Money SMS</h3>
+                            <p class="text-xs text-blue-100 mt-1 leading-relaxed">
+                                Paste MTN MoMo, Vodafone Cash, or AirtelTigo SMS alerts below — SafeSpend auto-extracts amount, recipient, and category. Paste multiple messages separated by blank lines.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Privacy notice -->
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 leading-relaxed">
+                    <p class="flex items-start gap-2">
+                        <i class="fas fa-shield-halved mt-0.5 shrink-0"></i>
+                        <span><strong>Your data stays private.</strong> SMS text is parsed entirely on your device. Raw messages are never uploaded, logged, or stored beyond the current session.</span>
+                    </p>
+                </div>
+
+                <!-- Paste area -->
+                <div class="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+                    <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Paste SMS Messages</label>
+                    <textarea id="import-sms-input" rows="6" maxlength="10000"
+                              placeholder="Example:
+Payment to DSTV GH. Amount: GHS 120.00. Ref: MP240315.0001.
+
+You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
+                              class="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none text-sm font-mono resize-y"></textarea>
+                    <p class="text-[11px] text-gray-400"><span id="import-char-count">0</span> / 10,000 characters · Works for MTN, Vodafone Cash, AirtelTigo</p>
+
+                    <div class="flex gap-2">
+                        <button onclick="parseSmsFromInput()"
+                                class="flex-1 bg-primary text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition flex items-center justify-center gap-2">
+                            <i class="fas fa-magic-wand-sparkles"></i> Parse Messages
+                        </button>
+                        <button onclick="clearImportInput()"
+                                class="px-4 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl hover:bg-gray-200 transition text-sm">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Results: parsed transactions -->
+                <div id="import-results-wrap" class="hidden">
+                    <div class="flex items-center justify-between mb-2 px-1">
+                        <h3 class="font-display font-semibold text-gray-800 text-sm" id="import-results-title">Parsed Transactions</h3>
+                        <button id="import-save-all-btn" onclick="saveAllImported()"
+                                class="text-xs bg-safe text-white px-3 py-1.5 rounded-full font-semibold hover:bg-green-600 transition">
+                            Save All
+                        </button>
+                    </div>
+                    <div id="import-results-list" class="space-y-3"></div>
+                </div>
+
+                <!-- Supported formats reference -->
+                <details class="bg-white rounded-2xl shadow-sm">
+                    <summary class="p-4 cursor-pointer text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <i class="fas fa-circle-info text-primary"></i>
+                        Supported SMS formats
+                    </summary>
+                    <div class="px-4 pb-4 text-xs text-gray-600 leading-relaxed space-y-3">
+                        <div>
+                            <p class="font-semibold text-gray-800 mb-1">MTN Mobile Money</p>
+                            <code class="block bg-gray-50 p-2 rounded text-[11px]">Payment to DSTV GH. Amount: GHS 120.00. Fee: GHS 1.00. Balance: GHS 450.00. TxId: MP240315.0001.</code>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-800 mb-1">Vodafone Cash</p>
+                            <code class="block bg-gray-50 p-2 rounded text-[11px]">Cash out of GHS 50.00 to 0244123456. Balance: GHS 200.00. Ref: VC98765</code>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-800 mb-1">AirtelTigo Money</p>
+                            <code class="block bg-gray-50 p-2 rounded text-[11px]">You have sent GHS 30.00 to JOHN DOE. Ref: ATM54321.</code>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
             <!-- ==================== PAYMENT / FUND BUDGET ==================== -->
             <div id="payment-screen" class="screen p-4">
                 <div class="flex items-center mb-6">
@@ -2345,6 +2518,15 @@
                             </div>
                         </div>
 
+                        <!-- Smart Import (SMS) -->
+                        <button onclick="showImportScreen()"
+                                class="w-full flex items-center gap-3 p-4 hover:bg-blue-50 transition text-gray-700 text-left">
+                            <i class="fas fa-wand-magic-sparkles w-5 text-center text-primary"></i>
+                            <span class="flex-1">Smart Import (SMS)</span>
+                            <span class="text-xs text-gray-400">Paste MoMo alerts</span>
+                            <i class="fas fa-chevron-right text-xs text-gray-400"></i>
+                        </button>
+
                         <!-- Help Center -->
                         <button onclick="showHelpScreen()"
                                 class="w-full flex items-center gap-3 p-4 hover:bg-blue-50 transition text-gray-700 text-left">
@@ -2418,15 +2600,183 @@
     const CURRENCIES = { USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', GHS: '₵' };
 
     // ── Category config ───────────────────────────────────────────
-    const categories = {
-        food:          { icon: 'utensils',      color: 'bg-orange-100 text-orange-600', label: 'Food',          hex: '#F97316' },
-        transport:     { icon: 'car',           color: 'bg-blue-100 text-blue-600',     label: 'Transport',     hex: '#3B82F6' },
-        bills:         { icon: 'file-invoice',  color: 'bg-red-100 text-red-600',       label: 'Bills',         hex: '#EF4444' },
-        shopping:      { icon: 'shopping-bag',  color: 'bg-purple-100 text-purple-600', label: 'Shopping',      hex: '#A855F7' },
-        entertainment: { icon: 'film',          color: 'bg-pink-100 text-pink-600',     label: 'Entertainment', hex: '#EC4899' },
-        health:        { icon: 'heart-pulse',   color: 'bg-green-100 text-green-600',   label: 'Health',        hex: '#10B981' },
-        other:         { icon: 'ellipsis-h',    color: 'bg-gray-100 text-gray-600',     label: 'Other',         hex: '#6B7280' }
+    // DEFAULT_CATEGORIES is the fallback; `categories` (below) is mutable
+    // and may contain user-edited versions + user-created custom categories.
+    // Built-in IDs can be renamed/recoloured but not deleted (they're the
+    // safety-net for existing transactions).
+    const DEFAULT_CATEGORIES = {
+        food:          { icon: 'utensils',      color: 'bg-orange-100 text-orange-600', label: 'Food',          hex: '#F97316', builtin: true },
+        transport:     { icon: 'car',           color: 'bg-blue-100 text-blue-600',     label: 'Transport',     hex: '#3B82F6', builtin: true },
+        bills:         { icon: 'file-invoice',  color: 'bg-red-100 text-red-600',       label: 'Bills',         hex: '#EF4444', builtin: true },
+        shopping:      { icon: 'shopping-bag',  color: 'bg-purple-100 text-purple-600', label: 'Shopping',      hex: '#A855F7', builtin: true },
+        entertainment: { icon: 'film',          color: 'bg-pink-100 text-pink-600',     label: 'Entertainment', hex: '#EC4899', builtin: true },
+        health:        { icon: 'heart-pulse',   color: 'bg-green-100 text-green-600',   label: 'Health',        hex: '#10B981', builtin: true },
+        other:         { icon: 'ellipsis-h',    color: 'bg-gray-100 text-gray-600',     label: 'Other',         hex: '#6B7280', builtin: true }
     };
+
+    const CATEGORIES_KEY = 'safespend_categories';
+    const CATEGORY_MAX_COUNT = 15;
+    const CATEGORY_LABEL_MAX = 20;
+
+    // Fixed palette so icon+color classes are known to Tailwind's JIT.
+    const CATEGORY_COLOR_PALETTE = [
+        { hex: '#F97316', bg: 'bg-orange-100',  text: 'text-orange-600',  label: 'Orange'  },
+        { hex: '#EF4444', bg: 'bg-red-100',     text: 'text-red-600',     label: 'Red'     },
+        { hex: '#EC4899', bg: 'bg-pink-100',    text: 'text-pink-600',    label: 'Pink'    },
+        { hex: '#A855F7', bg: 'bg-purple-100',  text: 'text-purple-600',  label: 'Purple'  },
+        { hex: '#6366F1', bg: 'bg-indigo-100',  text: 'text-indigo-600',  label: 'Indigo'  },
+        { hex: '#3B82F6', bg: 'bg-blue-100',    text: 'text-blue-600',    label: 'Blue'    },
+        { hex: '#14B8A6', bg: 'bg-teal-100',    text: 'text-teal-600',    label: 'Teal'    },
+        { hex: '#10B981', bg: 'bg-green-100',   text: 'text-green-600',   label: 'Green'   },
+        { hex: '#F59E0B', bg: 'bg-amber-100',   text: 'text-amber-600',   label: 'Amber'   },
+        { hex: '#6B7280', bg: 'bg-gray-100',    text: 'text-gray-600',    label: 'Gray'    }
+    ];
+
+    // Curated icon set — all Font Awesome 6 solid icons that render well at
+    // the sizes we use. Displayed in the picker grid.
+    const CATEGORY_ICON_CHOICES = [
+        'utensils','car','file-invoice','shopping-bag','film','heart-pulse','ellipsis-h',
+        'plane','house','graduation-cap','gift','dog','plug','piggy-bank','tag',
+        'briefcase','baby-carriage','book','dumbbell','gamepad','phone','wifi',
+        'coffee','bus','gas-pump','shirt','basket-shopping','seedling','tooth',
+        'paw','mug-saucer','wine-glass','pizza-slice','burger','bicycle','ticket',
+        'bed','scissors','music','book-open','sack-dollar','circle-dollar-to-slot'
+    ];
+
+    function cssForHex(hex) {
+        const c = CATEGORY_COLOR_PALETTE.find(p => p.hex === hex) || CATEGORY_COLOR_PALETTE[CATEGORY_COLOR_PALETTE.length - 1];
+        return `${c.bg} ${c.text}`;
+    }
+
+    function loadCategories() {
+        const merged = {};
+        // Start from defaults, deep-cloned
+        for (const [k, v] of Object.entries(DEFAULT_CATEGORIES)) merged[k] = { ...v };
+        // Apply saved overrides + extras
+        try {
+            const raw = localStorage.getItem(CATEGORIES_KEY);
+            const saved = raw ? JSON.parse(raw) : {};
+            for (const [k, v] of Object.entries(saved)) {
+                if (merged[k]) {
+                    // Override a built-in (keep builtin flag)
+                    merged[k] = { ...merged[k], ...v, builtin: true };
+                } else {
+                    // A user-created custom category
+                    merged[k] = { ...v, builtin: false };
+                }
+            }
+        } catch {}
+        return merged;
+    }
+
+    function saveCategoriesState() {
+        // Persist anything that differs from the default AND every custom category.
+        const toSave = {};
+        for (const [k, v] of Object.entries(categories)) {
+            const def = DEFAULT_CATEGORIES[k];
+            if (!def) {
+                // Fully custom category
+                toSave[k] = { label: v.label, icon: v.icon, color: v.color, hex: v.hex };
+            } else if (v.label !== def.label || v.icon !== def.icon || v.hex !== def.hex) {
+                // Built-in that has been edited
+                toSave[k] = { label: v.label, icon: v.icon, color: v.color, hex: v.hex };
+            }
+        }
+        localStorage.setItem(CATEGORIES_KEY, JSON.stringify(toSave));
+    }
+
+    // Mutable categories map — the ONE source of truth for the UI.
+    let categories = loadCategories();
+
+    // ── Category CRUD ─────────────────────────────────────────────
+    // Validation helper — returns error string or null
+    function validateCategoryInput({ label, icon, hex, editingId = null }) {
+        if (!label || !label.trim()) return 'Please enter a category name';
+        if (label.length > CATEGORY_LABEL_MAX) return `Name must be ${CATEGORY_LABEL_MAX} characters or less`;
+        const lower = label.trim().toLowerCase();
+        for (const [id, c] of Object.entries(categories)) {
+            if (id !== editingId && c.label.toLowerCase() === lower) return 'A category with that name already exists';
+        }
+        if (!CATEGORY_ICON_CHOICES.includes(icon)) return 'Pick an icon';
+        if (!CATEGORY_COLOR_PALETTE.some(p => p.hex === hex)) return 'Pick a color';
+        return null;
+    }
+
+    function createCategory({ label, icon, hex }) {
+        if (Object.keys(categories).length >= CATEGORY_MAX_COUNT) {
+            return { ok: false, error: `Maximum ${CATEGORY_MAX_COUNT} categories reached` };
+        }
+        const err = validateCategoryInput({ label, icon, hex });
+        if (err) return { ok: false, error: err };
+
+        const id = 'cat_' + Date.now().toString(36);
+        categories[id] = {
+            label: label.trim(),
+            icon,
+            hex,
+            color: cssForHex(hex),
+            builtin: false
+        };
+        saveCategoriesState();
+        return { ok: true, id };
+    }
+
+    function updateCategory(id, updates) {
+        if (!categories[id]) return { ok: false, error: 'Category not found' };
+        const merged = { ...categories[id], ...updates };
+        const err = validateCategoryInput({
+            label: merged.label,
+            icon:  merged.icon,
+            hex:   merged.hex,
+            editingId: id
+        });
+        if (err) return { ok: false, error: err };
+        categories[id] = {
+            ...categories[id],
+            label: merged.label.trim(),
+            icon:  merged.icon,
+            hex:   merged.hex,
+            color: cssForHex(merged.hex)
+        };
+        saveCategoriesState();
+        return { ok: true };
+    }
+
+    // Count transactions (current week + history) that reference a category.
+    function countTransactionsForCategory(id) {
+        let count = 0;
+        (appState.transactions || []).forEach(t => { if (!t.isTopUp && t.category === id) count++; });
+        (weekHistory || []).forEach(w => (w.transactions || []).forEach(t => {
+            if (!t.isTopUp && t.category === id) count++;
+        }));
+        return count;
+    }
+
+    // Delete a non-built-in category. Reassigns any existing transactions to
+    // the passed reassignTo (default 'other') to preserve history.
+    function deleteCategory(id, reassignTo = 'other') {
+        const c = categories[id];
+        if (!c) return { ok: false, error: 'Category not found' };
+        if (c.builtin) return { ok: false, error: 'Built-in categories cannot be deleted (try editing instead)' };
+        if (!categories[reassignTo]) return { ok: false, error: 'Reassignment target missing' };
+
+        // Reassign any existing transactions
+        (appState.transactions || []).forEach(t => { if (t.category === id) t.category = reassignTo; });
+        (weekHistory || []).forEach(w => (w.transactions || []).forEach(t => {
+            if (t.category === id) t.category = reassignTo;
+        }));
+        delete categories[id];
+        saveCategoriesState();
+        saveData();
+        return { ok: true };
+    }
+
+    function resetCategoryToDefault(id) {
+        if (!DEFAULT_CATEGORIES[id]) return { ok: false, error: 'Only built-in categories can be reset' };
+        categories[id] = { ...DEFAULT_CATEGORIES[id] };
+        saveCategoriesState();
+        return { ok: true };
+    }
 
     // Keyword → category mapping for auto-categorization.
     // Matches against both the note and any tags. First match wins in iteration order.
@@ -2548,6 +2898,394 @@
         });
         catLearning.categoryFrequency[category] = (catLearning.categoryFrequency[category] || 0) + 1;
         saveCatLearning();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  SMS SMART IMPORT — Mobile Money parser
+    //
+    //  Pure function (no DOM / network). Takes one SMS message string,
+    //  returns { ok, amount, currency, direction, counterparty, refId,
+    //  network, raw } or { ok: false }. Safe to port to Android/backend.
+    //
+    //  Supported: MTN MoMo, Vodafone Cash, AirtelTigo Money (Ghana-focused).
+    //  Designed to degrade gracefully on unknown formats.
+    // ═══════════════════════════════════════════════════════════════
+
+    // Amount regex: matches "GHS 50", "GHS50.00", "Ghc 50", "₵50", "50 GHS"
+    const AMOUNT_RE = /(?:GH(?:S|c|¢|₵)|₵)\s*([0-9]+(?:[,.][0-9]{2})?)|\b([0-9]+(?:[,.][0-9]{2})?)\s*(?:GH(?:S|c|¢|₵)|₵)\b/i;
+
+    // Direction keywords — what this SMS represents from the user's POV
+    const SENT_KEYWORDS     = /\b(sent|payment\s+(?:of|to|for)|paid|debit|purchased|transfer\s+to|transferred\s+to|cash\s*out|withdrawn|withdrawal|charged)\b/i;
+    const RECEIVED_KEYWORDS = /\b(received|credit|credited|deposit(?:ed)?|cash\s*in|you\s+have\s+received)\b/i;
+
+    // Words that look like names but aren't — never treat as counterparty
+    const NON_NAMES = /^(GHS|GHC|USD|EUR|GBP|GH|NEW|OLD|REF|TXID|MOMO|CASH|TOTAL|FEE|BALANCE|VIA|FROM|TO|ON|AT|FOR|AND|YOUR|THE|PAYMENT)$/i;
+
+    // Network detectors — presence of brand words
+    const NETWORK_HINTS = [
+        { id: 'mtn',        re: /\b(mtn(?:\s*momo)?|mobile\s*money)\b/i },
+        { id: 'vodafone',   re: /\b(vodafone\s*cash|voda(?:fone)?)\b/i },
+        { id: 'airteltigo', re: /\b(airtel\s*tigo|airteltigo|tigo\s*cash|airtel\s*money)\b/i }
+    ];
+
+    // Counterparty extractors — ordered by priority, globally-flagged so we
+    // can iterate all matches and reject false positives (like "GHS", "REF").
+    const COUNTERPARTY_PATTERNS = [
+        // "Payment to JOHN DOE" / "sent to John Doe"
+        /(?:payment\s*to|sent\s*to|transfer(?:red)?\s*to|paid\s*to)\s+([A-Z][A-Z\s.'-]{1,40}?)(?=\s*(?:\.|for|on|at|$|\bRef\b|\bTxId\b|\bBalance\b|\bFee\b|\d))/gi,
+        // "from JOHN DOE" — iterate all matches, skip the ones that grabbed "GHS"
+        /(?:received|from)\s+([A-Z][A-Z\s.'-]{2,40}?)(?=\s*(?:\.|on|\bRef\b|\bTxId\b|\bBalance\b|\d))/gi,
+        // "for DSTV" / "bill payment for ECG"
+        /(?:for|to)\s+([A-Z][A-Z0-9\s.'-]{2,40}?)(?=\s*(?:\.|\bRef\b|\bTxId\b|\bBalance\b|successful|$))/gi,
+        // Phone numbers (external MoMo)
+        /\b(\+?233[0-9]{9}|0[0-9]{9})\b/g
+    ];
+
+    // Transaction ID / reference extractors
+    const REFID_PATTERNS = [
+        /\b(?:Tx(?:Id|n|Ref)|Reference|Ref(?:erence)?|ID)\s*[:#]?\s*([A-Z0-9.-]{4,30})/i,
+        /\b(?:receipt|transaction)\s*(?:#|no\.?|number)\s*[:#]?\s*([A-Z0-9.-]{4,30})/i
+    ];
+
+    function parseSmsMessage(raw) {
+        if (!raw || typeof raw !== 'string' || raw.trim().length < 10) {
+            return { ok: false, reason: 'too-short', raw };
+        }
+        const s = raw.trim();
+
+        // 1) Amount
+        const amountMatch = s.match(AMOUNT_RE);
+        if (!amountMatch) return { ok: false, reason: 'no-amount', raw };
+        const amountStr = (amountMatch[1] || amountMatch[2] || '').replace(',', '.');
+        const amount = parseFloat(amountStr);
+        if (!amount || amount <= 0) return { ok: false, reason: 'invalid-amount', raw };
+
+        // 2) Direction (sent/received)
+        let direction = 'unknown';
+        if (SENT_KEYWORDS.test(s))          direction = 'sent';
+        else if (RECEIVED_KEYWORDS.test(s)) direction = 'received';
+
+        // 3) Network
+        let network = null;
+        for (const h of NETWORK_HINTS) {
+            if (h.re.test(s)) { network = h.id; break; }
+        }
+
+        // 4) Counterparty — iterate ALL matches of each pattern, skip false
+        // positives (currency codes, short digits). First valid candidate wins.
+        let counterparty = '';
+        outer: for (const re of COUNTERPARTY_PATTERNS) {
+            re.lastIndex = 0;
+            let m;
+            while ((m = re.exec(s)) !== null) {
+                let candidate = (m[1] || '').trim()
+                    .replace(/\s+/g, ' ')
+                    .replace(/\s*[.,]$/, '')
+                    .replace(/^(the|a|an)\s+/i, '');
+                if (!candidate || candidate.length < 2) continue;
+                const firstToken = candidate.split(/\s+/)[0] || '';
+                if (NON_NAMES.test(firstToken)) continue;
+                if (/^\d+$/.test(candidate) && candidate.length < 9) continue;
+                counterparty = candidate;
+                break outer;
+            }
+        }
+
+        // 5) Reference ID — strip trailing punctuation
+        let refId = null;
+        for (const re of REFID_PATTERNS) {
+            const m = s.match(re);
+            if (m) { refId = m[1].trim().replace(/[.,;]+$/, ''); break; }
+        }
+
+        // Confidence score — more signals = higher confidence (for UI hints)
+        const confidence =
+            (amount          ? 40 : 0) +
+            (direction !== 'unknown' ? 25 : 0) +
+            (counterparty    ? 20 : 0) +
+            (network         ? 10 : 0) +
+            (refId           ?  5 : 0);
+
+        return {
+            ok:          true,
+            amount,
+            currency:    'GHS',
+            direction,
+            counterparty: counterparty || null,
+            network,
+            refId,
+            confidence,
+            raw:         s
+        };
+    }
+
+    // Split a bigger blob of pasted text into individual SMS candidates.
+    // Heuristic: double-newline, OR a line that begins with a known MoMo
+    // keyword, treated as a new message.
+    function splitSmsBatch(text) {
+        if (!text) return [];
+        const normalized = text.replace(/\r/g, '').trim();
+        // First split on blank lines
+        const chunks = normalized.split(/\n\s*\n/).map(c => c.trim()).filter(Boolean);
+        // If only 1 chunk but multiple "known headers", split further
+        const startRe = /^(?:payment|you\s+have\s+(?:sent|received)|received|sent|cash\s+(?:out|in)|transfer|airtime)/i;
+        const out = [];
+        chunks.forEach(c => {
+            const lines = c.split('\n');
+            let buf = [];
+            for (const line of lines) {
+                if (buf.length > 0 && startRe.test(line.trim())) {
+                    out.push(buf.join('\n').trim());
+                    buf = [];
+                }
+                buf.push(line);
+            }
+            if (buf.length) out.push(buf.join('\n').trim());
+        });
+        return out.filter(c => c.length >= 10);
+    }
+
+    // Duplicate detection — is this SMS already saved?
+    // Two heuristics: (1) same refId, or (2) same amount within the last 60min.
+    function isDuplicateSms(parsed) {
+        if (!parsed || !parsed.ok) return false;
+        const txs = (appState.transactions || []).concat(
+            weekHistory.flatMap(w => w.transactions || [])
+        );
+        // Match 1: refId substring in note
+        if (parsed.refId) {
+            const hit = txs.find(t => (t.note || '').includes(parsed.refId));
+            if (hit) return { match: 'refId', tx: hit };
+        }
+        // Match 2: exact amount within 60 minutes of paste
+        const now = Date.now();
+        const hit = txs.find(t => {
+            if (Math.abs((t.amount || 0) - parsed.amount) > 0.01) return false;
+            const ts = t.createdAt || (t.date ? new Date(t.date).getTime() : 0);
+            return (now - ts) < 60 * 60 * 1000;
+        });
+        return hit ? { match: 'amount-window', tx: hit } : false;
+    }
+
+    // ── Smart Import state + handlers ─────────────────────────────
+    // importState.parsed is an array of { ...parsedSms, editable fields,
+    // suggestedCategory, duplicate: false|{match,tx}, saved: bool, id }
+    let importState = { parsed: [] };
+
+    function showImportScreen() {
+        const input = document.getElementById('import-sms-input');
+        if (input) {
+            input.oninput = () => {
+                setText('import-char-count', input.value.length.toLocaleString());
+            };
+        }
+        showScreen('import');
+    }
+
+    function clearImportInput() {
+        const input = document.getElementById('import-sms-input');
+        if (input) input.value = '';
+        setText('import-char-count', '0');
+        importState.parsed = [];
+        renderImportResults();
+    }
+
+    function parseSmsFromInput() {
+        const input = document.getElementById('import-sms-input');
+        const text  = (input?.value || '').trim();
+        if (!text) { showPayToast('Paste at least one SMS message'); return; }
+
+        const chunks  = splitSmsBatch(text);
+        const results = chunks.map(chunk => {
+            const parsed = parseSmsMessage(chunk);
+            if (!parsed.ok) {
+                return { ...parsed, id: 'sms_' + Math.random().toString(36).slice(2, 9), saved: false };
+            }
+            // AI category suggestion based on counterparty + any keywords in raw
+            const ctx = [parsed.counterparty, parsed.raw].filter(Boolean).join(' ');
+            const suggested = suggestCategoriesScored(ctx, 1);
+            const category  = suggested.length > 0 ? suggested[0].category : 'other';
+            return {
+                ...parsed,
+                id:          'sms_' + Math.random().toString(36).slice(2, 9),
+                editedNote:  parsed.counterparty || 'MoMo transaction',
+                editedDate:  new Date().toISOString().split('T')[0],
+                category,
+                duplicate:   isDuplicateSms(parsed),
+                saved:       false
+            };
+        });
+        importState.parsed = results;
+        renderImportResults();
+
+        const okCount = results.filter(r => r.ok).length;
+        const dupCount = results.filter(r => r.ok && r.duplicate).length;
+        showPayToast(`Parsed ${okCount} transaction${okCount !== 1 ? 's' : ''}${dupCount ? ` · ${dupCount} duplicate` : ''}`);
+    }
+
+    function renderImportResults() {
+        const wrap  = document.getElementById('import-results-wrap');
+        const list  = document.getElementById('import-results-list');
+        const title = document.getElementById('import-results-title');
+        if (!wrap || !list) return;
+
+        const results = importState.parsed || [];
+        if (results.length === 0) {
+            wrap.classList.add('hidden');
+            return;
+        }
+        wrap.classList.remove('hidden');
+        const okCount = results.filter(r => r.ok && !r.saved).length;
+        if (title) title.textContent = `Parsed ${results.length} · ${okCount} ready to save`;
+
+        list.innerHTML = results.map(r => renderImportCard(r)).join('');
+    }
+
+    function renderImportCard(r) {
+        if (!r.ok) {
+            return `
+                <div class="bg-red-50 border border-red-200 rounded-2xl p-3 text-xs text-danger">
+                    <p class="font-semibold mb-1"><i class="fas fa-exclamation-triangle"></i> Couldn't parse</p>
+                    <p class="text-red-700">${r.reason || 'unknown'}</p>
+                    <p class="mt-1 text-[10px] text-red-400 break-words">${escapeHtml((r.raw || '').slice(0, 140))}…</p>
+                </div>`;
+        }
+        if (r.saved) {
+            return `
+                <div class="bg-green-50 border border-green-200 rounded-2xl p-3 text-xs text-safe">
+                    <i class="fas fa-check-circle"></i> Saved: ${fmt(r.amount)} · ${escapeHtml(r.editedNote)}
+                </div>`;
+        }
+
+        const cat = categories[r.category] || categories.other;
+        const directionLabel = r.direction === 'sent'     ? '💸 Sent'
+                             : r.direction === 'received' ? '⬇️ Received'
+                             : '? Unknown';
+        const netLbl = r.network ? NETWORKS[r.network]?.label || r.network : '—';
+        const confColor = r.confidence >= 80 ? 'text-safe' : r.confidence >= 50 ? 'text-amber-600' : 'text-danger';
+        const dupBanner = r.duplicate ? `
+            <div class="mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
+                <i class="fas fa-triangle-exclamation"></i>
+                Possible duplicate detected (matched by ${r.duplicate.match}).
+            </div>` : '';
+
+        return `
+            <div class="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="font-semibold text-gray-500">${directionLabel} · ${netLbl}</span>
+                    <span class="${confColor} font-semibold">Confidence ${r.confidence}%</span>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-full ${cat.color} flex items-center justify-center shrink-0">
+                        <i class="fas fa-${cat.icon}"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Amount</p>
+                        <p class="font-display font-bold text-2xl text-gray-800">${fmt(r.amount)}</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-2">
+                    <div>
+                        <label class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Note</label>
+                        <input type="text" value="${escapeHtml(r.editedNote)}" maxlength="80"
+                               oninput="updateImportField('${r.id}','editedNote',this.value)"
+                               class="w-full mt-1 p-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Category</label>
+                            <select onchange="updateImportField('${r.id}','category',this.value)"
+                                    class="w-full mt-1 p-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm">
+                                ${Object.entries(categories).map(([k, c]) =>
+                                    `<option value="${k}" ${k === r.category ? 'selected' : ''}>${c.label}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Date</label>
+                            <input type="date" value="${r.editedDate}"
+                                   onchange="updateImportField('${r.id}','editedDate',this.value)"
+                                   class="w-full mt-1 p-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                ${r.refId ? `<p class="text-[11px] text-gray-400">Ref: ${escapeHtml(r.refId)}</p>` : ''}
+                ${dupBanner}
+
+                <div class="flex gap-2">
+                    <button onclick="saveImportedOne('${r.id}')"
+                            class="flex-1 bg-primary text-white font-semibold py-2 rounded-lg hover:bg-blue-800 transition text-sm">
+                        <i class="fas fa-check"></i> Save as Expense
+                    </button>
+                    <button onclick="dismissImportedOne('${r.id}')"
+                            class="px-3 bg-gray-100 text-gray-600 py-2 rounded-lg hover:bg-gray-200 transition text-sm">
+                        Dismiss
+                    </button>
+                </div>
+            </div>`;
+    }
+
+    function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
+    function updateImportField(id, field, value) {
+        const r = importState.parsed.find(x => x.id === id);
+        if (r) r[field] = value;
+    }
+
+    function saveImportedOne(id) {
+        const r = importState.parsed.find(x => x.id === id);
+        if (!r || !r.ok || r.saved) return;
+        // Sent = expense (counts toward budget). Received = skip (it's income).
+        if (r.direction === 'received') {
+            showPayToast('Incoming transfers are skipped — only expenses count toward budget');
+            r.saved = true;
+            renderImportResults();
+            return;
+        }
+        addTransaction(
+            r.amount,
+            r.category || 'other',
+            r.editedNote || 'MoMo transaction',
+            r.editedDate || new Date().toISOString().split('T')[0],
+            ['smart-import', r.network || 'momo', r.refId || 'auto'].filter(Boolean),
+            true  // autoCategorized = true
+        );
+        r.saved = true;
+        renderImportResults();
+        showPayToast(`✅ Saved: ${fmt(r.amount)} · ${r.editedNote}`);
+    }
+
+    function dismissImportedOne(id) {
+        importState.parsed = importState.parsed.filter(x => x.id !== id);
+        renderImportResults();
+    }
+
+    function saveAllImported() {
+        const pending = importState.parsed.filter(r => r.ok && !r.saved && r.direction !== 'received');
+        if (pending.length === 0) { showPayToast('Nothing to save'); return; }
+        let saved = 0;
+        pending.forEach(r => {
+            if (r.duplicate) return;  // skip dups in bulk save — user must save individually
+            addTransaction(
+                r.amount,
+                r.category || 'other',
+                r.editedNote || 'MoMo transaction',
+                r.editedDate || new Date().toISOString().split('T')[0],
+                ['smart-import', r.network || 'momo', r.refId || 'auto'].filter(Boolean),
+                true
+            );
+            r.saved = true;
+            saved++;
+        });
+        renderImportResults();
+        showPayToast(`✅ Imported ${saved} transaction${saved !== 1 ? 's' : ''}`);
     }
 
     // ── App state ─────────────────────────────────────────────────
@@ -5854,6 +6592,7 @@
         }
 
         if (name === 'analytics') setTimeout(initCharts, 100);
+        if (name === 'add')       renderAddCategoryGrid();  // keep grid fresh for custom categories
         if (name === 'history')   renderHistory();
         if (name === 'settings')  applySettings();
         if (name === 'payment')   initPaymentScreen();
@@ -6391,6 +7130,30 @@
         document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         selectedCategory = category;
+    }
+
+    // Render the Add-Expense category grid from the live `categories` state.
+    // Called whenever the Add screen is opened so newly-created categories
+    // appear immediately.
+    function renderAddCategoryGrid() {
+        const wrap = document.getElementById('add-category-grid');
+        if (!wrap) return;
+        const entries = Object.entries(categories);
+        wrap.innerHTML = entries.map(([id, c]) => `
+            <button class="category-btn p-3 rounded-xl border-2 border-gray-200 flex flex-col items-center gap-2"
+                    onclick="selectCategory(this,'${id}')">
+                <i class="fas fa-${c.icon} text-xl" style="color:${c.hex}"></i>
+                <span class="text-xs font-medium">${c.label}</span>
+            </button>
+        `).join('');
+
+        // Re-apply selected state if selectedCategory still exists
+        if (selectedCategory && categories[selectedCategory]) {
+            const sel = wrap.querySelector(`button[onclick*="'${selectedCategory}'"]`);
+            if (sel) sel.classList.add('selected');
+        } else {
+            selectedCategory = null;
+        }
     }
 
     function checkBudgetStatus() {
