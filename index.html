@@ -1375,6 +1375,37 @@
                 </div>
             </div>
 
+            <!-- ==================== IN-APP REMINDER POPUP ==================== -->
+            <div id="reminder-popup" class="fixed inset-0 bg-black/50 z-[195] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl slide-up text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i id="reminder-popup-icon" class="fas fa-bell text-3xl text-primary"></i>
+                    </div>
+                    <h3 id="reminder-popup-title" class="text-lg font-display font-bold text-gray-800">Time to log your expenses</h3>
+                    <p id="reminder-popup-body" class="text-sm text-gray-500 mt-2 mb-5">Have you logged today's expenses?</p>
+
+                    <!-- Action buttons -->
+                    <button onclick="reminderActionLogNow()"
+                            class="w-full bg-primary text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition mb-2">
+                        <i class="fas fa-plus mr-1"></i> Log expense now
+                    </button>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="reminderActionSnooze(10)"
+                                class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition">
+                            <i class="fas fa-clock mr-1"></i> Snooze 10m
+                        </button>
+                        <button onclick="reminderActionSnooze(30)"
+                                class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition">
+                            <i class="fas fa-clock mr-1"></i> Snooze 30m
+                        </button>
+                    </div>
+                    <button onclick="reminderActionDismiss()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Dismiss
+                    </button>
+                </div>
+            </div>
+
             <!-- ==================== BUSINESS / COMPANY SCREEN ==================== -->
             <div id="business-screen" class="screen p-4 space-y-4">
                 <div class="flex items-center justify-between mb-2">
@@ -3275,11 +3306,65 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
                                     <div id="notif-dot" class="w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow-sm"></div>
                                 </div>
                             </div>
-                            <div id="notif-time-row" class="hidden mt-3 pl-8 flex items-center gap-2">
-                                <label class="text-xs text-gray-500">Reminder time:</label>
-                                <input type="time" id="notif-time-input" value="20:00"
-                                    onchange="updateNotifTime(this.value)"
-                                    class="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 outline-none focus:border-primary">
+                            <!-- Expanded settings (visible only when reminders are ON) -->
+                            <div id="notif-settings-block" class="hidden mt-3 pl-8 space-y-3">
+                                <!-- Time -->
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-clock text-gray-400 text-xs w-4"></i>
+                                    <label class="text-xs text-gray-500">Reminder time:</label>
+                                    <input type="time" id="notif-time-input" value="20:00"
+                                        onchange="updateNotifTime(this.value)"
+                                        class="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 outline-none focus:border-primary">
+                                </div>
+                                <!-- Day-of-week chips -->
+                                <div>
+                                    <label class="text-xs text-gray-500 flex items-center gap-2 mb-1.5">
+                                        <i class="fas fa-calendar-week text-gray-400 text-xs w-4"></i>
+                                        Active days
+                                    </label>
+                                    <div id="notif-days-chips" class="flex gap-1 pl-6"></div>
+                                </div>
+                                <!-- Custom message -->
+                                <div>
+                                    <label class="text-xs text-gray-500 flex items-center gap-2 mb-1.5">
+                                        <i class="fas fa-comment-dots text-gray-400 text-xs w-4"></i>
+                                        Custom message
+                                    </label>
+                                    <input type="text" id="notif-msg-input" maxlength="120"
+                                           oninput="updateNotifMessage(this.value)"
+                                           placeholder="Have you logged today's expenses?"
+                                           class="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 outline-none focus:border-primary ml-6"
+                                           style="width: calc(100% - 24px);">
+                                </div>
+                                <!-- Smart skip -->
+                                <label class="flex items-center justify-between cursor-pointer">
+                                    <span class="flex items-center gap-2 text-xs text-gray-500">
+                                        <i class="fas fa-wand-magic-sparkles text-gray-400 text-xs w-4"></i>
+                                        Skip if I already logged today
+                                    </span>
+                                    <div onclick="event.preventDefault(); toggleSmartSkip()"
+                                        class="w-9 h-5 rounded-full relative cursor-pointer transition-colors"
+                                        id="smartskip-toggle" style="background:#D1D5DB">
+                                        <div id="smartskip-dot" class="w-4 h-4 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow-sm"></div>
+                                    </div>
+                                </label>
+                                <!-- Weekly summary -->
+                                <label class="flex items-center justify-between cursor-pointer">
+                                    <span class="flex items-center gap-2 text-xs text-gray-500">
+                                        <i class="fas fa-chart-line text-gray-400 text-xs w-4"></i>
+                                        Weekly summary (Sun 7 PM)
+                                    </span>
+                                    <div onclick="event.preventDefault(); toggleWeeklySummary()"
+                                        class="w-9 h-5 rounded-full relative cursor-pointer transition-colors"
+                                        id="weeklysum-toggle" style="background:#D1D5DB">
+                                        <div id="weeklysum-dot" class="w-4 h-4 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow-sm"></div>
+                                    </div>
+                                </label>
+                                <!-- Test button -->
+                                <button onclick="testReminderNow()"
+                                        class="text-xs bg-blue-50 hover:bg-blue-100 text-primary font-semibold px-3 py-1.5 rounded-full transition w-full">
+                                    <i class="fas fa-flask mr-1"></i> Test reminder now
+                                </button>
                             </div>
                         </div>
 
@@ -4131,8 +4216,23 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
     let profile = {
         name: '',
         currency: 'USD',
-        settings: { darkMode: false, notifications: false, carryOver: true, notifTime: '20:00' }
+        settings: {
+            darkMode:       false,
+            notifications:  false,
+            carryOver:      true,
+            notifTime:      '20:00',
+            // Enhanced reminder settings (added in v23)
+            notifMessage:   '',                    // empty → use default text
+            notifDays:      [0,1,2,3,4,5,6],       // 0=Sun…6=Sat; default all 7 days
+            weeklySummary:  false,                 // Sunday 7pm weekly recap
+            smartSkip:      true                   // skip popup if already logged today
+        }
     };
+    const DEFAULT_NOTIF_MESSAGE       = "Have you logged today's expenses?";
+    const DEFAULT_WEEKLY_SUMMARY_BODY = "Your week is wrapping up — review your spending and set up next week's budget.";
+    const SNOOZE_DEFAULT_MINUTES = 10;
+    let snoozedUntil = 0;             // epoch ms; 0 means not snoozed
+    let lastReminderShownDate = '';   // YYYY-MM-DD — prevents same-day re-pop
     let appState = { budget: 500, spent: 0, transactions: [], weekId: '' };
     let weekHistory = [];
     let selectedCategory = null;
@@ -4212,6 +4312,14 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
 
         if (rawProfile)  profile     = JSON.parse(rawProfile);
         if (rawHistory)  weekHistory = JSON.parse(rawHistory);
+
+        // Backfill new reminder fields for existing users (v23+)
+        if (profile.settings) {
+            if (typeof profile.settings.notifMessage  !== 'string') profile.settings.notifMessage  = '';
+            if (!Array.isArray(profile.settings.notifDays))         profile.settings.notifDays     = [0,1,2,3,4,5,6];
+            if (typeof profile.settings.weeklySummary !== 'boolean')profile.settings.weeklySummary = false;
+            if (typeof profile.settings.smartSkip     !== 'boolean')profile.settings.smartSkip     = true;
+        }
 
         // Engagement features — independent persistence
         try { goals       = JSON.parse(localStorage.getItem(GOALS_KEY))      || []; } catch { goals = []; }
@@ -9176,12 +9284,19 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         setToggle('notif-toggle',      'notif-dot',      profile.settings.notifications);
         setToggle('carry-over-toggle', 'carry-over-dot', profile.settings.carryOver);
 
-        const notifRow = document.getElementById('notif-time-row');
-        if (notifRow) {
-            notifRow.classList.toggle('hidden', !profile.settings.notifications);
+        const notifBlock = document.getElementById('notif-settings-block');
+        if (notifBlock) {
+            notifBlock.classList.toggle('hidden', !profile.settings.notifications);
         }
-        const notifInput = document.getElementById('notif-time-input');
-        if (notifInput) notifInput.value = profile.settings.notifTime;
+        renderNotifSettingsBlock();
+        // Start the in-app reminder tick loop if reminders are on
+        if (profile.settings.notifications) {
+            startReminderTickLoop();
+        }
+        // Start weekly summary if enabled
+        if (profile.settings.weeklySummary) {
+            scheduleWeeklySummary();
+        }
 
         const currSelect = document.getElementById('settings-currency');
         if (currSelect) currSelect.value = profile.currency;
@@ -10460,6 +10575,25 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         saveData();
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    //  ENHANCED REMINDER SYSTEM
+    //
+    //  Two complementary delivery channels:
+    //    1. Service Worker showNotification() — fires even if the app/tab
+    //       is closed (system-level notification with icon + badge).
+    //    2. In-app reminder popup — fires when the tab is open and visible.
+    //       Includes Snooze and Dismiss for a less-disturbing UX.
+    //
+    //  Smart features (configurable in Settings):
+    //    • Day-of-week filter (skip weekends, etc.)
+    //    • Custom message
+    //    • Smart skip — don't pop if user already logged today
+    //    • Weekly summary on Sundays at 7 PM (separate toggle)
+    // ═══════════════════════════════════════════════════════════════
+
+    const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];          // Sun=0..Sat=6
+    const DAY_FULL   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
     async function toggleNotifications() {
         if (!profile.settings.notifications) {
             if (!('Notification' in window)) { alert('Your browser does not support notifications.'); return; }
@@ -10467,9 +10601,11 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
             if (perm === 'granted') {
                 profile.settings.notifications = true;
                 setToggle('notif-toggle', 'notif-dot', true);
-                const row = document.getElementById('notif-time-row');
-                if (row) row.classList.remove('hidden');
+                const block = document.getElementById('notif-settings-block');
+                if (block) block.classList.remove('hidden');
                 scheduleNotification(profile.settings.notifTime);
+                renderNotifSettingsBlock();
+                startReminderTickLoop();
                 saveData();
             } else {
                 alert('Notification permission denied. Enable it in browser settings.');
@@ -10477,8 +10613,8 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         } else {
             profile.settings.notifications = false;
             setToggle('notif-toggle', 'notif-dot', false);
-            const row = document.getElementById('notif-time-row');
-            if (row) row.classList.add('hidden');
+            const block = document.getElementById('notif-settings-block');
+            if (block) block.classList.add('hidden');
             saveData();
         }
     }
@@ -10488,6 +10624,195 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         saveData();
         if (profile.settings.notifications) scheduleNotification(time);
     }
+
+    // ── Reminder customization handlers ────────────────────────────
+    function updateNotifMessage(text) {
+        profile.settings.notifMessage = (text || '').slice(0, 120);
+        saveData();
+        if (profile.settings.notifications) scheduleNotification(profile.settings.notifTime);
+    }
+
+    function toggleNotifDay(dayIdx) {
+        const days = profile.settings.notifDays || [0,1,2,3,4,5,6];
+        const i = days.indexOf(dayIdx);
+        if (i >= 0) days.splice(i, 1);
+        else        days.push(dayIdx);
+        // Keep at least one day enabled to avoid silent broken state
+        if (days.length === 0) {
+            days.push(dayIdx);
+            showPayToast('Keep at least one day enabled');
+        }
+        profile.settings.notifDays = days.sort();
+        saveData();
+        renderNotifSettingsBlock();
+    }
+
+    function toggleSmartSkip() {
+        profile.settings.smartSkip = !profile.settings.smartSkip;
+        setToggle('smartskip-toggle', 'smartskip-dot', profile.settings.smartSkip, '24px');
+        saveData();
+    }
+
+    function toggleWeeklySummary() {
+        profile.settings.weeklySummary = !profile.settings.weeklySummary;
+        setToggle('weeklysum-toggle', 'weeklysum-dot', profile.settings.weeklySummary, '24px');
+        saveData();
+        if (profile.settings.weeklySummary) {
+            scheduleWeeklySummary();
+            showPayToast('Weekly summary scheduled for Sundays at 7 PM');
+        }
+    }
+
+    function renderNotifSettingsBlock() {
+        // Time
+        const timeInput = document.getElementById('notif-time-input');
+        if (timeInput) timeInput.value = profile.settings.notifTime || '20:00';
+        // Custom message input
+        const msgInput = document.getElementById('notif-msg-input');
+        if (msgInput) msgInput.value = profile.settings.notifMessage || '';
+        // Smart skip + weekly summary toggles
+        setToggle('smartskip-toggle', 'smartskip-dot', !!profile.settings.smartSkip, '24px');
+        setToggle('weeklysum-toggle', 'weeklysum-dot', !!profile.settings.weeklySummary, '24px');
+        // Day chips
+        const wrap = document.getElementById('notif-days-chips');
+        if (wrap) {
+            const enabled = new Set(profile.settings.notifDays || [0,1,2,3,4,5,6]);
+            wrap.innerHTML = DAY_LABELS.map((lbl, idx) => {
+                const on = enabled.has(idx);
+                return `<button onclick="toggleNotifDay(${idx})" title="${DAY_FULL[idx]}"
+                    class="w-7 h-7 rounded-full text-[11px] font-bold transition ${on ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}">${lbl}</button>`;
+            }).join('');
+        }
+    }
+
+    function testReminderNow() {
+        showInAppReminderPopup({
+            title: 'Test reminder ✨',
+            body: profile.settings.notifMessage || DEFAULT_NOTIF_MESSAGE,
+            icon: 'flask'
+        });
+    }
+
+    // ── Smart skip check ────────────────────────────────────────────
+    function userLoggedExpenseToday() {
+        const today = new Date().toISOString().split('T')[0];
+        return (appState.transactions || []).some(t => !t.isTopUp && t.date === today);
+    }
+
+    // ── In-app reminder popup ───────────────────────────────────────
+    function showInAppReminderPopup({ title, body, icon }) {
+        const popup = document.getElementById('reminder-popup');
+        if (!popup) return;
+        setText('reminder-popup-title', title || 'Time to log your expenses');
+        setText('reminder-popup-body',  body  || DEFAULT_NOTIF_MESSAGE);
+        const iconEl = document.getElementById('reminder-popup-icon');
+        if (iconEl) iconEl.className = `fas fa-${icon || 'bell'} text-3xl text-primary`;
+        popup.classList.remove('hidden');
+    }
+    function hideInAppReminderPopup() {
+        document.getElementById('reminder-popup')?.classList.add('hidden');
+    }
+    function reminderActionLogNow() {
+        hideInAppReminderPopup();
+        showScreen('add');
+    }
+    function reminderActionSnooze(minutes) {
+        snoozedUntil = Date.now() + minutes * 60 * 1000;
+        hideInAppReminderPopup();
+        showPayToast(`⏰ Snoozed for ${minutes} minutes`);
+    }
+    function reminderActionDismiss() {
+        // Mark today's reminder as shown so it doesn't re-trigger today
+        lastReminderShownDate = new Date().toISOString().split('T')[0];
+        hideInAppReminderPopup();
+    }
+
+    // ── Reminder tick loop — runs every 30s while app is open ───────
+    let _reminderTickInterval = null;
+    function startReminderTickLoop() {
+        if (_reminderTickInterval) return;
+        // Check once immediately, then every 30 seconds.
+        reminderTickCheck();
+        _reminderTickInterval = setInterval(reminderTickCheck, 30 * 1000);
+        // Re-check whenever tab becomes visible (covers laptop wake from sleep)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) reminderTickCheck();
+        });
+    }
+
+    function reminderTickCheck() {
+        if (!profile.settings.notifications) return;
+        if (document.hidden) return;                           // SW notif handles closed-tab case
+        const today = new Date().toISOString().split('T')[0];
+        if (lastReminderShownDate === today) return;           // already shown today
+        if (Date.now() < snoozedUntil) return;                 // snoozed
+
+        const now = new Date();
+        const dow = now.getDay();
+        const days = profile.settings.notifDays || [0,1,2,3,4,5,6];
+        if (!days.includes(dow)) return;
+
+        // Time match: fire if within a 60-second window of the configured time
+        const [hh, mm] = (profile.settings.notifTime || '20:00').split(':').map(Number);
+        const target = hh * 60 + mm;
+        const current = now.getHours() * 60 + now.getMinutes();
+        if (current < target || current > target + 1) return;  // 2-minute fire window
+
+        // Smart skip: if user already logged today and the option is on
+        if (profile.settings.smartSkip && userLoggedExpenseToday()) {
+            lastReminderShownDate = today;
+            return;
+        }
+
+        // Fire the in-app popup
+        showInAppReminderPopup({
+            title: '🔔 Daily reminder',
+            body: profile.settings.notifMessage || DEFAULT_NOTIF_MESSAGE
+        });
+        lastReminderShownDate = today;
+    }
+
+    // ── Weekly summary scheduling (Sunday 7pm) ──────────────────────
+    let _weeklySummaryTimer = null;
+    function scheduleWeeklySummary() {
+        if (_weeklySummaryTimer) clearTimeout(_weeklySummaryTimer);
+        if (!profile.settings.weeklySummary) return;
+        const now = new Date();
+        const next = new Date(now);
+        next.setHours(19, 0, 0, 0);
+        // Find next Sunday at 19:00
+        const daysUntilSun = (7 - next.getDay()) % 7;
+        next.setDate(next.getDate() + (daysUntilSun || (next <= now ? 7 : 0)));
+        const delay = Math.max(60_000, next.getTime() - now.getTime());
+        _weeklySummaryTimer = setTimeout(() => {
+            const remaining = (appState.budget || 0) - (appState.spent || 0);
+            const body = remaining >= 0
+                ? `📊 You finished the week with ${fmt(remaining)} unspent — great discipline!`
+                : `📊 You went ${fmt(-remaining)} over budget. Time to plan next week.`;
+            showInAppReminderPopup({ title: 'Weekly Summary', body, icon: 'chart-line' });
+            // Re-schedule for next week
+            scheduleWeeklySummary();
+        }, delay);
+    }
+
+    // Re-pin the existing setToggle helper to support a custom dot translate distance
+    // (the existing setToggle hardcodes 'translateX(24px)' for w-12 toggles; small toggles
+    //  use a different translate). We patch it once if the function exists and lacks the param.
+    (function patchSetToggle() {
+        if (typeof setToggle === 'function' && setToggle.length < 4) {
+            const orig = setToggle;
+            window.setToggle = function(toggleId, dotId, on, translateDistance) {
+                if (translateDistance) {
+                    const tog = document.getElementById(toggleId);
+                    const dot = document.getElementById(dotId);
+                    if (tog) tog.style.background = on ? '#1E3A8A' : '#D1D5DB';
+                    if (dot) dot.style.transform  = on ? `translateX(${translateDistance})` : 'translateX(0)';
+                    return;
+                }
+                return orig(toggleId, dotId, on);
+            };
+        }
+    })();
 
     function toggleCarryOver() {
         profile.settings.carryOver = !profile.settings.carryOver;
@@ -10522,7 +10847,12 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
     // ── Notifications via service worker ─────────────────────────
     function scheduleNotification(time) {
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({ type: 'SCHEDULE_NOTIFICATION', time });
+            navigator.serviceWorker.controller.postMessage({
+                type:      'SCHEDULE_NOTIFICATION',
+                time:      time,
+                message:   profile.settings.notifMessage || DEFAULT_NOTIF_MESSAGE,
+                days:      profile.settings.notifDays    || [0,1,2,3,4,5,6]
+            });
         }
     }
 

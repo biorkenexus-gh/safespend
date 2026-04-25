@@ -1,4 +1,4 @@
-const CACHE_NAME = 'safespend-v22';
+const CACHE_NAME = 'safespend-v23';
 
 const PRECACHE_URLS = [
     './',
@@ -70,7 +70,12 @@ self.addEventListener('fetch', event => {
 });
 
 // ── Daily notification scheduling ────────────────────────────────
+//   Stored config from the latest SCHEDULE_NOTIFICATION message:
+//     time    : 'HH:MM'  — local time
+//     message : string   — custom body text (or default)
+//     days    : [0..6]   — Sun=0..Sat=6, days the reminder fires on
 let notifTimeout = null;
+let notifConfig  = { time: '20:00', message: "Have you logged today's expenses?", days: [0,1,2,3,4,5,6] };
 
 self.addEventListener('message', event => {
     if (!event.data) return;
@@ -78,30 +83,39 @@ self.addEventListener('message', event => {
         self.skipWaiting();
     }
     if (event.data.type === 'SCHEDULE_NOTIFICATION') {
-        scheduleDailyNotification(event.data.time);
+        if (event.data.time)             notifConfig.time    = event.data.time;
+        if (event.data.message)          notifConfig.message = event.data.message;
+        if (Array.isArray(event.data.days)) notifConfig.days  = event.data.days;
+        scheduleDailyNotification();
     }
 });
 
-function scheduleDailyNotification(time) {
+function scheduleDailyNotification() {
     if (notifTimeout) { clearTimeout(notifTimeout); notifTimeout = null; }
 
-    const [hours, minutes] = time.split(':').map(Number);
+    const [hours, minutes] = (notifConfig.time || '20:00').split(':').map(Number);
     const now    = new Date();
     const target = new Date(now);
     target.setHours(hours, minutes, 0, 0);
+    // If today's slot has already passed OR today isn't an enabled day,
+    // advance one day at a time until we hit an enabled day in the future.
+    const days = (notifConfig.days && notifConfig.days.length) ? notifConfig.days : [0,1,2,3,4,5,6];
     if (target <= now) target.setDate(target.getDate() + 1);
+    while (!days.includes(target.getDay())) {
+        target.setDate(target.getDate() + 1);
+    }
 
     const delay = target.getTime() - now.getTime();
     notifTimeout = setTimeout(() => {
         self.registration.showNotification('SafeSpend Reminder 💰', {
-            body:    "Have you logged today's expenses?",
+            body:    notifConfig.message || "Have you logged today's expenses?",
             icon:    './icon-192.svg',
             badge:   './icon-192.svg',
             tag:     'daily-reminder',
             renotify: true,
             actions: [{ action: 'open', title: 'Open App' }]
         });
-        scheduleDailyNotification(time);
+        scheduleDailyNotification();
     }, delay);
 }
 
