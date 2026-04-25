@@ -1160,6 +1160,203 @@
                 </div>
             </div>
 
+            <!-- ==================== HELP CENTER SCREEN ==================== -->
+            <div id="help-screen" class="screen p-4 space-y-4">
+                <div class="flex items-center mb-2">
+                    <button onclick="showScreen('settings')" class="mr-4 text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-2xl font-display font-bold text-gray-800">Help Center</h2>
+                </div>
+
+                <!-- Hero + search -->
+                <div class="bg-gradient-to-br from-primary via-blue-600 to-indigo-600 rounded-3xl p-6 text-white shadow-xl">
+                    <div class="flex items-center gap-2 mb-1 opacity-90">
+                        <i class="fas fa-life-ring"></i>
+                        <p class="text-xs font-semibold uppercase tracking-wide">How can we help?</p>
+                    </div>
+                    <p class="font-display font-bold text-2xl mb-4">We're here for you 24/7</p>
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="help-search" oninput="filterHelp()" placeholder="Search FAQs, troubleshooting…"
+                               class="w-full pl-11 pr-4 py-3 rounded-xl bg-white text-gray-800 outline-none focus:ring-2 focus:ring-blue-200">
+                    </div>
+                </div>
+
+                <!-- Quick contact cards -->
+                <div class="grid grid-cols-2 gap-3">
+                    <a id="help-whatsapp" href="#" target="_blank" rel="noopener"
+                       class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md active:scale-95 transition flex flex-col items-center gap-1 text-center">
+                        <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                            <i class="fab fa-whatsapp text-2xl"></i>
+                        </div>
+                        <p class="text-xs font-semibold text-gray-700 mt-1">WhatsApp</p>
+                        <p class="text-[10px] text-gray-400">Instant reply</p>
+                    </a>
+                    <a id="help-phone" href="#"
+                       class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md active:scale-95 transition flex flex-col items-center gap-1 text-center">
+                        <div class="w-12 h-12 bg-blue-100 text-primary rounded-full flex items-center justify-center">
+                            <i class="fas fa-phone text-xl"></i>
+                        </div>
+                        <p class="text-xs font-semibold text-gray-700 mt-1">Call Us</p>
+                        <p class="text-[10px] text-gray-400" id="help-hours-short">Mon-Fri · 9-5</p>
+                    </a>
+                    <a id="help-email" href="#"
+                       class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md active:scale-95 transition flex flex-col items-center gap-1 text-center">
+                        <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center">
+                            <i class="fas fa-envelope text-xl"></i>
+                        </div>
+                        <p class="text-xs font-semibold text-gray-700 mt-1">Email</p>
+                        <p class="text-[10px] text-gray-400">24h reply</p>
+                    </a>
+                    <button onclick="openContactFormModal()"
+                            class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md active:scale-95 transition flex flex-col items-center gap-1 text-center">
+                        <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center">
+                            <i class="fas fa-paper-plane text-xl"></i>
+                        </div>
+                        <p class="text-xs font-semibold text-gray-700 mt-1">Send Message</p>
+                        <p class="text-[10px] text-gray-400">Contact form</p>
+                    </button>
+                </div>
+
+                <!-- Detailed contact info -->
+                <div class="bg-white rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100">
+                    <div class="p-4 flex items-center gap-3">
+                        <div class="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center shrink-0">
+                            <i class="fab fa-whatsapp"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-gray-500">WhatsApp Support</p>
+                            <p class="text-sm font-semibold text-gray-800" id="help-wa-display">—</p>
+                        </div>
+                        <a id="help-wa-btn" href="#" target="_blank" rel="noopener"
+                           class="text-xs bg-green-600 text-white px-3 py-1.5 rounded-full font-semibold hover:bg-green-700 transition whitespace-nowrap">
+                            Chat now
+                        </a>
+                    </div>
+                    <div class="p-4 flex items-center gap-3">
+                        <div class="w-10 h-10 bg-blue-100 text-primary rounded-full flex items-center justify-center shrink-0">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-gray-500">Phone Line</p>
+                            <p class="text-sm font-semibold text-gray-800" id="help-phone-display">—</p>
+                            <p class="text-[10px] text-gray-400" id="help-hours">—</p>
+                        </div>
+                        <a id="help-phone-btn" href="#"
+                           class="text-xs bg-primary text-white px-3 py-1.5 rounded-full font-semibold hover:bg-blue-800 transition whitespace-nowrap">
+                            Call
+                        </a>
+                    </div>
+                    <div class="p-4 flex items-center gap-3">
+                        <div class="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center shrink-0">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-gray-500">Email Support</p>
+                            <p class="text-sm font-semibold text-gray-800 truncate" id="help-email-display">—</p>
+                        </div>
+                        <a id="help-email-btn" href="#"
+                           class="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-full font-semibold hover:bg-purple-700 transition whitespace-nowrap">
+                            Mail
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Offices -->
+                <div class="bg-white rounded-2xl shadow-sm">
+                    <div class="px-4 py-3 border-b border-gray-100">
+                        <h3 class="font-display font-semibold text-gray-800 text-sm flex items-center gap-2">
+                            <i class="fas fa-building text-primary"></i> Our Offices
+                        </h3>
+                    </div>
+                    <div id="help-offices-list" class="divide-y divide-gray-100"></div>
+                </div>
+
+                <!-- FAQ -->
+                <div id="help-faq-section" class="bg-white rounded-2xl shadow-sm">
+                    <div class="px-4 py-3 border-b border-gray-100">
+                        <h3 class="font-display font-semibold text-gray-800 text-sm flex items-center gap-2">
+                            <i class="fas fa-circle-question text-primary"></i> Frequently Asked Questions
+                        </h3>
+                    </div>
+                    <div id="help-faq-list" class="divide-y divide-gray-100"></div>
+                </div>
+
+                <!-- Troubleshooting -->
+                <div id="help-trouble-section" class="bg-white rounded-2xl shadow-sm">
+                    <div class="px-4 py-3 border-b border-gray-100">
+                        <h3 class="font-display font-semibold text-gray-800 text-sm flex items-center gap-2">
+                            <i class="fas fa-wrench text-primary"></i> Troubleshooting
+                        </h3>
+                    </div>
+                    <div id="help-trouble-list" class="divide-y divide-gray-100"></div>
+                </div>
+
+                <!-- No-results state -->
+                <div id="help-no-results" class="hidden bg-white rounded-2xl p-8 text-center text-gray-400">
+                    <i class="fas fa-search text-3xl mb-2 empty-pulse"></i>
+                    <p class="text-sm">No topics match your search</p>
+                    <button onclick="clearHelpSearch()"
+                            class="mt-3 text-xs bg-primary text-white px-4 py-1.5 rounded-full font-semibold hover:bg-blue-800 transition">
+                        Clear search
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== CONTACT FORM MODAL ==================== -->
+            <div id="contact-form-modal" class="fixed inset-0 bg-black/60 z-[180] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl slide-up">
+                    <div class="text-center mb-5">
+                        <div class="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-paper-plane text-2xl text-amber-600"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-gray-800">Send a Message</h3>
+                        <p class="text-sm text-gray-500 mt-1">We'll reply within 24 hours</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Your Name</label>
+                            <input type="text" id="contact-name" maxlength="50" placeholder="Jane Doe"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Email</label>
+                            <input type="email" id="contact-email" maxlength="100" placeholder="you@example.com"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Subject</label>
+                            <select id="contact-subject" class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                                <option value="general">General Question</option>
+                                <option value="wallet">Wallet / Payment Issue</option>
+                                <option value="account">Account / Login</option>
+                                <option value="bug">Report a Bug</option>
+                                <option value="feedback">Feedback / Feature Request</option>
+                                <option value="business">Business / Partnership</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Message</label>
+                            <textarea id="contact-message" maxlength="1000" rows="4" placeholder="Tell us how we can help…"
+                                      class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none resize-none"></textarea>
+                            <p class="text-[10px] text-gray-400 mt-0.5"><span id="contact-char-count">0</span>/1000 characters</p>
+                        </div>
+                        <p id="contact-error" class="hidden text-xs text-danger"></p>
+                    </div>
+
+                    <button onclick="submitContactForm()"
+                            class="w-full mt-5 bg-primary text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition">
+                        <i class="fas fa-paper-plane mr-1"></i> Send Message
+                    </button>
+                    <button onclick="closeContactFormModal()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
             <!-- ==================== ADMIN DASHBOARD SCREEN ==================== -->
             <div id="admin-screen" class="screen p-4 space-y-4">
                 <div class="flex items-center mb-2">
@@ -1237,6 +1434,19 @@
                         </div>
                     </div>
 
+                    <!-- Support messages inbox -->
+                    <div id="admin-support-card" class="bg-white rounded-2xl shadow-sm">
+                        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                            <h3 class="font-display font-semibold text-gray-800 text-sm flex items-center gap-2">
+                                <i class="fas fa-inbox text-primary"></i>
+                                Support Inbox
+                                <span id="admin-support-unread" class="hidden text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold"></span>
+                            </h3>
+                            <button onclick="loadAdminData().then(renderAdminDashboard)" class="text-xs text-primary hover:underline">Refresh</button>
+                        </div>
+                        <div id="admin-support-list" class="divide-y divide-gray-100 max-h-80 overflow-y-auto"></div>
+                    </div>
+
                     <!-- Pending owner withdrawals -->
                     <div id="admin-withdrawals-card" class="bg-white rounded-2xl shadow-sm hidden">
                         <div class="px-4 py-3 border-b border-gray-100">
@@ -1244,6 +1454,7 @@
                         </div>
                         <div id="admin-withdrawals-list" class="divide-y divide-gray-100"></div>
                     </div>
+
                 </div>
             </div>
 
@@ -1288,6 +1499,168 @@
                         Cancel
                     </button>
                 </div>
+            </div>
+
+            <!-- ==================== HELP CENTER SCREEN ==================== -->
+            <div id="help-screen" class="screen p-4 space-y-4">
+                <div class="flex items-center mb-2">
+                    <button onclick="showScreen('settings')" class="mr-4 text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-2xl font-display font-bold text-gray-800">Help Center</h2>
+                </div>
+
+                <!-- Hero -->
+                <div class="bg-gradient-to-br from-primary via-blue-600 to-indigo-600 rounded-3xl p-6 text-white shadow-xl">
+                    <div class="flex items-start gap-3">
+                        <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
+                            <i class="fas fa-life-ring text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-bold text-lg">How can we help?</h3>
+                            <p class="text-sm text-blue-100 mt-0.5">Chat, call, email, or browse FAQs — we're here to help you get the most from SafeSpend.</p>
+                        </div>
+                    </div>
+                    <!-- Search -->
+                    <div class="relative mt-4">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-white/60 text-sm"></i>
+                        <input type="text" id="help-search" oninput="filterFaqs()"
+                               class="w-full pl-11 pr-3 py-3 rounded-xl bg-white/20 backdrop-blur border border-white/30 text-white placeholder:text-white/70 outline-none focus:bg-white/30"
+                               placeholder="Search help topics…">
+                    </div>
+                </div>
+
+                <!-- Contact methods grid (4 cards) -->
+                <div class="grid grid-cols-2 gap-3">
+                    <!-- WhatsApp -->
+                    <a id="help-whatsapp" href="#" target="_blank"
+                       class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition flex flex-col items-start active:scale-95">
+                        <div class="w-11 h-11 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-3">
+                            <i class="fab fa-whatsapp text-2xl"></i>
+                        </div>
+                        <h4 class="font-display font-bold text-gray-800 text-sm">WhatsApp Chat</h4>
+                        <p class="text-[11px] text-gray-500 mt-0.5" id="help-whatsapp-display">—</p>
+                        <p class="text-[10px] text-green-600 mt-1 font-semibold">Typically responds in minutes</p>
+                    </a>
+
+                    <!-- Phone -->
+                    <a id="help-phone" href="#"
+                       class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition flex flex-col items-start active:scale-95">
+                        <div class="w-11 h-11 bg-blue-100 text-primary rounded-full flex items-center justify-center mb-3">
+                            <i class="fas fa-phone text-lg"></i>
+                        </div>
+                        <h4 class="font-display font-bold text-gray-800 text-sm">Call Support</h4>
+                        <p class="text-[11px] text-gray-500 mt-0.5" id="help-phone-display">—</p>
+                        <p class="text-[10px] text-primary mt-1 font-semibold" id="help-phone-hours">—</p>
+                    </a>
+
+                    <!-- Email -->
+                    <a id="help-email" href="#"
+                       class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition flex flex-col items-start active:scale-95">
+                        <div class="w-11 h-11 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mb-3">
+                            <i class="fas fa-envelope text-lg"></i>
+                        </div>
+                        <h4 class="font-display font-bold text-gray-800 text-sm">Email Us</h4>
+                        <p class="text-[11px] text-gray-500 mt-0.5 break-all" id="help-email-display">—</p>
+                        <p class="text-[10px] text-purple-600 mt-1 font-semibold">Responds within 24 hours</p>
+                    </a>
+
+                    <!-- Contact form shortcut -->
+                    <button onclick="scrollToContactForm()"
+                            class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition flex flex-col items-start text-left active:scale-95">
+                        <div class="w-11 h-11 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-3">
+                            <i class="fas fa-message text-lg"></i>
+                        </div>
+                        <h4 class="font-display font-bold text-gray-800 text-sm">Send a Message</h4>
+                        <p class="text-[11px] text-gray-500 mt-0.5">Fill out our contact form</p>
+                        <p class="text-[10px] text-amber-600 mt-1 font-semibold">Attached to your account</p>
+                    </button>
+                </div>
+
+                <!-- FAQ Section -->
+                <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                        <i class="fas fa-circle-question text-primary"></i>
+                        <h3 class="font-display font-semibold text-gray-800">Frequently Asked Questions</h3>
+                    </div>
+                    <div id="faq-list" class="divide-y divide-gray-100">
+                        <!-- Populated by renderFaqs() -->
+                    </div>
+                    <div id="faq-no-results" class="hidden p-6 text-center text-gray-400 text-sm">
+                        <i class="fas fa-search text-2xl mb-2"></i>
+                        <p>No FAQs match your search</p>
+                    </div>
+                </div>
+
+                <!-- Contact Form -->
+                <div id="contact-form-section" class="bg-white rounded-2xl shadow-sm p-4 space-y-3 scroll-mt-4">
+                    <div class="flex items-center gap-2 mb-1">
+                        <i class="fas fa-paper-plane text-primary"></i>
+                        <h3 class="font-display font-semibold text-gray-800">Send us a message</h3>
+                    </div>
+                    <p class="text-xs text-gray-500">Fill out the form and we'll get back to you. Your account details are attached automatically so we can find your transactions.</p>
+
+                    <div>
+                        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Your Name</label>
+                        <input type="text" id="contact-name" maxlength="50"
+                               class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                               placeholder="Your name">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Email</label>
+                        <input type="email" id="contact-email" maxlength="100"
+                               class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                               placeholder="you@example.com">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Topic</label>
+                        <select id="contact-subject"
+                                class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                            <option value="general">General question</option>
+                            <option value="wallet">Wallet / PIN / Payment</option>
+                            <option value="account">Account &amp; sign-in</option>
+                            <option value="bug">Bug report</option>
+                            <option value="feedback">Feedback / feature request</option>
+                            <option value="business">Business inquiry</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Message</label>
+                        <textarea id="contact-message" rows="4" maxlength="1000"
+                                  class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none resize-none"
+                                  placeholder="Tell us what's happening…"></textarea>
+                        <p class="text-[10px] text-gray-400 mt-1 text-right"><span id="contact-char-count">0</span>/1000</p>
+                    </div>
+                    <p id="contact-error" class="hidden text-xs text-danger"></p>
+                    <button onclick="submitContactForm()"
+                            class="w-full bg-primary text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition">
+                        Send Message
+                    </button>
+                </div>
+
+                <!-- Office addresses -->
+                <div class="bg-white rounded-2xl shadow-sm p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="fas fa-location-dot text-primary"></i>
+                        <h3 class="font-display font-semibold text-gray-800">Our Offices</h3>
+                    </div>
+                    <div id="help-offices" class="space-y-3">
+                        <!-- Populated by renderHelpCenter() -->
+                    </div>
+                </div>
+
+                <!-- Troubleshooting shortcut → user guide -->
+                <a href="docs/SafeSpend-User-Guide.html" target="_blank"
+                   class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-2xl p-4 text-white flex items-center gap-3 hover:shadow-lg transition">
+                    <div class="w-11 h-11 bg-white/15 rounded-full flex items-center justify-center shrink-0">
+                        <i class="fas fa-book-open text-lg"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-display font-bold">Troubleshooting Guide</h4>
+                        <p class="text-xs opacity-90">Full user manual with Chapter 12: Troubleshooting</p>
+                    </div>
+                    <i class="fas fa-external-link-alt opacity-75"></i>
+                </a>
             </div>
 
             <!-- ==================== PREMIUM UPGRADE MODAL ==================== -->
@@ -2122,6 +2495,24 @@
                             </div>
                         </div>
 
+                        <!-- Help Center -->
+                        <button onclick="showHelpScreen()"
+                                class="w-full flex items-center gap-3 p-4 hover:bg-blue-50 transition text-gray-700 text-left">
+                            <i class="fas fa-life-ring w-5 text-center text-primary"></i>
+                            <span class="flex-1">Help &amp; Support</span>
+                            <span class="text-xs text-gray-400">FAQ · WhatsApp · Email</span>
+                            <i class="fas fa-chevron-right text-xs text-gray-400"></i>
+                        </button>
+
+                        <!-- Help Center -->
+                        <button onclick="showHelpScreen()"
+                                class="w-full flex items-center gap-3 p-4 hover:bg-blue-50 transition text-left text-gray-700">
+                            <i class="fas fa-life-ring w-5 text-center text-primary"></i>
+                            <span class="flex-1">Help Center &amp; Support</span>
+                            <span class="text-xs text-gray-400">FAQ · Contact us</span>
+                            <i class="fas fa-chevron-right text-xs text-gray-400"></i>
+                        </button>
+
                         <!-- User Guide -->
                         <a href="docs/SafeSpend-User-Guide.html" target="_blank"
                            class="w-full flex items-center gap-3 p-4 hover:bg-blue-50 transition text-gray-700">
@@ -2882,16 +3273,263 @@
     }
 
     // ═══════════════════════════════════════════════════════════════
+    //  HELP CENTER / SUPPORT
+    // ═══════════════════════════════════════════════════════════════
+
+    // Curated FAQ content. Add new entries here — they auto-render.
+    const FAQ_ITEMS = [
+        {
+            q: 'How do I create an account?',
+            a: 'Open the app and tap "Continue with Google" on the login screen. Your profile is created automatically using your Google name, email, and photo. No password to remember, no forms to fill. If you prefer to try the app first without an account, tap "Continue as Guest" — you can upgrade anytime.'
+        },
+        {
+            q: 'How do I add an expense?',
+            a: 'Tap the "+" button in the bottom navigation. Enter the amount, pick a category (or let SafeSpend auto-detect from your note), add a note, and tap "Save Expense". You can also use Quick Add tiles on the home screen for one-tap logging of repeated items.'
+        },
+        {
+            q: 'How do I fund my wallet?',
+            a: 'Go to Settings → Mobile Money Wallet → "Add Money". Select your network (MTN, Vodafone, AirtelTigo, M-PESA), enter your phone number and the amount, then tap "Pay with MoMo". You\'ll see a processing screen for a few seconds; on success, your wallet balance updates immediately.'
+        },
+        {
+            q: 'How do I send money to another user?',
+            a: 'Wallet → "Send". Enter the recipient\'s SafeSpend email OR any Mobile Money number. Enter the amount and an optional note. Enter your 4-digit PIN to confirm. SafeSpend-to-SafeSpend transfers are instant; external MoMo transfers go through the provider.'
+        },
+        {
+            q: 'How do I withdraw my wallet balance?',
+            a: 'Wallet → "Withdraw". Pick your network, enter your phone number and the amount, confirm your PIN. A 2% fee applies — shown in the live preview before you confirm. Funds arrive at your Mobile Money within seconds.'
+        },
+        {
+            q: 'What should I do if a transaction fails?',
+            a: '1. Wait 30 seconds and refresh — sometimes the provider is slow.\n2. Check your internet connection.\n3. Ensure you have enough balance in the source (wallet for sends, MoMo account for deposits).\n4. Try again with a smaller amount.\n5. If it still fails, contact us via WhatsApp with the timestamp and amount — we\'ll investigate in Firestore logs.'
+        },
+        {
+            q: 'I\'m having trouble with OTP or login',
+            a: 'For OTP: make sure you\'re on the Mobile Money tab when funding the budget (card payments don\'t use OTP). If the OTP modal is empty, tap "Resend" to generate a fresh code.\n\nFor login: if you see "Sign-in failed", open DevTools (F12) → Console to see the exact Firebase error code. Common fixes: allow popups for the site, check your internet, or clear the browser cache via the "Clear cache & reload" button.'
+        },
+        {
+            q: 'How do I set up a savings goal?',
+            a: 'Settings → Savings Goals → tap "+". Give it a name, emoji, target amount, and optional deadline. Contribute any amount to watch your progress bar fill up. When you hit the target, SafeSpend celebrates with a toast — you\'ve done it!'
+        },
+        {
+            q: 'How do recurring bills work?',
+            a: 'Settings → Recurring Bills → tap "+". Add the bill name, amount, frequency (weekly/monthly/yearly), and due day. SafeSpend auto-computes the next due date and shows an alert on the home screen when a bill is coming up. Tap "Paid" to log the expense and roll to the next cycle.'
+        },
+        {
+            q: 'Is SafeSpend free?',
+            a: 'The core app (expense tracking, budgets, analytics, goals, bills) is 100% free forever. Wallet operations charge small industry-standard fees (0% deposit, 1% send, 2% withdraw). Premium is a one-time $9.99 lifetime purchase — no subscriptions, no recurring charges.'
+        },
+        {
+            q: 'How do I earn from referrals?',
+            a: 'Settings → Refer & Earn → copy your unique code or share directly via WhatsApp/SMS. When someone signs up with your link and logs their first expense, you earn a fixed commission. Withdraw earnings anytime from the Referral Dashboard once you reach the minimum ($20).'
+        },
+        {
+            q: 'Is my data secure?',
+            a: 'Yes. Authentication is handled by Google (we never see your password). Wallet PINs are stored as SHA-256 hashes with per-user salts. Firestore security rules ensure users can only read/write their own data — no cross-user access. All connections use HTTPS. Your expenses and wallet activity are private to you.'
+        }
+    ];
+
+    const TROUBLESHOOTING_ITEMS = [
+        {
+            q: 'App shows old version after update',
+            a: 'Press Ctrl+Shift+R (Cmd+Shift+R on Mac) for a hard reload. If that doesn\'t work: DevTools (F12) → Application → Service Workers → Unregister → reload the page. All error banners also have a "Clear cache & reload" button for quick recovery.'
+        },
+        {
+            q: 'Google Sign-In not working',
+            a: 'Open DevTools (F12) → Console tab. Click "Continue with Google" again — the exact Firebase error code appears with the [Auth] prefix. Common fixes:\n• auth/popup-blocked → allow popups in browser settings\n• auth/unauthorized-domain → add localhost to Firebase Console → Authentication → Settings → Authorized domains\n• auth/operation-not-allowed → enable Google sign-in method in Firebase Console'
+        },
+        {
+            q: 'Wallet balance not showing correctly',
+            a: 'Balance is computed from your transactions in real-time. If it seems off:\n1. Pull down to refresh (or tap the Wallet entry in Settings again).\n2. Check your internet — Firestore needs connectivity.\n3. Open DevTools → Console to see any Firestore errors.\n4. Verify your security rules are published (Firebase Console → Firestore → Rules).'
+        },
+        {
+            q: 'Can\'t find the Admin Dashboard',
+            a: 'The Admin Dashboard is hidden unless your Firebase UID is listed in ADMIN_UIDS (both in index.html and firestore.rules). Find your UID in Firebase Console → Authentication → Users, add it to both files, republish the rules, hard-reload the app, and the purple card will appear in Settings.'
+        },
+        {
+            q: 'Notifications not appearing',
+            a: '1. Settings → Daily Reminder → toggle ON.\n2. Your browser asks for permission — click "Allow".\n3. If you accidentally denied it, go to browser Site Settings → Notifications → allow manually.\n4. On mobile, PWA notifications only work after installing to home screen.'
+        },
+        {
+            q: 'Data not syncing across devices',
+            a: 'Only Google Sign-In accounts sync (guest mode is device-only). Confirm you\'re signed in with the same Google account on both devices. Firestore must be enabled in Firebase Console for sync to work. Wait 5-10 seconds after a change for Firestore to propagate.'
+        }
+    ];
+
+    let helpExpanded = new Set();   // indices of expanded FAQ/troubleshooting items
+
+    function showHelpScreen() {
+        renderHelpCenter();
+        showScreen('help');
+    }
+
+    function renderHelpCenter() {
+        // Quick-action cards
+        const wa  = document.getElementById('help-whatsapp');    if (wa)  wa.href  = waLink();
+        const ph  = document.getElementById('help-phone');       if (ph)  ph.href  = telLink();
+        const em  = document.getElementById('help-email');       if (em)  em.href  = mailLink();
+
+        // Detailed rows
+        setText('help-wa-display',    SUPPORT.WHATSAPP_DISPLAY);
+        setText('help-phone-display', SUPPORT.PHONE_DISPLAY);
+        setText('help-hours',         SUPPORT.HOURS);
+        setText('help-email-display', SUPPORT.EMAIL);
+
+        const waBtn = document.getElementById('help-wa-btn');       if (waBtn)    waBtn.href    = waLink();
+        const phBtn = document.getElementById('help-phone-btn');    if (phBtn)    phBtn.href    = telLink();
+        const emBtn = document.getElementById('help-email-btn');    if (emBtn)    emBtn.href    = mailLink();
+
+        // Offices
+        const offices = document.getElementById('help-offices-list');
+        if (offices) {
+            offices.innerHTML = SUPPORT.OFFICES.map(o => `
+                <div class="p-4 flex items-start gap-3">
+                    <div class="text-2xl shrink-0">${o.flag}</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs text-gray-500">${o.label}</p>
+                        <p class="text-sm text-gray-800 leading-snug">${o.address}</p>
+                        <a href="${o.mapUrl}" target="_blank" rel="noopener"
+                           class="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1">
+                            <i class="fas fa-map-location-dot"></i> Open in Maps
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        renderHelpAccordions();
+    }
+
+    function renderHelpAccordions() {
+        const q = (document.getElementById('help-search')?.value || '').toLowerCase().trim();
+        const filter = item => !q ||
+            item.q.toLowerCase().includes(q) ||
+            item.a.toLowerCase().includes(q);
+
+        const faqs   = FAQ_ITEMS.filter(filter);
+        const trouble = TROUBLESHOOTING_ITEMS.filter(filter);
+
+        const faqList    = document.getElementById('help-faq-list');
+        const troubleList = document.getElementById('help-trouble-list');
+        const faqSection    = document.getElementById('help-faq-section');
+        const troubleSection = document.getElementById('help-trouble-section');
+        const noResults      = document.getElementById('help-no-results');
+
+        if (faqList) faqList.innerHTML = faqs.map((it, i) => renderAccordionItem('f' + i, it, q)).join('');
+        if (troubleList) troubleList.innerHTML = trouble.map((it, i) => renderAccordionItem('t' + i, it, q)).join('');
+
+        if (faqSection)    faqSection.classList.toggle('hidden', faqs.length === 0);
+        if (troubleSection) troubleSection.classList.toggle('hidden', trouble.length === 0);
+        if (noResults)      noResults.classList.toggle('hidden', faqs.length > 0 || trouble.length > 0);
+    }
+
+    function renderAccordionItem(key, item, searchTerm) {
+        const open = helpExpanded.has(key);
+        const highlight = txt => {
+            if (!searchTerm) return txt;
+            const re = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            return txt.replace(re, '<mark class="bg-yellow-200 px-0.5 rounded">$1</mark>');
+        };
+        const answerHtml = highlight(item.a.replace(/\n/g, '<br>'));
+        const questionHtml = highlight(item.q);
+
+        return `
+            <div class="p-0">
+                <button onclick="toggleHelpItem('${key}')"
+                        class="w-full p-4 text-left flex items-center justify-between gap-3 hover:bg-gray-50 transition">
+                    <span class="text-sm font-semibold text-gray-800 flex-1">${questionHtml}</span>
+                    <i class="fas fa-chevron-${open ? 'up' : 'down'} text-gray-400 text-xs shrink-0"></i>
+                </button>
+                ${open ? `<div class="px-4 pb-4 text-sm text-gray-600 leading-relaxed">${answerHtml}</div>` : ''}
+            </div>`;
+    }
+
+    function toggleHelpItem(key) {
+        if (helpExpanded.has(key)) helpExpanded.delete(key);
+        else                        helpExpanded.add(key);
+        renderHelpAccordions();
+    }
+
+    function filterHelp() { renderHelpAccordions(); }
+    function clearHelpSearch() {
+        const s = document.getElementById('help-search');
+        if (s) s.value = '';
+        renderHelpAccordions();
+    }
+
+    // ── Contact form ──────────────────────────────────────────────
+    const CONTACT_RATE_KEY = 'safespend_last_contact_submit';
+    const CONTACT_RATE_MS  = 60_000;  // 1 message per minute to prevent spam
+
+    function openContactFormModal() {
+        const u = firebase.auth().currentUser;
+        document.getElementById('contact-name').value    = profile.name || u?.displayName || '';
+        document.getElementById('contact-email').value   = u?.email || '';
+        document.getElementById('contact-subject').value = 'general';
+        document.getElementById('contact-message').value = '';
+        setText('contact-char-count', '0');
+        const msg = document.getElementById('contact-message');
+        msg.oninput = () => setText('contact-char-count', msg.value.length);
+        const err = document.getElementById('contact-error');
+        err.textContent = ''; err.classList.add('hidden');
+        document.getElementById('contact-form-modal').classList.remove('hidden');
+    }
+    function closeContactFormModal() { document.getElementById('contact-form-modal').classList.add('hidden'); }
+
+    async function submitContactForm() {
+        const err = document.getElementById('contact-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+
+        // Rate limit (prevent spam)
+        const last = parseInt(localStorage.getItem(CONTACT_RATE_KEY) || '0', 10);
+        if (Date.now() - last < CONTACT_RATE_MS) {
+            const sec = Math.ceil((CONTACT_RATE_MS - (Date.now() - last)) / 1000);
+            return showErr(`Please wait ${sec}s before sending another message.`);
+        }
+
+        const name    = document.getElementById('contact-name').value.trim().slice(0, 50);
+        const email   = document.getElementById('contact-email').value.trim().slice(0, 100);
+        const subject = document.getElementById('contact-subject').value;
+        const message = document.getElementById('contact-message').value.trim().slice(0, 1000);
+
+        if (name.length < 2)                           return showErr('Enter your name');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr('Enter a valid email address');
+        if (message.length < 10)                        return showErr('Message must be at least 10 characters');
+        if (!firestoreReady)                            return showErr('No connection — try WhatsApp or email instead');
+
+        try {
+            const user = firebase.auth().currentUser;
+            await db.collection('supportMessages').add({
+                userId:    user?.uid || null,
+                name:      name,
+                email:     email,
+                subject:   subject,
+                message:   message,
+                status:    'new',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                readAt:    null,
+                resolvedAt: null
+            });
+            localStorage.setItem(CONTACT_RATE_KEY, String(Date.now()));
+            closeContactFormModal();
+            showPayToast('✉️ Message sent! We\'ll reply within 24 hours.');
+        } catch (e) {
+            console.warn('[Support] Message submit failed:', e);
+            showErr('Could not send. Please contact us via WhatsApp or email directly.');
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     //  ADMIN DASHBOARD — revenue analytics + owner withdrawal
     // ═══════════════════════════════════════════════════════════════
 
     let revenueChartInstance = null;
     let adminState = {
-        events:       [],
-        withdrawals:  [],
-        totalRevenue: 0,
-        withdrawn:    0,
-        net:          0
+        events:          [],
+        withdrawals:     [],
+        supportMessages: [],
+        totalRevenue:    0,
+        withdrawn:       0,
+        net:             0
     };
 
     async function showAdminScreen() {
@@ -2946,9 +3584,40 @@
                 .reduce((s, w) => s + (w.amount || 0), 0);
 
             adminState.net = Math.max(0, adminState.totalRevenue - adminState.withdrawn);
+
+            // Support messages
+            const sQ = await db.collection('supportMessages').get();
+            adminState.supportMessages = sQ.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => {
+                    const ta = a.createdAt?.toMillis?.() || 0;
+                    const tb = b.createdAt?.toMillis?.() || 0;
+                    return tb - ta;
+                });
         } catch (err) {
             console.warn('[Admin] Load failed:', err);
         }
+    }
+
+    async function markSupportMessageRead(id) {
+        try {
+            await db.collection('supportMessages').doc(id).update({
+                status: 'read',
+                readAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            await loadAdminData();
+            renderAdminDashboard();
+        } catch (e) { console.warn('[Admin] mark read failed:', e); }
+    }
+    async function markSupportMessageResolved(id) {
+        try {
+            await db.collection('supportMessages').doc(id).update({
+                status:     'resolved',
+                resolvedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            await loadAdminData();
+            renderAdminDashboard();
+        } catch (e) { console.warn('[Admin] mark resolved failed:', e); }
     }
 
     function renderAdminDashboard() {
@@ -3039,6 +3708,56 @@
                             <p class="text-[11px] text-gray-500 truncate">${e.description || ''} · ${when}</p>
                         </div>
                         <p class="font-bold text-safe text-sm shrink-0">+${fmt(e.amount)}</p>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        // Support messages inbox
+        const sList = document.getElementById('admin-support-list');
+        const sUnread = document.getElementById('admin-support-unread');
+        if (sList) {
+            const msgs = adminState.supportMessages || [];
+            const unread = msgs.filter(m => m.status === 'new').length;
+            if (sUnread) {
+                if (unread > 0) {
+                    sUnread.textContent = unread;
+                    sUnread.classList.remove('hidden');
+                } else {
+                    sUnread.classList.add('hidden');
+                }
+            }
+            if (msgs.length === 0) {
+                sList.innerHTML = `
+                    <div class="p-6 text-center text-gray-400 text-sm">
+                        <i class="fas fa-inbox text-2xl mb-2"></i>
+                        <p>No support messages yet</p>
+                    </div>`;
+            } else {
+                const subjectLabels = {
+                    general: 'General', wallet: 'Wallet/Payment', account: 'Account/Login',
+                    bug: 'Bug Report', feedback: 'Feedback', business: 'Business'
+                };
+                const statusColor = {
+                    new:      'bg-red-100 text-danger',
+                    read:     'bg-amber-100 text-amber-700',
+                    resolved: 'bg-green-100 text-safe'
+                };
+                sList.innerHTML = msgs.slice(0, 30).map(m => {
+                    const when = m.createdAt?.toDate?.() ? timeAgo(m.createdAt.toDate()) : '—';
+                    return `
+                    <div class="p-3">
+                        <div class="flex items-center gap-2 mb-1">
+                            <p class="text-sm font-semibold text-gray-800 flex-1 truncate">${m.name}</p>
+                            <span class="text-[10px] ${statusColor[m.status] || 'bg-gray-100 text-gray-500'} px-2 py-0.5 rounded-full font-semibold">${m.status}</span>
+                        </div>
+                        <p class="text-[11px] text-gray-500 mb-1">${m.email} · ${subjectLabels[m.subject] || m.subject} · ${when}</p>
+                        <p class="text-xs text-gray-700 mb-2 leading-relaxed whitespace-pre-wrap">${(m.message || '').replace(/</g, '&lt;')}</p>
+                        <div class="flex gap-2">
+                            ${m.status === 'new' ? `<button onclick="markSupportMessageRead('${m.id}')" class="text-[10px] bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-semibold">Mark Read</button>` : ''}
+                            ${m.status !== 'resolved' ? `<button onclick="markSupportMessageResolved('${m.id}')" class="text-[10px] bg-green-100 text-safe px-2 py-1 rounded-full font-semibold">Mark Resolved</button>` : ''}
+                            <a href="mailto:${m.email}?subject=Re:%20SafeSpend%20Support" class="text-[10px] bg-blue-100 text-primary px-2 py-1 rounded-full font-semibold">Reply</a>
+                        </div>
                     </div>`;
                 }).join('');
             }
@@ -3252,6 +3971,212 @@
             }
         } else {
             showErr(`Insufficient wallet balance. You have ${fmt(walletState.balance)}. Top up your Wallet or fund ${fmt(PREMIUM_PRICE - walletState.balance)} more.`);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  HELP CENTER / SUPPORT
+    //
+    //  Contact config lives in SUPPORT_CONFIG (update values there, not
+    //  in this code). FAQ content in FAQ_ITEMS. Messages are saved to
+    //  /supportMessages in Firestore — visible in the Admin Dashboard.
+    // ═══════════════════════════════════════════════════════════════
+
+    function showHelpScreen() {
+        renderHelpCenter();
+        renderFaqs();
+        showScreen('help');
+        // Reset character counter hooks
+        const msg = document.getElementById('contact-message');
+        if (msg) {
+            msg.oninput = () => setText('contact-char-count', msg.value.length);
+        }
+        // Pre-fill name/email from signed-in profile
+        const user = firebase.auth().currentUser;
+        const nameEl  = document.getElementById('contact-name');
+        const emailEl = document.getElementById('contact-email');
+        if (nameEl && !nameEl.value) nameEl.value = profile.name || user?.displayName || '';
+        if (emailEl && !emailEl.value) emailEl.value = user?.email || profile.email || '';
+    }
+
+    function renderHelpCenter() {
+        // Wire up contact links from SUPPORT_CONFIG
+        const waBtn    = document.getElementById('help-whatsapp');
+        const phoneBtn = document.getElementById('help-phone');
+        const emailBtn = document.getElementById('help-email');
+        if (waBtn)    waBtn.href    = buildWhatsAppURL();
+        if (phoneBtn) phoneBtn.href = buildPhoneURL();
+        if (emailBtn) emailBtn.href = buildMailtoURL();
+
+        setText('help-whatsapp-display', SUPPORT_CONFIG.whatsappDisplay);
+        setText('help-phone-display',    SUPPORT_CONFIG.phoneDisplay);
+        setText('help-phone-hours',      SUPPORT_CONFIG.phoneHours);
+        setText('help-email-display',    SUPPORT_CONFIG.supportEmail);
+
+        // Office addresses
+        const offices = document.getElementById('help-offices');
+        if (offices) {
+            offices.innerHTML = SUPPORT_CONFIG.officeAddresses.map(o => {
+                const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.address)}`;
+                return `
+                <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 bg-blue-100 text-primary rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">${o.label}</p>
+                        <p class="text-sm text-gray-800 mt-0.5">${o.address}</p>
+                        <a href="${mapUrl}" target="_blank"
+                           class="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1">
+                            <i class="fas fa-map-location-dot"></i> Open in Maps
+                        </a>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    }
+
+    // ── FAQ accordion + search ───────────────────────────────────
+    let faqExpanded = new Set();
+
+    function renderFaqs(filterText = '') {
+        const list    = document.getElementById('faq-list');
+        const noRes   = document.getElementById('faq-no-results');
+        if (!list) return;
+        const needle  = (filterText || '').toLowerCase().trim();
+        const matched = FAQ_ITEMS.map((item, idx) => ({ ...item, idx }))
+            .filter(it => !needle || it.q.toLowerCase().includes(needle) || it.a.toLowerCase().includes(needle));
+
+        if (matched.length === 0) {
+            list.innerHTML = '';
+            noRes?.classList.remove('hidden');
+            return;
+        }
+        noRes?.classList.add('hidden');
+
+        list.innerHTML = matched.map(it => {
+            const open = faqExpanded.has(it.idx) || (needle && true);  // auto-open when searching
+            return `
+            <div class="faq-item">
+                <button onclick="toggleFaq(${it.idx})"
+                        class="w-full text-left px-4 py-3 flex items-center justify-between gap-3 hover:bg-gray-50 transition">
+                    <span class="text-sm font-semibold text-gray-800 flex-1">${highlightMatch(it.q, needle)}</span>
+                    <i class="fas fa-chevron-${open ? 'up' : 'down'} text-xs text-gray-400 shrink-0"></i>
+                </button>
+                ${open ? `<div class="px-4 pb-4 text-sm text-gray-600 leading-relaxed">${highlightMatch(it.a, needle)}</div>` : ''}
+            </div>`;
+        }).join('');
+    }
+
+    function toggleFaq(idx) {
+        if (faqExpanded.has(idx)) faqExpanded.delete(idx);
+        else                      faqExpanded.add(idx);
+        const search = document.getElementById('help-search')?.value || '';
+        renderFaqs(search);
+    }
+
+    function filterFaqs() {
+        const q = document.getElementById('help-search')?.value || '';
+        renderFaqs(q);
+    }
+
+    function highlightMatch(text, needle) {
+        if (!needle) return text;
+        const safe = text.replace(/[<>]/g, c => ({ '<': '&lt;', '>': '&gt;' }[c]));
+        const re = new RegExp(`(${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return safe.replace(re, '<mark class="bg-yellow-200 px-0.5 rounded">$1</mark>');
+    }
+
+    function scrollToContactForm() {
+        const el = document.getElementById('contact-form-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── Contact form submission ─────────────────────────────────────
+    let lastContactSubmitAt = 0;
+
+    async function submitContactForm() {
+        const err = document.getElementById('contact-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+        err.textContent = ''; err.classList.add('hidden');
+
+        const name    = document.getElementById('contact-name').value.trim();
+        const email   = document.getElementById('contact-email').value.trim();
+        const subject = document.getElementById('contact-subject').value;
+        const message = document.getElementById('contact-message').value.trim();
+
+        // Validation (matches Firestore rules bounds exactly)
+        if (!name || name.length < 2)         return showErr('Please enter your name');
+        if (name.length > 50)                  return showErr('Name too long (max 50 characters)');
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr('Please enter a valid email address');
+        if (email.length > 100)                return showErr('Email too long (max 100 characters)');
+        if (!message || message.length < 10)  return showErr('Please write at least 10 characters');
+        if (message.length > 1000)            return showErr('Message too long (max 1000 characters)');
+
+        // Basic spam/rate-limit: max 1 submission per 30 seconds
+        if (Date.now() - lastContactSubmitAt < 30_000) {
+            return showErr('Please wait a few seconds before sending another message');
+        }
+
+        if (!firestoreReady) {
+            // Graceful fallback — open email client with the message
+            const body = `Name: ${name}\nEmail: ${email}\nSubject: ${subject}\n\n${message}`;
+            window.location.href = `mailto:${SUPPORT_CONFIG.supportEmail}?subject=${encodeURIComponent(SUPPORT_CONFIG.emailSubject + ' — ' + subject)}&body=${encodeURIComponent(body)}`;
+            return;
+        }
+
+        try {
+            const user = firebase.auth().currentUser;
+            await db.collection('supportMessages').add({
+                name,
+                email,
+                subject,      // 'general' | 'wallet' | 'account' | 'bug' | 'feedback' | 'business'
+                message,
+                userId:     user?.uid || null,
+                userAgent:  (navigator.userAgent || '').slice(0, 200),
+                status:     'new',    // 'new' | 'read' | 'resolved'
+                createdAt:  firebase.firestore.FieldValue.serverTimestamp()
+            });
+            lastContactSubmitAt = Date.now();
+            document.getElementById('contact-message').value = '';
+            setText('contact-char-count', 0);
+            showPayToast('✅ Message sent — we\'ll reply within 24 hours');
+        } catch (e) {
+            console.warn('[Support] Submission failed:', e);
+            showErr('Could not send message. Please try WhatsApp or email directly.');
+        }
+    }
+
+    // Admin helpers to mark support messages as read/resolved (used by buttons
+    // in the admin dashboard). Rules allow admin updates that don't touch content.
+    async function markSupportMessageRead(id) {
+        try {
+            await db.collection('supportMessages').doc(id).update({ status: 'read' });
+            await loadAdminData(); renderAdminDashboard();
+        } catch (e) { console.warn('[Admin] Mark read failed:', e); }
+    }
+    async function markSupportMessageResolved(id) {
+        try {
+            await db.collection('supportMessages').doc(id).update({ status: 'resolved' });
+            await loadAdminData(); renderAdminDashboard();
+        } catch (e) { console.warn('[Admin] Mark resolved failed:', e); }
+    }
+
+    // ── Admin view of support messages (called inside admin dashboard) ──
+    async function loadSupportMessages() {
+        if (!firestoreReady || !isCurrentUserAdmin()) return [];
+        try {
+            const q = await db.collection('supportMessages').get();
+            return q.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => {
+                    const ta = a.createdAt?.toMillis?.() || 0;
+                    const tb = b.createdAt?.toMillis?.() || 0;
+                    return tb - ta;
+                });
+        } catch (e) {
+            console.warn('[Admin] Support messages load failed:', e);
+            return [];
         }
     }
 
@@ -3950,6 +4875,45 @@
     const PREMIUM_PRICE  = 9.99;                 // One-time lifetime purchase
     const PREMIUM_LABEL  = 'SafeSpend Premium';
 
+    // ═══════════════════════════════════════════════════════════════
+    //  SUPPORT / HELP CENTER CONFIG
+    //  Update these values when your contact info changes — no other
+    //  code edits needed. Phone numbers should include country code.
+    // ═══════════════════════════════════════════════════════════════
+    const SUPPORT = {
+        WHATSAPP_NUMBER:  '233504669893',                  // digits only for wa.me
+        WHATSAPP_DISPLAY: '+233 50 466 9893',
+        PHONE:            '+233504669893',                 // tel: format
+        PHONE_DISPLAY:    '+233 50 466 9893',
+        EMAIL:            'biorkenexus@gmail.com',
+        HOURS:            'Mon – Fri · 9:00 AM – 5:00 PM GMT',
+        WA_PREFILL:       'Hello, I need help with SafeSpend',
+        OFFICES: [
+            {
+                label:   'US Office',
+                address: '1021C Mount Aetna Rd, Hagerstown MD 21740',
+                flag:    '🇺🇸',
+                mapUrl:  'https://maps.google.com/?q=1021C+Mount+Aetna+Rd+Hagerstown+MD+21740'
+            },
+            {
+                label:   'Ghana Office',
+                address: 'Tema, Middle East Avenue',
+                flag:    '🇬🇭',
+                mapUrl:  'https://maps.google.com/?q=Tema+Middle+East+Avenue+Ghana'
+            }
+        ]
+    };
+
+    function waLink() {
+        return `https://wa.me/${SUPPORT.WHATSAPP_NUMBER}?text=${encodeURIComponent(SUPPORT.WA_PREFILL)}`;
+    }
+    function mailLink() {
+        return `mailto:${SUPPORT.EMAIL}?subject=${encodeURIComponent('SafeSpend Support Request')}`;
+    }
+    function telLink() {
+        return `tel:${SUPPORT.PHONE}`;
+    }
+
     // Compute fee for a given operation.
     function calculateFee(type, amount) {
         const cfg = FEES[type] || { percent: 0, flat: 0 };
@@ -3981,6 +4945,82 @@
         const u = firebase.auth().currentUser;
         return !!(u && ADMIN_UIDS.includes(u.uid));
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  SUPPORT / HELP CENTER CONFIG
+    //  Update any of these values to change what appears on the Help Center.
+    //  No other code changes needed — UI reads from SUPPORT_CONFIG.
+    // ═══════════════════════════════════════════════════════════════
+    const SUPPORT_CONFIG = {
+        whatsappNumber:  '+233504669893',                          // international format, digits only (used in wa.me link)
+        whatsappDisplay: '+233 50 466 9893',                       // pretty display
+        whatsappMessage: 'Hello, I need help with SafeSpend',      // pre-filled chat message
+        phoneNumber:     '+233504669893',                          // click-to-call link
+        phoneDisplay:    '+233 50 466 9893',
+        phoneHours:      'Mon-Fri · 9:00 AM - 5:00 PM GMT',
+        supportEmail:    'biorkenexus@gmail.com',
+        emailSubject:    'SafeSpend Support Request',
+        officeAddresses: [
+            { label: 'US Office',    address: '1021C Mount Aetna Rd, Hagerstown, MD 21740' },
+            { label: 'Ghana Office', address: 'Tema Middle Eats Avenue' }
+        ]
+    };
+
+    function buildWhatsAppURL() {
+        const digits = SUPPORT_CONFIG.whatsappNumber.replace(/\D/g, '');
+        return `https://wa.me/${digits}?text=${encodeURIComponent(SUPPORT_CONFIG.whatsappMessage)}`;
+    }
+    function buildMailtoURL() {
+        return `mailto:${SUPPORT_CONFIG.supportEmail}?subject=${encodeURIComponent(SUPPORT_CONFIG.emailSubject)}`;
+    }
+    function buildPhoneURL() {
+        return `tel:${SUPPORT_CONFIG.phoneNumber}`;
+    }
+
+    // FAQ content — edit these freely; renderer picks them up automatically.
+    const FAQ_ITEMS = [
+        {
+            q: 'How do I create a SafeSpend account?',
+            a: 'Open the app, tap "Continue with Google" on the login screen, and select your Google account. Your profile is created automatically with your name, email, and photo. No passwords needed — Google handles authentication securely.'
+        },
+        {
+            q: 'How do I add an expense?',
+            a: 'Tap the "+" button in the bottom navigation. Enter the amount, optionally pick a category (or let SafeSpend auto-categorize from your note), add a note and tags, and tap Save. Expenses count toward your weekly budget.'
+        },
+        {
+            q: 'How do I send money to another user?',
+            a: 'Go to Settings → Mobile Money Wallet → Send. Enter the recipient\'s email (for SafeSpend users) or phone number (for external Mobile Money). Enter amount, confirm your PIN, and the money transfers instantly.'
+        },
+        {
+            q: 'How do I withdraw money from my wallet?',
+            a: 'Settings → Mobile Money Wallet → Withdraw. Choose your network (MTN, Vodafone, AirtelTigo, or M-PESA), enter your phone number and amount, then confirm with your Wallet PIN. A 2% fee applies; you\'ll see the breakdown before confirming.'
+        },
+        {
+            q: 'My transaction failed — what do I do?',
+            a: 'Mobile Money transfers can fail due to provider issues or insufficient balance on the source account. Check your Wallet transaction history to confirm the final status. If money was debited but not received, contact us via WhatsApp or email with the transaction time — we\'ll investigate.'
+        },
+        {
+            q: 'I\'m not receiving my OTP — what\'s wrong?',
+            a: 'For budget top-up OTPs: look for the amber banner inside the OTP modal — the code is displayed there (currently in demo mode). For real SMS delivery, ensure your phone has signal and the number entered is correct. Tap "Resend OTP" to generate a fresh code.'
+        },
+        {
+            q: 'I forgot my Wallet PIN — how do I reset it?',
+            a: 'For security, PIN reset isn\'t self-service. Contact support via WhatsApp with your registered email. We\'ll verify your identity and reset your PIN within 1 business day.'
+        },
+        {
+            q: 'How does the referral system work?',
+            a: 'Settings → Refer & Earn → share your unique SAFE-XXXXX link. When a friend signs up through your link and logs their first expense, the referral activates and you earn $5 per active referral. Minimum withdrawal is $20.'
+        },
+        {
+            q: 'Can I export my transactions?',
+            a: 'Yes — go to History screen → tap the CSV or PDF icon (top-right). CSV is great for spreadsheets; PDF gives you a branded report with category breakdowns.'
+        },
+        {
+            q: 'Is my financial data safe?',
+            a: 'Yes. Authentication goes through Google (OAuth 2.0, no passwords stored by us). Wallet balances are computed from an immutable transaction log stored in Firebase with bank-grade encryption. We never sell your data.'
+        }
+    ];
+
     let walletState = {
         balance:      0,
         transactions: [],
