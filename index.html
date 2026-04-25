@@ -1875,6 +1875,25 @@
                     </p>
                 </div>
 
+                <!-- Auto-save toggle -->
+                <div class="bg-white rounded-2xl shadow-sm p-3 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                            <i class="fas fa-bolt text-primary"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-gray-800">Auto-save parsed transactions</p>
+                            <p class="text-[11px] text-gray-500" id="autosave-help">Off — review each parsed message before saving (recommended)</p>
+                        </div>
+                    </div>
+                    <div onclick="toggleSmartImportAutosave()"
+                         id="autosave-toggle"
+                         class="w-12 h-6 rounded-full relative cursor-pointer transition-colors shrink-0"
+                         style="background:#D1D5DB">
+                        <div id="autosave-dot" class="w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow-sm"></div>
+                    </div>
+                </div>
+
                 <!-- Paste area -->
                 <div class="bg-white rounded-2xl shadow-sm p-4 space-y-3">
                     <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Paste SMS Messages</label>
@@ -2596,6 +2615,7 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
     const DATA_KEY    = 'safespend_data';
     const HISTORY_KEY = 'safespend_history';
     const DAILY_RECAP_KEY = 'safespend_last_recap';
+    const SMART_IMPORT_AUTOSAVE_KEY = 'safespend_smart_autosave';
 
     // Default favorites (quick-add templates) — used when favorites[] is empty
     const DEFAULT_FAVORITES = [
@@ -3088,7 +3108,32 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
                 setText('import-char-count', input.value.length.toLocaleString());
             };
         }
+        renderSmartImportAutosave();
         showScreen('import');
+    }
+
+    // ── Auto-save toggle (persisted) ──────────────────────────────
+    function isSmartImportAutosaveOn() {
+        return localStorage.getItem(SMART_IMPORT_AUTOSAVE_KEY) === '1';
+    }
+    function toggleSmartImportAutosave() {
+        const next = !isSmartImportAutosaveOn();
+        localStorage.setItem(SMART_IMPORT_AUTOSAVE_KEY, next ? '1' : '0');
+        renderSmartImportAutosave();
+        showPayToast(next
+            ? 'Auto-save enabled — parsed transactions save instantly'
+            : 'Auto-save off — review each transaction before saving');
+    }
+    function renderSmartImportAutosave() {
+        const on   = isSmartImportAutosaveOn();
+        const tog  = document.getElementById('autosave-toggle');
+        const dot  = document.getElementById('autosave-dot');
+        const help = document.getElementById('autosave-help');
+        if (tog) tog.style.background = on ? '#1E3A8A' : '#D1D5DB';
+        if (dot) dot.style.transform  = on ? 'translateX(24px)' : 'translateX(0)';
+        if (help) help.textContent = on
+            ? 'On — parsed transactions save automatically (duplicates and incoming transfers skipped)'
+            : 'Off — review each parsed message before saving (recommended)';
     }
 
     function clearImportInput() {
@@ -3127,8 +3172,20 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         importState.parsed = results;
         renderImportResults();
 
-        const okCount = results.filter(r => r.ok).length;
+        const okCount  = results.filter(r => r.ok).length;
         const dupCount = results.filter(r => r.ok && r.duplicate).length;
+
+        // Auto-save mode: instantly save anything that's safe to save
+        if (isSmartImportAutosaveOn() && okCount > 0) {
+            const before = results.filter(r => r.saved).length;
+            saveAllImported();
+            const after = importState.parsed.filter(r => r.saved).length;
+            const auto = after - before;
+            if (auto > 0) {
+                showPayToast(`⚡ Auto-saved ${auto} transaction${auto !== 1 ? 's' : ''}${dupCount ? ` · ${dupCount} duplicate skipped` : ''}`);
+                return;
+            }
+        }
         showPayToast(`Parsed ${okCount} transaction${okCount !== 1 ? 's' : ''}${dupCount ? ` · ${dupCount} duplicate` : ''}`);
     }
 
@@ -7176,9 +7233,18 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
                 </div>`;
             }
             const cat = categories[t.category] || categories.other;
-            const tagChips = (t.tags || []).slice(0, 2).map(tg =>
+            const isSmsImport = (t.tags || []).includes('smart-import');
+            // Hide internal SMS tags from chips — shown as a dedicated badge instead
+            const visibleTags = (t.tags || []).filter(tg => tg !== 'smart-import' && tg !== 'mtn' && tg !== 'vodafone' && tg !== 'airteltigo' && tg !== 'momo' && tg !== 'auto');
+            const tagChips = visibleTags.slice(0, 2).map(tg =>
                 `<span class="text-[10px] bg-white/70 text-gray-500 px-1.5 py-0.5 rounded ml-1">${tg}</span>`
             ).join('');
+            const smsBadge = isSmsImport
+                ? '<span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded ml-1" title="Auto-imported from Mobile Money SMS"><i class="fas fa-comment-sms mr-0.5"></i>Auto-imported</span>'
+                : '';
+            const aiBadge = !isSmsImport && t.autoCategorized
+                ? '<span class="text-[10px] bg-blue-100 text-primary px-1.5 py-0.5 rounded ml-1"><i class="fas fa-wand-magic-sparkles mr-0.5"></i>auto</span>'
+                : '';
             return `
             <div class="transaction-item flex items-center justify-between p-3 rounded-xl bg-gray-50">
                 <div class="flex items-center gap-3 flex-1 min-w-0">
@@ -7190,7 +7256,8 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
                         <div class="flex items-center gap-1 mt-0.5">
                             <span class="text-[11px] text-gray-500">${cat.label}</span>
                             ${tagChips}
-                            ${t.autoCategorized ? '<span class="text-[10px] bg-blue-100 text-primary px-1.5 py-0.5 rounded ml-1"><i class="fas fa-wand-magic-sparkles mr-0.5"></i>auto</span>' : ''}
+                            ${smsBadge}
+                            ${aiBadge}
                         </div>
                     </div>
                 </div>
@@ -7648,10 +7715,16 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
     function renderHistoryRow(t) {
         const c = categories[t.category] || categories.other;
         const iconClass = (c.color || '').split(' ').filter(x => !x.startsWith('text-')).join(' ');
-        const tagBits = (t.tags || []).slice(0, 3).map(tg =>
+        // Hide internal SMS tags from the tag chips — they're shown as a dedicated badge instead
+        const visibleTags = (t.tags || []).filter(tg => tg !== 'smart-import' && tg !== 'mtn' && tg !== 'vodafone' && tg !== 'airteltigo' && tg !== 'momo' && tg !== 'auto');
+        const tagBits = visibleTags.slice(0, 3).map(tg =>
             `<span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">${tg}</span>`
         ).join(' ');
-        const autoBadge = t.autoCategorized
+        const isSmsImport = (t.tags || []).includes('smart-import');
+        const smsBadge = isSmsImport
+            ? '<span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded ml-1" title="Auto-imported from Mobile Money SMS"><i class="fas fa-comment-sms"></i> Auto-imported</span>'
+            : '';
+        const autoBadge = !isSmsImport && t.autoCategorized
             ? '<span class="text-[10px] bg-blue-50 text-primary px-1.5 py-0.5 rounded ml-1">auto</span>' : '';
         return `
             <div class="flex items-center gap-3 p-3">
@@ -7659,7 +7732,7 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
                     <i class="fas fa-${c.icon} text-sm" style="color:${c.hex || '#6B7280'}"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-gray-800 truncate">${t.note || c.label}${autoBadge}</p>
+                    <p class="text-sm font-semibold text-gray-800 truncate">${t.note || c.label}${smsBadge}${autoBadge}</p>
                     <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
                         <span class="text-[11px] text-gray-500">${c.label}</span>
                         ${tagBits}
