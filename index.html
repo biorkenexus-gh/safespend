@@ -2595,6 +2595,15 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
     const PROFILE_KEY = 'safespend_profile';
     const DATA_KEY    = 'safespend_data';
     const HISTORY_KEY = 'safespend_history';
+    const DAILY_RECAP_KEY = 'safespend_last_recap';
+
+    // Default favorites (quick-add templates) — used when favorites[] is empty
+    const DEFAULT_FAVORITES = [
+        { id: 'fav-coffee', emoji: '☕', label: 'Coffee',  amount: 4,  category: 'food' },
+        { id: 'fav-lunch',  emoji: '🥗', label: 'Lunch',   amount: 12, category: 'food' },
+        { id: 'fav-uber',   emoji: '🚗', label: 'Uber',    amount: 8,  category: 'transport' },
+        { id: 'fav-snack',  emoji: '🍪', label: 'Snack',   amount: 3,  category: 'food' }
+    ];
 
     // ── Currency config ───────────────────────────────────────────
     const CURRENCIES = { USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', GHS: '₵' };
@@ -3377,8 +3386,15 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         // Engagement features — independent persistence
         try { goals       = JSON.parse(localStorage.getItem(GOALS_KEY))      || []; } catch { goals = []; }
         try { bills       = JSON.parse(localStorage.getItem(BILLS_KEY))      || []; } catch { bills = []; }
-        try { favorites   = JSON.parse(localStorage.getItem(FAVORITES_KEY))  || []; } catch { favorites = []; }
         try { dailyStreak = JSON.parse(localStorage.getItem(DAILY_STREAK_KEY)) || { count: 0, lastDate: null, bestStreak: 0 }; } catch { dailyStreak = { count: 0, lastDate: null, bestStreak: 0 }; }
+        // Favorites: seed defaults for first-time users so Quick-Add is visible immediately
+        const rawFav = localStorage.getItem(FAVORITES_KEY);
+        if (rawFav === null) {
+            favorites = DEFAULT_FAVORITES.slice();
+            localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+        } else {
+            try { favorites = JSON.parse(rawFav) || []; } catch { favorites = []; }
+        }
 
         if (rawData) {
             const saved = JSON.parse(rawData);
@@ -3656,6 +3672,60 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
             dailyStreak.count = 0;
             saveData();
         }
+    }
+
+    // ── DAILY RECAP ───────────────────────────────────────────────
+    // Shows a one-time "yesterday's stats" toast/banner the FIRST time the
+    // user opens the app each day. Triggers self-reflection ("how was
+    // yesterday?") which is a strong daily-return mechanism.
+    function maybeShowDailyRecap() {
+        const today = new Date().toISOString().split('T')[0];
+        const lastShown = localStorage.getItem(DAILY_RECAP_KEY);
+        if (lastShown === today) return;        // already shown today
+        if (!appState.transactions || appState.transactions.length === 0) {
+            // No data yet — don't pester new users with empty recaps
+            localStorage.setItem(DAILY_RECAP_KEY, today);
+            return;
+        }
+
+        // Compute yesterday's stats from the current week's transactions
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        const ytx = appState.transactions.filter(t => !t.isTopUp && t.date === yesterday);
+
+        // Skip the toast if there were no expenses yesterday — silent rather than discouraging
+        if (ytx.length === 0) {
+            localStorage.setItem(DAILY_RECAP_KEY, today);
+            return;
+        }
+
+        const total = ytx.reduce((s, t) => s + (t.amount || 0), 0);
+        // Find top category to mention
+        const catTotals = {};
+        ytx.forEach(t => { catTotals[t.category] = (catTotals[t.category] || 0) + (t.amount || 0); });
+        const [topCat] = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0] || [];
+        const topLbl = (categories[topCat] || categories.other).label;
+
+        // Compare to 7-day avg from history if we have it
+        let comparisonStr = '';
+        if (weekHistory.length > 0 && weekHistory[0].spent > 0) {
+            const dailyAvg = weekHistory[0].spent / 7;
+            if (dailyAvg > 0) {
+                const ratio = total / dailyAvg;
+                if      (ratio < 0.6)  comparisonStr = ' — well under your average 🎉';
+                else if (ratio < 1.0)  comparisonStr = ' — under your average';
+                else if (ratio < 1.4)  comparisonStr = ' — about average';
+                else                   comparisonStr = ' — above average';
+            }
+        }
+
+        const txWord = ytx.length === 1 ? 'expense' : 'expenses';
+        showPayToast(`📊 Yesterday: ${fmt(total)} across ${ytx.length} ${txWord}${comparisonStr}`);
+        // Second toast a moment later for the top category
+        setTimeout(() => {
+            showPayToast(`Top category: ${topLbl}`);
+        }, 3500);
+
+        localStorage.setItem(DAILY_RECAP_KEY, today);
     }
 
     // ── GOALS UI ──────────────────────────────────────────────────
@@ -4961,6 +5031,8 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
             document.getElementById('expense-date').valueAsDate = new Date();
             startLiveTime();
             registerServiceWorker();
+            // Daily recap — delayed so it doesn't compete with auth lifecycle toasts
+            setTimeout(maybeShowDailyRecap, 2000);
 
             // Referral lifecycle (fire-and-forget; errors don't block main flow)
             ensureUserDoc(user)
@@ -5060,6 +5132,8 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         document.getElementById('expense-date').valueAsDate = new Date();
         startLiveTime();
         registerServiceWorker();
+        // Daily recap — same as Google flow; works in guest mode too
+        setTimeout(maybeShowDailyRecap, 2000);
         // Referral system runs for Google users (guest mode skipped — no stable uid)
     }
 
