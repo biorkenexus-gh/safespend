@@ -885,27 +885,34 @@
                     </div>
 
                     <!-- Action buttons -->
-                    <div class="grid grid-cols-3 gap-3">
+                    <div class="grid grid-cols-4 gap-2">
                         <button onclick="openDepositModal()"
-                                class="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-3 flex flex-col items-center gap-1 active:scale-95">
-                            <div class="w-10 h-10 bg-green-100 text-safe rounded-full flex items-center justify-center">
-                                <i class="fas fa-arrow-down"></i>
+                                class="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-2.5 flex flex-col items-center gap-1 active:scale-95">
+                            <div class="w-9 h-9 bg-green-100 text-safe rounded-full flex items-center justify-center">
+                                <i class="fas fa-arrow-down text-sm"></i>
                             </div>
-                            <span class="text-xs font-semibold text-gray-700">Add Money</span>
+                            <span class="text-[11px] font-semibold text-gray-700">Add</span>
                         </button>
                         <button onclick="openSendModal()"
-                                class="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-3 flex flex-col items-center gap-1 active:scale-95">
-                            <div class="w-10 h-10 bg-blue-100 text-primary rounded-full flex items-center justify-center">
-                                <i class="fas fa-paper-plane"></i>
+                                class="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-2.5 flex flex-col items-center gap-1 active:scale-95">
+                            <div class="w-9 h-9 bg-blue-100 text-primary rounded-full flex items-center justify-center">
+                                <i class="fas fa-paper-plane text-sm"></i>
                             </div>
-                            <span class="text-xs font-semibold text-gray-700">Send</span>
+                            <span class="text-[11px] font-semibold text-gray-700">Send</span>
                         </button>
                         <button onclick="openWalletWithdrawModal()"
-                                class="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-3 flex flex-col items-center gap-1 active:scale-95">
-                            <div class="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center">
-                                <i class="fas fa-arrow-up"></i>
+                                class="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-2.5 flex flex-col items-center gap-1 active:scale-95">
+                            <div class="w-9 h-9 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center">
+                                <i class="fas fa-arrow-up text-sm"></i>
                             </div>
-                            <span class="text-xs font-semibold text-gray-700">Withdraw</span>
+                            <span class="text-[11px] font-semibold text-gray-700">MoMo</span>
+                        </button>
+                        <button onclick="showBankTransferScreen()"
+                                class="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-2.5 flex flex-col items-center gap-1 active:scale-95">
+                            <div class="w-9 h-9 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center">
+                                <i class="fas fa-building-columns text-sm"></i>
+                            </div>
+                            <span class="text-[11px] font-semibold text-gray-700">Bank</span>
                         </button>
                     </div>
 
@@ -1084,6 +1091,226 @@
                     <button onclick="closeWalletWithdrawModal()"
                             class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
                         Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== BANK TRANSFER SCREEN ==================== -->
+            <div id="bank-screen" class="screen p-4 space-y-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center min-w-0">
+                        <button onclick="showWalletScreen()" class="mr-3 text-gray-600 hover:text-gray-800 shrink-0">
+                            <i class="fas fa-arrow-left text-xl"></i>
+                        </button>
+                        <h2 class="text-2xl font-display font-bold text-gray-800 truncate">Bank Transfer</h2>
+                    </div>
+                    <button onclick="openSavedBanksManager()"
+                            class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-3 py-1.5 rounded-full transition">
+                        <i class="fas fa-bookmark mr-1"></i> Saved
+                    </button>
+                </div>
+
+                <!-- Auth/firestore gate (reuses wallet pattern) -->
+                <div id="bank-no-auth" class="hidden bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                    <p class="font-semibold mb-1">🔒 Sign in with Google to use Bank Transfer</p>
+                    <p class="text-xs leading-relaxed">Bank features need cross-device sync. Guest mode can't save bank accounts.</p>
+                </div>
+
+                <div id="bank-ready" class="space-y-4 hidden">
+                    <!-- Wallet balance reminder -->
+                    <div class="bg-gradient-to-br from-primary via-blue-600 to-indigo-700 rounded-2xl p-4 text-white shadow-md">
+                        <p class="text-[11px] uppercase tracking-wider opacity-80">Wallet Balance</p>
+                        <p id="bank-wallet-balance" class="font-display font-bold text-2xl mt-0.5">—</p>
+                    </div>
+
+                    <!-- Withdraw / Deposit tabs -->
+                    <div class="bg-white rounded-2xl p-1 shadow-sm flex gap-1">
+                        <button data-banktab="withdraw" onclick="setBankTab('withdraw')"
+                                class="bank-tab-btn flex-1 py-2.5 rounded-xl text-sm font-semibold transition">
+                            <i class="fas fa-arrow-up mr-1"></i> Withdraw
+                        </button>
+                        <button data-banktab="deposit" onclick="setBankTab('deposit')"
+                                class="bank-tab-btn flex-1 py-2.5 rounded-xl text-sm font-semibold transition">
+                            <i class="fas fa-arrow-down mr-1"></i> Deposit
+                        </button>
+                    </div>
+
+                    <!-- =========== WITHDRAW PANE =========== -->
+                    <div id="bank-withdraw-pane" class="space-y-3">
+                        <!-- Saved bank picker -->
+                        <div class="bg-white rounded-2xl shadow-sm p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Destination Bank</label>
+                                <button onclick="openAddBankModal()" class="text-xs text-primary font-semibold hover:underline">
+                                    <i class="fas fa-plus"></i> Add bank
+                                </button>
+                            </div>
+                            <div id="bank-saved-picker">
+                                <!-- Filled by render -->
+                            </div>
+                        </div>
+
+                        <!-- Amount + fee preview -->
+                        <div class="bg-white rounded-2xl shadow-sm p-3 space-y-3">
+                            <div>
+                                <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Amount</label>
+                                <input type="number" id="bank-amount" min="0" step="0.01"
+                                       oninput="updateBankFeePreview()"
+                                       class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none text-2xl font-bold"
+                                       placeholder="0.00">
+                            </div>
+
+                            <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 space-y-1 text-sm">
+                                <div class="flex justify-between"><span class="text-gray-600">Amount</span><span id="bank-prev-amount" class="font-semibold text-gray-800">—</span></div>
+                                <div class="flex justify-between"><span class="text-gray-600">Fee (1%, max <span id="bank-fee-cap">—</span>)</span><span id="bank-prev-fee" class="font-semibold text-gray-800">—</span></div>
+                                <div class="flex justify-between border-t border-blue-200 pt-1.5 mt-1">
+                                    <span class="font-display font-bold text-gray-800">Debited from wallet</span>
+                                    <span id="bank-prev-total" class="font-display font-bold text-primary">—</span>
+                                </div>
+                            </div>
+
+                            <p class="text-[11px] text-gray-400 leading-relaxed flex items-start gap-1.5">
+                                <i class="fas fa-clock mt-0.5"></i>
+                                <span>Estimated arrival: <strong>10–30 minutes</strong> within Ghana. International: 1–3 business days.</span>
+                            </p>
+
+                            <p id="bank-error" class="hidden text-xs text-danger"></p>
+
+                            <button onclick="submitBankWithdraw()" id="bank-withdraw-btn"
+                                    class="w-full bg-primary text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="fas fa-shield-halved mr-1"></i> Verify with PIN &amp; Send
+                            </button>
+                        </div>
+
+                        <!-- Mock notice -->
+                        <p class="text-[10px] text-center text-gray-400 leading-relaxed">
+                            <i class="fas fa-flask"></i> Currently in simulated mode — replace <code class="bg-gray-100 px-1 rounded">processBankTransfer()</code> with a Cloud Function calling Paystack/Flutterwave for live transfers.
+                        </p>
+                    </div>
+
+                    <!-- =========== DEPOSIT PANE =========== -->
+                    <div id="bank-deposit-pane" class="hidden space-y-3">
+                        <!-- Virtual account card -->
+                        <div class="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+                            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Your Virtual Account</p>
+                            <div class="bg-gray-50 rounded-xl p-3 space-y-2">
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase">Account Number</p>
+                                    <div class="flex items-center justify-between">
+                                        <p id="bank-va-number" class="font-mono font-bold text-lg text-gray-800 tracking-wider">—</p>
+                                        <button onclick="copyVirtualAccount()" class="text-primary text-xs font-semibold hover:underline">
+                                            <i class="fas fa-copy"></i> Copy
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase">Account Name</p>
+                                    <p id="bank-va-name" class="text-sm font-semibold text-gray-800">—</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase">Bank</p>
+                                    <p id="bank-va-bank" class="text-sm font-semibold text-gray-800">—</p>
+                                </div>
+                            </div>
+                            <p id="bank-va-instructions" class="text-[11px] text-gray-500 leading-relaxed"></p>
+                        </div>
+
+                        <!-- Mock confirm card (test mode) -->
+                        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 space-y-3">
+                            <p class="text-xs font-semibold text-amber-800">
+                                <i class="fas fa-flask mr-1"></i> Simulated mode — manually confirm a deposit
+                            </p>
+                            <p class="text-[11px] text-amber-700 leading-relaxed">In production, your virtual-account webhook auto-credits the wallet. To test the flow now, enter an amount you "transferred" from your bank:</p>
+                            <input type="number" id="bank-deposit-amount" min="5" step="0.01"
+                                   class="w-full p-2.5 rounded-xl border-2 border-amber-200 focus:border-primary outline-none text-base font-semibold"
+                                   placeholder="0.00">
+                            <p id="bank-deposit-error" class="hidden text-xs text-danger"></p>
+                            <button onclick="submitBankDeposit()"
+                                    class="w-full bg-amber-600 text-white font-semibold py-2.5 rounded-xl hover:bg-amber-700 transition text-sm">
+                                I've sent the money — credit my wallet
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Recent bank transactions -->
+                    <div class="bg-white rounded-2xl shadow-sm">
+                        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                            <h3 class="font-display font-semibold text-gray-800 text-sm">Recent Bank Activity</h3>
+                            <span id="bank-tx-count" class="text-xs text-gray-400">—</span>
+                        </div>
+                        <div id="bank-tx-list" class="divide-y divide-gray-100">
+                            <div class="p-6 text-center text-gray-400 text-sm">
+                                <i class="fas fa-building-columns text-2xl mb-2 empty-pulse"></i>
+                                <p>No bank transfers yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== ADD BANK MODAL ==================== -->
+            <div id="add-bank-modal" class="fixed inset-0 bg-black/60 z-[185] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl slide-up max-h-[90vh] overflow-y-auto">
+                    <div class="text-center mb-5">
+                        <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-building-columns text-xl text-primary"></i>
+                        </div>
+                        <h3 class="text-lg font-display font-bold text-gray-800">Add Bank Account</h3>
+                        <p class="text-xs text-gray-500 mt-1">We verify the account name before saving.</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Bank *</label>
+                            <select id="addbank-bank" onchange="resetAddBankVerification()"
+                                    class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                                <!-- Filled by render -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Account Number *</label>
+                            <input type="text" id="addbank-account" maxlength="20" inputmode="numeric"
+                                   oninput="resetAddBankVerification()"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none font-mono text-base"
+                                   placeholder="10–13 digits">
+                        </div>
+                        <div id="addbank-verified" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                            <p class="text-[10px] text-emerald-600 uppercase font-semibold">Verified</p>
+                            <p id="addbank-verified-name" class="text-sm font-semibold text-emerald-800 mt-0.5">—</p>
+                        </div>
+                        <label class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" id="addbank-default" class="w-4 h-4 rounded accent-primary">
+                            <span class="text-gray-700">Set as default account</span>
+                        </label>
+                        <p id="addbank-error" class="hidden text-xs text-danger"></p>
+                    </div>
+
+                    <button id="addbank-verify-btn" onclick="verifyAndSaveBank()"
+                            class="w-full mt-5 bg-primary text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition">
+                        <i class="fas fa-shield-halved mr-1"></i> Verify Account
+                    </button>
+                    <button onclick="closeAddBankModal()"
+                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== SAVED BANKS MANAGER MODAL ==================== -->
+            <div id="saved-banks-modal" class="fixed inset-0 bg-black/60 z-[185] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl slide-up max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-display font-bold text-gray-800">Saved Bank Accounts</h3>
+                        <button onclick="closeSavedBanksManager()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                    <div id="saved-banks-list" class="space-y-2">
+                        <!-- Filled by render -->
+                    </div>
+                    <button onclick="closeSavedBanksManager(); openAddBankModal()"
+                            class="w-full mt-4 bg-primary text-white font-semibold py-2.5 rounded-xl hover:bg-blue-800 transition text-sm">
+                        <i class="fas fa-plus mr-1"></i> Add new bank
                     </button>
                 </div>
             </div>
@@ -7592,6 +7819,529 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         };
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    //  BANK INTEGRATION (mock — production needs Cloud Function)
+    //
+    //  SWAP POINTS:
+    //    • verifyBankAccount() — replace with Paystack /bank/resolve or
+    //      Flutterwave /accounts/resolve via callable Cloud Function.
+    //    • processBankTransfer() — replace with Paystack /transfer or
+    //      Flutterwave /transfers via callable Cloud Function. Server-side
+    //      handler holds the secret key (never in client code).
+    //    • generateVirtualAccount() — replace with Paystack DVA / Flutterwave
+    //      virtual account creation if you want auto-credit on deposit.
+    //
+    //  Frontend code, schema, rules, and UI all stay the same when you
+    //  swap the mocks for real APIs.
+    // ═══════════════════════════════════════════════════════════════
+
+    async function verifyBankAccount({ bankCode, accountNumber }) {
+        // 1.5s simulation. Real: Paystack GET /bank/resolve?account_number=X&bank_code=Y
+        await new Promise(r => setTimeout(r, 1500));
+        if (!accountNumber || accountNumber.replace(/\D/g, '').length < 9) {
+            return { success: false, error: 'Account number must be at least 9 digits' };
+        }
+        // Generate a plausible-looking name based on the digits (deterministic)
+        const seed = accountNumber.split('').reduce((s, d) => s + (parseInt(d, 10) || 0), 0);
+        const firsts = ['KWAME', 'AKOSUA', 'KOFI', 'ABENA', 'YAW', 'AMA', 'KOJO', 'EFUA'];
+        const lasts  = ['MENSAH', 'ASANTE', 'OWUSU', 'BOATENG', 'NKRUMAH', 'ADDO', 'OSEI', 'AGYEMAN'];
+        const fakeName = `${firsts[seed % firsts.length]} ${lasts[(seed * 7) % lasts.length]}`;
+        return { success: true, accountName: fakeName, bankCode };
+    }
+
+    async function processBankTransfer({ bankCode, accountNumber, accountName, amount, type }) {
+        // 2.5s simulation. Real: Paystack POST /transfer or Flutterwave POST /transfers
+        await new Promise(r => setTimeout(r, 2500));
+        if (Math.random() < 0.05) {
+            return { success: false, error: 'Bank rejected the transfer — check details and try again' };
+        }
+        return {
+            success: true,
+            ref: `BANK-${(bankCode || 'XXX').slice(-3)}-${Date.now().toString(36).toUpperCase()}`
+        };
+    }
+
+    function generateVirtualAccount() {
+        // Mock: returns deterministic virtual account info per user.
+        // Real: call Paystack /dedicated_account or Flutterwave /virtual-account-numbers
+        const user = firebase.auth().currentUser;
+        const uid = user?.uid || 'guest';
+        // Deterministic 10-digit number from uid (purely cosmetic for the mock)
+        let n = 0;
+        for (let i = 0; i < uid.length; i++) n = (n * 31 + uid.charCodeAt(i)) >>> 0;
+        const acctNum = String(1000000000 + (n % 9000000000));
+        return {
+            accountNumber: acctNum,
+            bankName:      'SafeSpend Virtual Account',
+            accountName:   (profile.name || user?.displayName || 'SafeSpend User').toUpperCase(),
+            instructions:  'Transfer from any Ghana bank to this virtual account. Funds appear in your wallet within 5–15 minutes after the bank confirms.'
+        };
+    }
+
+    // ── Saved bank accounts (Firestore) ─────────────────────────────
+    async function loadSavedBanks() {
+        if (!firestoreReady) { savedBankAccounts = []; return; }
+        const user = firebase.auth().currentUser;
+        if (!user) return;
+        try {
+            const q = await db.collection('savedBankAccounts').where('ownerUid', '==', user.uid).get();
+            savedBankAccounts = q.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => {
+                if (a.isDefault && !b.isDefault) return -1;
+                if (!a.isDefault && b.isDefault) return 1;
+                const ta = a.createdAt?.toMillis?.() || 0;
+                const tb = b.createdAt?.toMillis?.() || 0;
+                return tb - ta;
+            });
+        } catch (err) {
+            console.warn('[Bank] load saved banks failed:', err);
+        }
+    }
+
+    async function saveSavedBank({ bankCode, accountNumber, accountName, isDefault }) {
+        const user = firebase.auth().currentUser;
+        if (!user || !firestoreReady) throw new Error('Sign in required');
+        const bank = getBank(bankCode);
+        const doc = {
+            ownerUid:       user.uid,
+            bankCode:       bankCode,
+            bankName:       bank.name,
+            accountNumber:  accountNumber.replace(/\s/g, ''),
+            accountName:    (accountName || '').trim().toUpperCase(),
+            isDefault:      !!isDefault,
+            createdAt:      firebase.firestore.FieldValue.serverTimestamp()
+        };
+        // If marking default, clear default flag on others first (best-effort)
+        if (isDefault) {
+            const updates = savedBankAccounts.filter(b => b.isDefault).map(b =>
+                db.collection('savedBankAccounts').doc(b.id).update({ isDefault: false }).catch(() => {})
+            );
+            await Promise.all(updates);
+            savedBankAccounts.forEach(b => { b.isDefault = false; });
+        }
+        const ref = await db.collection('savedBankAccounts').add(doc);
+        savedBankAccounts.unshift({ id: ref.id, ...doc, createdAt: { toMillis: () => Date.now() } });
+        return ref.id;
+    }
+
+    async function deleteSavedBank(id) {
+        if (!firestoreReady) return;
+        await db.collection('savedBankAccounts').doc(id).delete();
+        savedBankAccounts = savedBankAccounts.filter(b => b.id !== id);
+    }
+
+    // ── Bank withdrawal: wallet → bank ──────────────────────────────
+    async function executeBankWithdraw({ bank, amount, fee }) {
+        const user = firebase.auth().currentUser;
+        const procEl = document.getElementById('processing-overlay');
+        const msgEl  = document.getElementById('processing-msg');
+        procEl.classList.remove('hidden');
+        if (msgEl) msgEl.textContent = 'Sending to your bank…';
+
+        const result = await processBankTransfer({
+            bankCode:      bank.bankCode,
+            accountNumber: bank.accountNumber,
+            accountName:   bank.accountName,
+            amount,
+            type: 'withdraw'
+        });
+        if (!result.success) {
+            procEl.classList.add('hidden');
+            showPayToast(`❌ Transfer failed: ${result.error || 'Bank declined'}`);
+            return;
+        }
+        try {
+            // Single wallet tx debits the wallet for amount + fee combined.
+            // The fee is recorded separately as a revenue event for transparency.
+            const totalDebit = amount + fee;
+            await db.collection('walletTransactions').add({
+                type:          'withdraw',
+                amount:        totalDebit,
+                currency:      profile.currency || 'USD',
+                senderId:      user.uid,
+                recipientId:   `bank:${bank.bankCode}`,
+                senderName:    user.displayName || profile.name || 'You',
+                recipientName: `${bank.bankName} · ${bank.accountName}`,
+                phone:         null,
+                network:       null,                 // bank, not MoMo
+                bankCode:      bank.bankCode,
+                bankAccountLast4: bank.accountNumber.slice(-4),
+                feeAmount:     fee,
+                note:          fee > 0 ? `Bank withdrawal (${fmt(amount)} + ${fmt(fee)} fee)` : 'Bank withdrawal',
+                status:        'completed',
+                mockRef:       result.ref,
+                createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
+                completedAt:   firebase.firestore.FieldValue.serverTimestamp()
+            });
+            // Record fee as revenue (non-blocking)
+            if (fee > 0 && typeof recordRevenueEvent === 'function') {
+                recordRevenueEvent({
+                    type:         'fee_withdraw',
+                    amount:       fee,
+                    sourceUserId: user.uid,
+                    description:  `Bank withdrawal fee on ${fmt(amount)}`
+                }).catch(() => {});
+            }
+            procEl.classList.add('hidden');
+            showPayToast(`✅ ${fmt(amount)} sent to ${bank.bankName}`);
+            await loadWallet(); renderWallet();
+            renderBankTransferScreen();
+        } catch (e) {
+            procEl.classList.add('hidden');
+            console.warn('[Bank] withdraw write failed:', e);
+            showPayToast('Sent at bank but sync failed. Pull to refresh.');
+        }
+    }
+
+    // ── Bank deposit: bank → wallet (manual confirmation flow) ──────
+    // In production with a real virtual account: webhook auto-credits.
+    // In mock mode: user clicks "I've sent the money" to credit instantly
+    // for testing; admin verification happens manually.
+    async function executeBankDeposit({ amount }) {
+        const user = firebase.auth().currentUser;
+        const procEl = document.getElementById('processing-overlay');
+        const msgEl  = document.getElementById('processing-msg');
+        procEl.classList.remove('hidden');
+        if (msgEl) msgEl.textContent = 'Confirming bank deposit…';
+
+        await new Promise(r => setTimeout(r, 1500));
+        try {
+            await db.collection('walletTransactions').add({
+                type:          'deposit',
+                amount:        amount,
+                currency:      profile.currency || 'USD',
+                senderId:      'bank:incoming',
+                recipientId:   user.uid,
+                senderName:    'Bank Deposit',
+                recipientName: user.displayName || profile.name || 'You',
+                phone:         null,
+                network:       null,
+                bankCode:      'incoming',
+                feeAmount:     0,
+                note:          'Bank deposit (mock — confirm via webhook in production)',
+                status:        'completed',
+                mockRef:       `BANK-DEP-${Date.now().toString(36).toUpperCase()}`,
+                createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
+                completedAt:   firebase.firestore.FieldValue.serverTimestamp()
+            });
+            procEl.classList.add('hidden');
+            showPayToast(`✅ ${fmt(amount)} added to your wallet`);
+            await loadWallet(); renderWallet();
+            renderBankTransferScreen();
+        } catch (e) {
+            procEl.classList.add('hidden');
+            console.warn('[Bank] deposit write failed:', e);
+            showPayToast('Deposit failed. Check your connection.');
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  BANK TRANSFER UI — render, tabs, picker, fee preview
+    // ═══════════════════════════════════════════════════════════════
+
+    async function showBankTransferScreen() {
+        const noAuth = document.getElementById('bank-no-auth');
+        const ready  = document.getElementById('bank-ready');
+        if (!firestoreReady || !firebase.auth().currentUser || profile.isGuest) {
+            noAuth.classList.remove('hidden');
+            ready.classList.add('hidden');
+            showScreen('bank');
+            return;
+        }
+        noAuth.classList.add('hidden');
+        ready.classList.remove('hidden');
+        showScreen('bank');
+        // Refresh wallet balance + saved banks + history every time
+        await Promise.all([loadWallet(), loadSavedBanks()]);
+        renderBankTransferScreen();
+    }
+
+    function renderBankTransferScreen() {
+        // Wallet balance
+        setText('bank-wallet-balance', fmt(walletState.balance));
+        setText('bank-fee-cap', fmt(BANK_FEE.withdrawCapAmount));
+
+        // Tab visibility
+        document.querySelectorAll('.bank-tab-btn').forEach(btn => {
+            const active = btn.dataset.banktab === bankTransferState.tab;
+            btn.className = `bank-tab-btn flex-1 py-2.5 rounded-xl text-sm font-semibold transition ${active ? 'bg-primary text-white' : 'bg-transparent text-gray-600 hover:bg-gray-100'}`;
+        });
+        document.getElementById('bank-withdraw-pane').classList.toggle('hidden', bankTransferState.tab !== 'withdraw');
+        document.getElementById('bank-deposit-pane').classList.toggle('hidden', bankTransferState.tab !== 'deposit');
+
+        if (bankTransferState.tab === 'withdraw') {
+            renderSavedBankPicker();
+            updateBankFeePreview();
+        } else {
+            renderVirtualAccount();
+        }
+        renderBankTransactions();
+    }
+
+    function setBankTab(tab) {
+        bankTransferState.tab = tab;
+        renderBankTransferScreen();
+    }
+
+    function renderSavedBankPicker() {
+        const wrap = document.getElementById('bank-saved-picker');
+        if (!wrap) return;
+        if (savedBankAccounts.length === 0) {
+            wrap.innerHTML = `
+                <div class="bg-gray-50 rounded-xl p-4 text-center">
+                    <p class="text-sm text-gray-500 mb-2">No saved banks yet</p>
+                    <button onclick="openAddBankModal()" class="text-primary text-sm font-semibold hover:underline">
+                        <i class="fas fa-plus"></i> Add your first bank
+                    </button>
+                </div>`;
+            bankTransferState.pendingBank = null;
+            const btn = document.getElementById('bank-withdraw-btn');
+            if (btn) btn.disabled = true;
+            return;
+        }
+
+        // Auto-select default or first if not yet selected
+        if (!bankTransferState.pendingBank ||
+            !savedBankAccounts.find(b => b.id === bankTransferState.pendingBank.id)) {
+            bankTransferState.pendingBank = savedBankAccounts.find(b => b.isDefault) || savedBankAccounts[0];
+        }
+
+        wrap.innerHTML = savedBankAccounts.map(b => {
+            const selected = bankTransferState.pendingBank?.id === b.id;
+            const last4 = b.accountNumber.slice(-4);
+            return `
+                <label class="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition ${selected ? 'bg-blue-50 border-2 border-primary' : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'}">
+                    <input type="radio" name="bank-pick" ${selected ? 'checked' : ''} onchange="selectSavedBank('${b.id}')" class="w-4 h-4 accent-primary shrink-0">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-800 truncate">${escapeHtml(b.bankName)}</p>
+                        <p class="text-[11px] text-gray-500">•••• ${last4} · ${escapeHtml(b.accountName)}</p>
+                    </div>
+                    ${b.isDefault ? '<span class="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">Default</span>' : ''}
+                </label>`;
+        }).join('');
+
+        const btn = document.getElementById('bank-withdraw-btn');
+        if (btn) btn.disabled = !bankTransferState.pendingBank;
+    }
+
+    function selectSavedBank(id) {
+        bankTransferState.pendingBank = savedBankAccounts.find(b => b.id === id) || null;
+        renderSavedBankPicker();
+    }
+
+    function updateBankFeePreview() {
+        const amt = parseFloat(document.getElementById('bank-amount')?.value) || 0;
+        const fee = calcBankWithdrawFee(amt);
+        bankTransferState.pendingFee = fee;
+        bankTransferState.pendingAmount = amt;
+        setText('bank-prev-amount', fmt(amt));
+        setText('bank-prev-fee',    fmt(fee));
+        setText('bank-prev-total',  fmt(amt + fee));
+    }
+
+    function renderVirtualAccount() {
+        const va = generateVirtualAccount();
+        setText('bank-va-number', va.accountNumber.replace(/(\d{4})(?=\d)/g, '$1 '));
+        setText('bank-va-name',   va.accountName);
+        setText('bank-va-bank',   va.bankName);
+        setText('bank-va-instructions', va.instructions);
+    }
+
+    function copyVirtualAccount() {
+        const va = generateVirtualAccount();
+        navigator.clipboard.writeText(va.accountNumber).then(() => {
+            showPayToast('Account number copied');
+        }).catch(() => {
+            prompt('Copy your virtual account number:', va.accountNumber);
+        });
+    }
+
+    // List of bank-related wallet transactions (filter from walletState)
+    function renderBankTransactions() {
+        const list = document.getElementById('bank-tx-list');
+        if (!list) return;
+        const user = firebase.auth().currentUser;
+        if (!user) return;
+        // Bank txs are wallet txs whose recipient or sender starts with "bank:"
+        const bankTxs = (walletState.transactions || []).filter(t =>
+            (t.recipientId || '').startsWith('bank:') ||
+            (t.senderId    || '').startsWith('bank:'));
+        setText('bank-tx-count', bankTxs.length === 0 ? '—' : `${bankTxs.length}`);
+        if (bankTxs.length === 0) {
+            list.innerHTML = `
+                <div class="p-6 text-center text-gray-400 text-sm">
+                    <i class="fas fa-building-columns text-2xl mb-2 empty-pulse"></i>
+                    <p>No bank transfers yet</p>
+                </div>`;
+            return;
+        }
+        list.innerHTML = bankTxs.slice(0, 10).map(t => {
+            const inbound = t.recipientId === user.uid;
+            const sign = inbound ? '+' : '−';
+            const color = inbound ? 'text-emerald-600' : 'text-red-500';
+            const icon = inbound ? 'arrow-down' : 'arrow-up';
+            const iconBg = inbound ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-600';
+            const label = inbound
+                ? 'Bank deposit'
+                : `Bank withdrawal · ${escapeHtml(t.recipientName || '')}`;
+            const when = t.completedAt?.toDate?.() ? timeAgo(t.completedAt.toDate())
+                       : t.createdAt?.toDate?.() ? timeAgo(t.createdAt.toDate()) : 'just now';
+            const feeLine = (t.feeAmount || 0) > 0
+                ? `<p class="text-[10px] text-gray-400">incl. ${fmt(t.feeAmount)} fee</p>` : '';
+            return `
+                <div class="flex items-center gap-3 p-3 hover:bg-gray-50 transition">
+                    <div class="w-9 h-9 rounded-full ${iconBg} flex items-center justify-center shrink-0">
+                        <i class="fas fa-${icon} text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-800 truncate">${label}</p>
+                        <p class="text-[11px] text-gray-500">${when}</p>
+                        ${feeLine}
+                    </div>
+                    <p class="font-bold text-sm ${color} shrink-0 ml-2">${sign}${fmt(t.amount)}</p>
+                </div>`;
+        }).join('');
+    }
+
+    // ── Withdraw flow (uses existing PIN gate) ──────────────────────
+    function submitBankWithdraw() {
+        const err = document.getElementById('bank-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+        err.textContent = ''; err.classList.add('hidden');
+
+        const bank = bankTransferState.pendingBank;
+        if (!bank)                              return showErr('Add a bank account first');
+        const amount = parseFloat(document.getElementById('bank-amount').value) || 0;
+        const fee    = calcBankWithdrawFee(amount);
+        if (amount < BANK_FEE.withdrawMin)      return showErr(`Minimum withdrawal is ${fmt(BANK_FEE.withdrawMin)}`);
+        if (amount > BANK_FEE.withdrawMax)      return showErr(`Maximum withdrawal is ${fmt(BANK_FEE.withdrawMax)}`);
+        if (amount + fee > walletState.balance) return showErr(`Insufficient wallet balance. You have ${fmt(walletState.balance)}.`);
+
+        // Route through the existing wallet PIN gate (set up once, reused everywhere).
+        pendingPinAction = { type: 'bank-withdraw', payload: { bank, amount, fee } };
+        openPinGate();
+    }
+
+    function submitBankDeposit() {
+        const err = document.getElementById('bank-deposit-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+        err.textContent = ''; err.classList.add('hidden');
+        const amount = parseFloat(document.getElementById('bank-deposit-amount').value) || 0;
+        if (amount < BANK_FEE.depositMin) return showErr(`Minimum deposit is ${fmt(BANK_FEE.depositMin)}`);
+        if (amount > BANK_FEE.depositMax) return showErr(`Maximum deposit is ${fmt(BANK_FEE.depositMax)}`);
+        executeBankDeposit({ amount });
+        document.getElementById('bank-deposit-amount').value = '';
+    }
+
+    // ── Add Bank modal ──────────────────────────────────────────────
+    let pendingVerifiedBank = null;   // verified result staged for save
+
+    function openAddBankModal() {
+        const sel = document.getElementById('addbank-bank');
+        sel.innerHTML = BANKS.map(b => `<option value="${b.code}">${b.name}</option>`).join('');
+        document.getElementById('addbank-account').value = '';
+        document.getElementById('addbank-default').checked = false;
+        resetAddBankVerification();
+        document.getElementById('add-bank-modal').classList.remove('hidden');
+    }
+    function closeAddBankModal() { document.getElementById('add-bank-modal').classList.add('hidden'); }
+
+    function resetAddBankVerification() {
+        pendingVerifiedBank = null;
+        const verBlock = document.getElementById('addbank-verified');
+        if (verBlock) verBlock.classList.add('hidden');
+        const btn = document.getElementById('addbank-verify-btn');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-shield-halved mr-1"></i> Verify Account';
+            btn.disabled = false;
+        }
+        const err = document.getElementById('addbank-error');
+        if (err) { err.textContent = ''; err.classList.add('hidden'); }
+    }
+
+    async function verifyAndSaveBank() {
+        const err = document.getElementById('addbank-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+        err.textContent = ''; err.classList.add('hidden');
+
+        const bankCode      = document.getElementById('addbank-bank').value;
+        const accountNumber = document.getElementById('addbank-account').value.replace(/\s/g, '');
+        const isDefault     = document.getElementById('addbank-default').checked;
+        const btn           = document.getElementById('addbank-verify-btn');
+
+        // Two-step UX: first click verifies, second click saves
+        if (!pendingVerifiedBank) {
+            if (!accountNumber || accountNumber.length < 9) return showErr('Account number must be at least 9 digits');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="w-4 h-4 inline-block border-2 border-white/40 border-t-white rounded-full animate-spin mr-1"></div> Verifying…';
+            try {
+                const result = await verifyBankAccount({ bankCode, accountNumber });
+                btn.disabled = false;
+                if (!result.success) {
+                    btn.innerHTML = '<i class="fas fa-shield-halved mr-1"></i> Verify Account';
+                    return showErr(result.error || 'Verification failed');
+                }
+                pendingVerifiedBank = { bankCode, accountNumber, accountName: result.accountName };
+                const verBlock = document.getElementById('addbank-verified');
+                setText('addbank-verified-name', result.accountName);
+                verBlock.classList.remove('hidden');
+                btn.innerHTML = '<i class="fas fa-floppy-disk mr-1"></i> Save Bank Account';
+            } catch (e) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-shield-halved mr-1"></i> Verify Account';
+                showErr('Verification failed. Try again.');
+            }
+            return;
+        }
+
+        // Second click — save
+        try {
+            await saveSavedBank({ ...pendingVerifiedBank, isDefault });
+            closeAddBankModal();
+            showPayToast(`✅ ${getBank(pendingVerifiedBank.bankCode).short} account saved`);
+            pendingVerifiedBank = null;
+            renderBankTransferScreen();
+        } catch (e) {
+            console.warn('[Bank] save failed:', e);
+            showErr('Could not save. Check your connection.');
+        }
+    }
+
+    // ── Saved banks manager ─────────────────────────────────────────
+    function openSavedBanksManager() {
+        renderSavedBanksManager();
+        document.getElementById('saved-banks-modal').classList.remove('hidden');
+    }
+    function closeSavedBanksManager() { document.getElementById('saved-banks-modal').classList.add('hidden'); }
+
+    function renderSavedBanksManager() {
+        const list = document.getElementById('saved-banks-list');
+        if (!list) return;
+        if (savedBankAccounts.length === 0) {
+            list.innerHTML = `<p class="text-center text-sm text-gray-400 py-6">No saved banks yet</p>`;
+            return;
+        }
+        list.innerHTML = savedBankAccounts.map(b => `
+            <div class="bg-gray-50 rounded-xl p-3 flex items-center gap-2">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-800 truncate">${escapeHtml(b.bankName)}${b.isDefault ? ' <span class="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide ml-1">Default</span>' : ''}</p>
+                    <p class="text-[11px] text-gray-500">•••• ${b.accountNumber.slice(-4)} · ${escapeHtml(b.accountName)}</p>
+                </div>
+                <button onclick="confirmDeleteSavedBank('${b.id}')" class="text-gray-400 hover:text-danger px-2 py-1">
+                    <i class="fas fa-trash-can"></i>
+                </button>
+            </div>`).join('');
+    }
+
+    async function confirmDeleteSavedBank(id) {
+        if (!confirm('Remove this saved bank account?')) return;
+        try {
+            await deleteSavedBank(id);
+            renderSavedBanksManager();
+            renderBankTransferScreen();
+            showPayToast('Bank removed');
+        } catch { showPayToast('Could not remove'); }
+    }
+
     // ── PIN crypto (SHA-256 + random salt, stored on user doc) ──────
     async function hashPin(pin, salt) {
         const enc = new TextEncoder().encode(pin + ':' + salt);
@@ -8211,8 +8961,9 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         const a = pendingPinAction;
         pendingPinAction = null;
         if (!a) return;
-        if (a.type === 'send')     return executeSend(a.payload);
-        if (a.type === 'withdraw') return executeWalletWithdraw(a.payload);
+        if (a.type === 'send')          return executeSend(a.payload);
+        if (a.type === 'withdraw')      return executeWalletWithdraw(a.payload);
+        if (a.type === 'bank-withdraw') return executeBankWithdraw(a.payload);
     }
 
     function showLoginError(msg) {
@@ -9789,6 +10540,63 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         vodafone:  { label: 'Vodafone Cash',  short: 'Vodafone' },
         airteltigo:{ label: 'AirtelTigo',     short: 'AirtelTigo' },
         mpesa:     { label: 'M-PESA',         short: 'M-PESA' },
+    };
+
+    // ─── Bank list (Ghana focus, dynamic API extension possible) ─────
+    // Codes follow Paystack/Flutterwave Ghana bank codes for easy swap.
+    // To add a bank: append { code, name, short } here. To fetch dynamically
+    // in the future, replace this constant with a Firestore-cached API call.
+    const BANKS = [
+        { code: 'GHGCB',  name: 'GCB Bank',                  short: 'GCB'      },
+        { code: 'GHEBG',  name: 'Ecobank Ghana',             short: 'Ecobank'  },
+        { code: 'GHSCB',  name: 'Stanbic Bank Ghana',        short: 'Stanbic'  },
+        { code: 'GHFBL',  name: 'Fidelity Bank Ghana',       short: 'Fidelity' },
+        { code: 'GHCBG',  name: 'CalBank',                   short: 'CalBank'  },
+        { code: 'GHADB',  name: 'Agricultural Development Bank', short: 'ADB'  },
+        { code: 'GHABS',  name: 'Absa Bank Ghana',           short: 'Absa'     },
+        { code: 'GHZBL',  name: 'Zenith Bank Ghana',         short: 'Zenith'   },
+        { code: 'GHACC',  name: 'Access Bank Ghana',         short: 'Access'   },
+        { code: 'GHGTB',  name: 'GT Bank Ghana',             short: 'GTBank'   },
+        { code: 'GHRBL',  name: 'Republic Bank Ghana',       short: 'Republic' },
+        { code: 'GHSCH',  name: 'Standard Chartered Ghana',  short: 'StanChart'},
+        { code: 'GHUBA',  name: 'United Bank for Africa',    short: 'UBA'      },
+        { code: 'GHFBN',  name: 'First National Bank Ghana', short: 'FNB'      },
+        { code: 'GHCONS', name: 'Consolidated Bank Ghana',   short: 'CBG'      }
+    ];
+
+    function getBank(code) { return BANKS.find(b => b.code === code) || { code, name: code, short: code }; }
+
+    // Fee model (configurable per market):
+    //   • Withdrawal: 1% capped at 25 (units of user's currency)
+    //   • Deposit:    free
+    //   • Min withdrawal:  2     (avoid fee > amount edge case)
+    //   • Max withdrawal:  10,000 (matches existing wallet rule cap)
+    const BANK_FEE = {
+        withdrawPercent: 0.01,
+        withdrawCapAmount: 25,
+        withdrawMin: 2,
+        withdrawMax: 10000,
+        depositPercent: 0,
+        depositCapAmount: 0,
+        depositMin: 5,
+        depositMax: 10000
+    };
+    function calcBankWithdrawFee(amount) {
+        const raw = (parseFloat(amount) || 0) * BANK_FEE.withdrawPercent;
+        return Math.min(raw, BANK_FEE.withdrawCapAmount);
+    }
+    function calcBankDepositFee(amount) {
+        const raw = (parseFloat(amount) || 0) * BANK_FEE.depositPercent;
+        return Math.min(raw, BANK_FEE.depositCapAmount);
+    }
+
+    // Bank state — populated by loadSavedBanks()
+    let savedBankAccounts = [];           // [{id, bankCode, bankName, accountNumber, accountName, isDefault, createdAt}]
+    let bankTransferState = {
+        tab: 'withdraw',                  // 'withdraw' | 'deposit'
+        pendingAmount: 0,
+        pendingBank: null,                // saved bank object for the current flow
+        pendingFee: 0
     };
 
     let payState = {

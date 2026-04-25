@@ -104,25 +104,54 @@ service cloud.firestore {
                     && request.resource.data.amount <= 10000
                     && request.resource.data.status in ['pending', 'completed']
                     && (
-                      // Deposit: recipient is self, sender is external MoMo
+                      // Deposit: recipient is self, sender is external MoMo or bank
                       (request.resource.data.type == 'deposit'
                         && request.resource.data.recipientId == request.auth.uid
-                        && request.resource.data.senderId.matches('momo:.*'))
+                        && (request.resource.data.senderId.matches('momo:.*')
+                            || request.resource.data.senderId.matches('bank:.*')))
                       ||
-                      // Withdraw: sender is self, recipient is external MoMo
+                      // Withdraw: sender is self, recipient is external MoMo or bank
                       (request.resource.data.type == 'withdraw'
                         && request.resource.data.senderId == request.auth.uid
-                        && request.resource.data.recipientId.matches('momo:.*'))
+                        && (request.resource.data.recipientId.matches('momo:.*')
+                            || request.resource.data.recipientId.matches('bank:.*')))
                       ||
                       // Send: sender is self, recipient is a different real user
                       (request.resource.data.type == 'send'
                         && request.resource.data.senderId == request.auth.uid
                         && request.resource.data.recipientId != request.auth.uid
-                        && !request.resource.data.recipientId.matches('momo:.*'))
+                        && !request.resource.data.recipientId.matches('momo:.*')
+                        && !request.resource.data.recipientId.matches('bank:.*'))
                     );
 
       // Transactions are an immutable audit trail — no client updates/deletes.
       allow update, delete: if false;
+    }
+
+    // ─── Saved Bank Accounts ──────────────────────────────────────
+    // Per-user list of pre-verified bank accounts. Owner-isolated.
+    // Account number stored full but only last-4 displayed in the UI.
+    // Production should encrypt at rest via Cloud Function or KMS.
+    match /savedBankAccounts/{id} {
+      allow read: if request.auth != null
+                    && resource.data.ownerUid == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.bankCode is string
+                    && request.resource.data.accountNumber is string
+                    && request.resource.data.accountNumber.size() >= 9
+                    && request.resource.data.accountNumber.size() <= 20
+                    && request.resource.data.accountName is string
+                    && request.resource.data.accountName.size() > 0;
+      // Only the isDefault flag is mutable; bank/account fields immutable.
+      allow update: if request.auth != null
+                    && resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.ownerUid      == resource.data.ownerUid
+                    && request.resource.data.bankCode      == resource.data.bankCode
+                    && request.resource.data.accountNumber == resource.data.accountNumber
+                    && request.resource.data.accountName   == resource.data.accountName;
+      allow delete: if request.auth != null
+                    && resource.data.ownerUid == request.auth.uid;
     }
 
     // ─── Revenue Events (APP EARNINGS) ────────────────────────────
