@@ -158,5 +158,60 @@ service cloud.firestore {
                     && request.resource.data.status == 'pending';
       allow update, delete: if false;
     }
+
+    // ─── Support Messages ─────────────────────────────────────────
+    // Contact form submissions from the Help Center. Any user (including
+    // unauthenticated guests reading the help pages) can submit; only
+    // admins can read + update (to mark read/resolved). No deletes.
+    match /supportMessages/{id} {
+      allow read: if isAdmin();
+
+      allow create: if request.resource.data.name is string
+                    && request.resource.data.name.size() >= 2
+                    && request.resource.data.name.size() <= 50
+                    && request.resource.data.email is string
+                    && request.resource.data.email.matches('.*@.*\\..*')
+                    && request.resource.data.email.size() <= 100
+                    && request.resource.data.message is string
+                    && request.resource.data.message.size() >= 10
+                    && request.resource.data.message.size() <= 1000
+                    && request.resource.data.status == 'new';
+
+      // Admins can update status (mark read/resolved) but not edit content
+      allow update: if isAdmin()
+                    && request.resource.data.name    == resource.data.name
+                    && request.resource.data.email   == resource.data.email
+                    && request.resource.data.message == resource.data.message
+                    && request.resource.data.status in ['new', 'read', 'resolved'];
+
+      allow delete: if false;
+    }
+
+    // ─── Business Transactions ────────────────────────────────────
+    // Premium-only feature for tracking company income/expenses/bonuses.
+    // The premium check is enforced client-side; rules ensure that
+    // each owner can only read/write their own business data.
+    // Type and amount are immutable after creation (audit integrity);
+    // owners can correct date/source/note/category fields.
+    match /businessTransactions/{id} {
+      allow read: if request.auth != null
+                    && resource.data.ownerUid == request.auth.uid;
+
+      allow create: if request.auth != null
+                    && request.resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.type in ['income', 'expense', 'bonus']
+                    && request.resource.data.amount is number
+                    && request.resource.data.amount > 0
+                    && request.resource.data.amount <= 1000000;
+
+      allow update: if request.auth != null
+                    && resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.ownerUid == resource.data.ownerUid
+                    && request.resource.data.type     == resource.data.type
+                    && request.resource.data.amount   == resource.data.amount;
+
+      allow delete: if request.auth != null
+                    && resource.data.ownerUid == request.auth.uid;
+    }
   }
 }
