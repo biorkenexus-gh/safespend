@@ -571,8 +571,18 @@
                                 <span class="text-xs font-medium">Other</span>
                             </button>
                         </div>
-                        <p id="auto-cat-hint" class="text-xs text-primary mt-2 hidden">
-                            <i class="fas fa-magic-wand-sparkles"></i> <span id="auto-cat-hint-text"></span>
+                        <!-- AI-powered category suggestions (chips) -->
+                        <div id="ai-cat-suggestions" class="hidden mt-3">
+                            <div class="flex items-center gap-1.5 mb-1.5">
+                                <i class="fas fa-wand-magic-sparkles text-xs text-primary"></i>
+                                <span class="text-[11px] text-primary font-semibold uppercase tracking-wide">Smart suggestions</span>
+                                <span class="text-[10px] text-gray-400">· tap to apply</span>
+                            </div>
+                            <div id="ai-cat-chips" class="flex gap-2 flex-wrap"></div>
+                        </div>
+                        <!-- Legacy hint (kept hidden for backward compat with old code paths) -->
+                        <p id="auto-cat-hint" class="hidden">
+                            <span id="auto-cat-hint-text"></span>
                         </p>
                     </div>
 
@@ -589,6 +599,7 @@
                     <div>
                         <label class="text-gray-700 font-medium mb-2 block">Tags (Optional)</label>
                         <input type="text" id="expense-tags"
+                            oninput="previewAutoCategory()"
                             class="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
                             placeholder="Comma-separated, e.g. work, urgent, recurring">
                         <p class="text-xs text-gray-400 mt-1">Helps you find and filter expenses later</p>
@@ -2428,13 +2439,115 @@
         health:        ['pharmacy','medicine','doctor','hospital','clinic','gym','fitness','yoga','massage','dentist','therapy','vitamins','healthcare','nurse']
     };
 
-    function suggestCategory(text) {
-        if (!text) return null;
-        const t = String(text).toLowerCase();
+    // ── AI Category Suggestion Engine ─────────────────────────────
+    //
+    // Hybrid approach (prioritized):
+    //   1. USER HISTORY — tokens the user has previously paired with a category
+    //      get the strongest signal (personalizes over time)
+    //   2. KEYWORD RULES — static CATEGORY_RULES map provides a cold-start base
+    //   3. FREQUENCY — most-used category bubbles up as a tiebreaker
+    //
+    // State lives in `catLearning` (localStorage). It is device-local; a future
+    // Firestore mirror would make it multi-device.
+
+    const CAT_LEARNING_KEY = 'safespend_cat_learning';
+    const STOPWORDS = new Set([
+        'a','an','the','of','at','in','on','for','to','from','with','my','your',
+        'is','was','and','or','it','this','that','we','i','me','you','he','she',
+        'they','them','us','our','as','by','about','some','any','no','not','but',
+        'today','yesterday','tomorrow','week','month','bought','paid','spent','got'
+    ]);
+
+    let catLearning = { titlePatterns: {}, categoryFrequency: {} };
+    try {
+        const raw = localStorage.getItem(CAT_LEARNING_KEY);
+        if (raw) catLearning = JSON.parse(raw);
+    } catch { catLearning = { titlePatterns: {}, categoryFrequency: {} }; }
+
+    function saveCatLearning() {
+        try { localStorage.setItem(CAT_LEARNING_KEY, JSON.stringify(catLearning)); } catch {}
+    }
+
+    // Tokenize text into meaningful lowercase words for matching.
+    function tokenizeCat(text) {
+        if (!text) return [];
+        return String(text).toLowerCase()
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .split(/\s+/)
+            .filter(w => w.length >= 2 && !STOPWORDS.has(w));
+    }
+
+    // Return top N category suggestions ranked by a hybrid score.
+    // Each suggestion: { category, score, reasons: [] }
+    function suggestCategoriesScored(text, topN = 3) {
+        if (!text) return [];
+        const t      = String(text).toLowerCase();
+        const tokens = tokenizeCat(t);
+        const scores = {};
+        const reasons = {};
+
+        // Initialize all 7 categories so frequency boost can apply
+        Object.keys(categories).forEach(cat => { scores[cat] = 0; reasons[cat] = []; });
+
+        // 1) Keyword-rule matches — longer keyword matches score higher
         for (const [cat, kws] of Object.entries(CATEGORY_RULES)) {
-            if (kws.some(kw => t.includes(kw))) return cat;
+            for (const kw of kws) {
+                if (t.includes(kw)) {
+                    // Weight by keyword length (prefers specific over generic)
+                    const base = 10 + Math.min(10, kw.length);
+                    scores[cat] += base;
+                    reasons[cat].push(`"${kw}"`);
+                    break;  // count each category's keyword rule only once
+                }
+            }
         }
-        return null;
+
+        // 2) User history — strongest signal (personalized)
+        tokens.forEach(tok => {
+            const learned = catLearning.titlePatterns[tok];
+            if (!learned) return;
+            for (const [cat, count] of Object.entries(learned)) {
+                if (scores[cat] === undefined) continue;  // defensive
+                scores[cat] += count * 15;                 // heavy personalization weight
+                reasons[cat].push(`history:${tok}`);
+            }
+        });
+
+        // 3) Frequency tiebreaker — small nudge so popular cats win ties
+        for (const cat of Object.keys(scores)) {
+            scores[cat] += (catLearning.categoryFrequency[cat] || 0) * 0.1;
+        }
+
+        // Only include categories with at least one real signal (keyword or
+        // user-history hit). Frequency is ONLY a tiebreaker — we don't want
+        // the user's most-used category to leak into every unrelated note.
+        return Object.entries(scores)
+            .filter(([cat]) => reasons[cat].length > 0)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, topN)
+            .map(([cat, score]) => ({ category: cat, score: +score.toFixed(2), reasons: reasons[cat].slice(0, 3) }));
+    }
+
+    // Backward-compat single-value helper kept for any legacy callers.
+    function suggestCategory(text) {
+        const top = suggestCategoriesScored(text, 1);
+        return top.length > 0 ? top[0].category : null;
+    }
+
+    // Record a user's category choice so future similar notes rank it higher.
+    // Called by addTransaction() every time an expense is saved.
+    function recordCategoryChoice(note, tags, category) {
+        if (!category || !categories[category]) return;
+        const tokens = new Set([
+            ...tokenizeCat(note || ''),
+            ...(tags || []).flatMap(t => tokenizeCat(t))
+        ]);
+        tokens.forEach(tok => {
+            catLearning.titlePatterns[tok] = catLearning.titlePatterns[tok] || {};
+            catLearning.titlePatterns[tok][category] = (catLearning.titlePatterns[tok][category] || 0) + 1;
+        });
+        catLearning.categoryFrequency[category] = (catLearning.categoryFrequency[category] || 0) + 1;
+        saveCatLearning();
     }
 
     // ── App state ─────────────────────────────────────────────────
@@ -6294,26 +6407,50 @@
         }
     }
 
-    // Live hint under the category grid: suggests a category as the user types the note
+    // Live suggestion chips under the category grid. Fires on every keystroke
+    // of the note field and also when tags change (via renderCatSuggestions
+    // caller). Shows up to 3 ranked suggestions; tap any to auto-select.
     function previewAutoCategory() {
-        const note = document.getElementById('expense-note').value.trim();
-        const hint = document.getElementById('auto-cat-hint');
-        const hintText = document.getElementById('auto-cat-hint-text');
-        if (!hint || !hintText) return;
+        const note = document.getElementById('expense-note')?.value.trim() || '';
+        const tags = document.getElementById('expense-tags')?.value.trim() || '';
+        const wrap  = document.getElementById('ai-cat-suggestions');
+        const chips = document.getElementById('ai-cat-chips');
+        if (!wrap || !chips) return;
 
-        if (selectedCategory) { hint.classList.add('hidden'); return; }  // don't nag if user already picked
-        const suggested = suggestCategory(note);
-        if (suggested && categories[suggested]) {
-            hintText.textContent = `Looks like "${categories[suggested].label}" — tap to apply`;
-            hint.classList.remove('hidden');
-            hint.onclick = () => {
-                const btn = document.querySelector(`.category-btn[onclick*="${suggested}"]`);
-                if (btn) selectCategory(btn, suggested);
-                hint.classList.add('hidden');
-            };
-        } else {
-            hint.classList.add('hidden');
-        }
+        // If user already picked a category explicitly, hide suggestions
+        if (selectedCategory) { wrap.classList.add('hidden'); return; }
+        if (!note && !tags)   { wrap.classList.add('hidden'); return; }
+
+        const combined = `${note} ${tags}`.trim();
+        const topN = suggestCategoriesScored(combined, 3);
+        if (topN.length === 0) { wrap.classList.add('hidden'); return; }
+
+        wrap.classList.remove('hidden');
+        chips.innerHTML = topN.map((sug, idx) => {
+            const c = categories[sug.category];
+            if (!c) return '';
+            const isTop = idx === 0;
+            const cls = isTop
+                ? 'bg-blue-50 border-primary text-primary font-semibold'
+                : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-primary hover:text-primary';
+            const reasonHint = sug.reasons.length ? ` · ${sug.reasons[0]}` : '';
+            return `
+                <button type="button"
+                        onclick="applyAiSuggestion('${sug.category}')"
+                        title="Match score ${sug.score}${reasonHint}"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 text-xs transition active:scale-95 ${cls}">
+                    <i class="fas fa-${c.icon}" style="color:${c.hex || '#6B7280'}"></i>
+                    <span>${c.label}</span>
+                    ${isTop ? '<span class="text-[9px] bg-primary text-white px-1.5 py-0.5 rounded-full ml-0.5">Best</span>' : ''}
+                </button>`;
+        }).join('');
+    }
+
+    // Apply a suggested category (called when user taps a suggestion chip).
+    function applyAiSuggestion(cat) {
+        const btn = document.querySelector(`.category-btn[onclick*="'${cat}'"]`);
+        if (btn) selectCategory(btn, cat);
+        document.getElementById('ai-cat-suggestions')?.classList.add('hidden');
     }
 
     function parseTagsInput(raw) {
@@ -6387,6 +6524,8 @@
         // Engagement triggers
         touchDailyStreak();
         maybeSuggestFavorite(amount, category, note);
+        // AI learning: remember which category the user chose for this note
+        recordCategoryChoice(note, tags, category);
 
         updateUI();
 
@@ -6400,6 +6539,7 @@
         const tagsEl = document.getElementById('expense-tags'); if (tagsEl) tagsEl.value = '';
         document.getElementById('emergency-reason').value = '';
         document.getElementById('auto-cat-hint')?.classList.add('hidden');
+        document.getElementById('ai-cat-suggestions')?.classList.add('hidden');
         document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
         selectedCategory = null;
         const w = document.getElementById('budget-warning');
