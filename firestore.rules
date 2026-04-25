@@ -213,5 +213,33 @@ service cloud.firestore {
       allow delete: if request.auth != null
                     && resource.data.ownerUid == request.auth.uid;
     }
+
+    // ─── Invoices ─────────────────────────────────────────────────
+    // Premium-only invoicing for business owners. Each invoice is
+    // owner-isolated. ownerUid is immutable after creation; total/
+    // subtotal recomputed server-side would be ideal, but trusted from
+    // client here since the owner only writes their own data.
+    match /invoices/{id} {
+      allow read: if request.auth != null
+                    && resource.data.ownerUid == request.auth.uid;
+
+      allow create: if request.auth != null
+                    && request.resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.invoiceNumber is string
+                    && request.resource.data.customerName is string
+                    && request.resource.data.customerName.size() > 0
+                    && request.resource.data.total is number
+                    && request.resource.data.total >= 0
+                    && request.resource.data.total <= 10000000
+                    && request.resource.data.status in ['pending', 'paid', 'overdue', 'cancelled'];
+
+      // Owner can edit any field on their own invoice except the ownerUid
+      allow update: if request.auth != null
+                    && resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.ownerUid == resource.data.ownerUid;
+
+      allow delete: if request.auth != null
+                    && resource.data.ownerUid == request.auth.uid;
+    }
   }
 }

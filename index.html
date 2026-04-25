@@ -1295,11 +1295,17 @@
                         </div>
                     </div>
 
-                    <!-- Export button -->
-                    <button onclick="exportBusinessReport()"
-                            class="w-full bg-white border-2 border-gray-200 hover:border-primary text-gray-700 font-semibold py-3 rounded-2xl transition flex items-center justify-center gap-2">
-                        <i class="fas fa-file-pdf"></i> Export Profit &amp; Loss Report (PDF)
-                    </button>
+                    <!-- Quick links -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="showInvoicesScreen()"
+                                class="bg-white border-2 border-gray-200 hover:border-primary text-gray-700 font-semibold py-3 rounded-2xl transition flex items-center justify-center gap-2 text-sm">
+                            <i class="fas fa-file-invoice-dollar text-primary"></i> Invoices
+                        </button>
+                        <button onclick="exportBusinessReport()"
+                                class="bg-white border-2 border-gray-200 hover:border-primary text-gray-700 font-semibold py-3 rounded-2xl transition flex items-center justify-center gap-2 text-sm">
+                            <i class="fas fa-file-pdf text-primary"></i> P&amp;L Report
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1424,6 +1430,249 @@
                             class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
                         Cancel
                     </button>
+                </div>
+            </div>
+
+            <!-- ==================== INVOICES LIST SCREEN ==================== -->
+            <div id="invoices-screen" class="screen p-4 space-y-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center min-w-0">
+                        <button onclick="showBusinessScreen()" class="mr-3 text-gray-600 hover:text-gray-800 shrink-0">
+                            <i class="fas fa-arrow-left text-xl"></i>
+                        </button>
+                        <h2 class="text-2xl font-display font-bold text-gray-800 truncate">Invoices</h2>
+                    </div>
+                    <button id="invoices-new-btn" onclick="openInvoiceForm(null)"
+                            class="hidden bg-primary text-white text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-blue-800 transition">
+                        <i class="fas fa-plus mr-1"></i> New
+                    </button>
+                </div>
+
+                <!-- 1) Premium gate (non-premium users) -->
+                <div id="invoices-gate" class="hidden bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 rounded-3xl p-6 text-white shadow-xl">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-12 h-12 bg-white/25 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-file-invoice-dollar text-2xl text-yellow-200"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs uppercase tracking-wider opacity-90">Premium Feature</p>
+                            <h3 class="font-display font-bold text-xl">Invoicing</h3>
+                        </div>
+                    </div>
+                    <p class="text-sm leading-relaxed opacity-95 mb-4">
+                        Send branded invoices to your customers and track payments — all from inside SafeSpend.
+                    </p>
+                    <ul class="text-sm opacity-95 space-y-1.5 mb-5">
+                        <li><i class="fas fa-check-circle mr-2"></i>Auto-numbered, professional invoices</li>
+                        <li><i class="fas fa-check-circle mr-2"></i>Tax + discount + multi-line items</li>
+                        <li><i class="fas fa-check-circle mr-2"></i>PDF export with your business branding</li>
+                        <li><i class="fas fa-check-circle mr-2"></i>Pending / Paid / Overdue tracking</li>
+                    </ul>
+                    <button onclick="openPremiumModal()"
+                            class="w-full bg-white text-orange-600 font-bold py-3 rounded-xl shadow-md hover:shadow-lg active:scale-95 transition">
+                        <i class="fas fa-bolt mr-1"></i> Upgrade to Premium · <span id="invoices-gate-price">—</span>
+                    </button>
+                </div>
+
+                <!-- 2) Setup-required CTA (premium but no businessProfile yet) -->
+                <div id="invoices-setup-needed" class="hidden bg-white rounded-2xl p-6 shadow-sm text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-briefcase text-2xl text-primary"></i>
+                    </div>
+                    <h3 class="font-display font-bold text-lg text-gray-800">Set up your business first</h3>
+                    <p class="text-sm text-gray-500 mt-1 mb-5">Invoices auto-fill your business name, logo, and contact info.</p>
+                    <button onclick="showBusinessScreen()"
+                            class="bg-primary text-white font-semibold px-6 py-3 rounded-xl hover:bg-blue-800 transition">
+                        Go to Business Setup
+                    </button>
+                </div>
+
+                <!-- 3) Active invoice list -->
+                <div id="invoices-active" class="hidden space-y-4">
+                    <!-- Stats trio -->
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="bg-white rounded-2xl p-3 shadow-sm text-center">
+                            <p class="text-[10px] text-gray-500 uppercase font-semibold">Invoiced</p>
+                            <p id="inv-stat-total" class="font-display font-bold text-base text-gray-800 mt-1">—</p>
+                        </div>
+                        <div class="bg-white rounded-2xl p-3 shadow-sm text-center">
+                            <p class="text-[10px] text-gray-500 uppercase font-semibold">Paid</p>
+                            <p id="inv-stat-paid" class="font-display font-bold text-base text-emerald-600 mt-1">—</p>
+                        </div>
+                        <div class="bg-white rounded-2xl p-3 shadow-sm text-center">
+                            <p class="text-[10px] text-gray-500 uppercase font-semibold">Outstanding</p>
+                            <p id="inv-stat-out" class="font-display font-bold text-base text-amber-600 mt-1">—</p>
+                        </div>
+                    </div>
+
+                    <!-- Search + filter pills -->
+                    <div class="bg-white rounded-2xl p-3 shadow-sm space-y-2">
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                            <input type="text" id="invoices-search" oninput="setInvoiceSearch(this.value)"
+                                   class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-primary outline-none text-sm"
+                                   placeholder="Search invoice # or customer…">
+                        </div>
+                        <div class="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                            <button data-istatus="all"     onclick="setInvoiceFilter('all')"     class="inv-filter-btn shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold">All <span class="opacity-70" data-count="all">0</span></button>
+                            <button data-istatus="pending" onclick="setInvoiceFilter('pending')" class="inv-filter-btn shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold">Pending <span class="opacity-70" data-count="pending">0</span></button>
+                            <button data-istatus="paid"    onclick="setInvoiceFilter('paid')"    class="inv-filter-btn shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold">Paid <span class="opacity-70" data-count="paid">0</span></button>
+                            <button data-istatus="overdue" onclick="setInvoiceFilter('overdue')" class="inv-filter-btn shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold">Overdue <span class="opacity-70" data-count="overdue">0</span></button>
+                        </div>
+                    </div>
+
+                    <!-- Invoice cards -->
+                    <div id="invoices-list" class="space-y-2">
+                        <div class="bg-white rounded-2xl p-8 text-center text-gray-400">
+                            <i class="fas fa-file-invoice-dollar text-3xl mb-2 empty-pulse"></i>
+                            <p class="text-sm">No invoices yet</p>
+                            <p class="text-xs mt-1">Tap "New" to create your first one</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== INVOICE FORM MODAL ==================== -->
+            <div id="invoice-form-modal" class="fixed inset-0 bg-black/60 z-[185] hidden flex items-center justify-center p-3">
+                <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl slide-up max-h-[95vh] flex flex-col">
+                    <!-- Sticky header -->
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                        <h3 id="invform-title" class="text-lg font-display font-bold text-gray-800">New Invoice</h3>
+                        <button onclick="closeInvoiceForm()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+
+                    <!-- Scrollable body -->
+                    <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+                        <!-- Invoice meta -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Invoice #</label>
+                                <input type="text" id="invform-number" readonly
+                                       class="w-full mt-1 p-2.5 rounded-lg border border-gray-200 bg-gray-50 outline-none text-sm font-mono">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Status</label>
+                                <select id="invform-status" class="w-full mt-1 p-2.5 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm">
+                                    <option value="pending">Pending</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="overdue">Overdue</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Issue Date</label>
+                                <input type="date" id="invform-issue" class="w-full mt-1 p-2.5 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Due Date</label>
+                                <input type="date" id="invform-due" class="w-full mt-1 p-2.5 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm">
+                            </div>
+                        </div>
+
+                        <!-- Customer -->
+                        <div class="bg-gray-50 rounded-xl p-3 space-y-2">
+                            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Bill To</p>
+                            <input type="text" id="invform-cname" maxlength="80" placeholder="Customer name *"
+                                   class="w-full p-2.5 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm bg-white">
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="email" id="invform-cemail" maxlength="100" placeholder="Email"
+                                       class="w-full p-2.5 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm bg-white">
+                                <input type="tel" id="invform-cphone" maxlength="30" placeholder="Phone"
+                                       class="w-full p-2.5 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm bg-white">
+                            </div>
+                            <textarea id="invform-caddress" rows="2" maxlength="200" placeholder="Address"
+                                      class="w-full p-2.5 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm bg-white resize-none"></textarea>
+                        </div>
+
+                        <!-- Line items -->
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Line Items</p>
+                                <button onclick="addInvoiceItem()" class="text-xs text-primary font-semibold hover:underline">
+                                    <i class="fas fa-plus"></i> Add row
+                                </button>
+                            </div>
+                            <div id="invform-items" class="space-y-2"></div>
+                        </div>
+
+                        <!-- Tax + discount -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Tax %</label>
+                                <input type="number" id="invform-tax" min="0" max="100" step="0.01" value="0" oninput="updateInvoiceTotals()"
+                                       class="w-full mt-1 p-2.5 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Discount</label>
+                                <input type="number" id="invform-discount" min="0" step="0.01" value="0" oninput="updateInvoiceTotals()"
+                                       class="w-full mt-1 p-2.5 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm">
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Notes (Optional)</label>
+                            <textarea id="invform-notes" rows="2" maxlength="300" placeholder="Payment terms, thank you message…"
+                                      class="w-full mt-1 p-2.5 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm resize-none"></textarea>
+                        </div>
+
+                        <!-- Live totals card -->
+                        <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-1 text-sm">
+                            <div class="flex justify-between"><span class="text-gray-600">Subtotal</span><span id="invform-subtotal" class="font-semibold text-gray-800">—</span></div>
+                            <div class="flex justify-between"><span class="text-gray-600">Discount</span><span id="invform-disp-discount" class="font-semibold text-gray-800">—</span></div>
+                            <div class="flex justify-between"><span class="text-gray-600">Tax</span><span id="invform-disp-tax" class="font-semibold text-gray-800">—</span></div>
+                            <div class="flex justify-between border-t border-blue-200 pt-2 mt-1">
+                                <span class="font-display font-bold text-gray-800">Total</span>
+                                <span id="invform-total" class="font-display font-bold text-lg text-primary">—</span>
+                            </div>
+                        </div>
+
+                        <p id="invform-error" class="hidden text-xs text-danger"></p>
+                    </div>
+
+                    <!-- Sticky footer -->
+                    <div class="px-5 py-3 border-t border-gray-100 flex gap-2">
+                        <button onclick="closeInvoiceForm()" class="px-4 py-2.5 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-semibold transition">
+                            Cancel
+                        </button>
+                        <button onclick="submitInvoiceForm(false)" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition text-sm">
+                            <i class="fas fa-save mr-1"></i> Save
+                        </button>
+                        <button onclick="submitInvoiceForm(true)" class="flex-1 bg-primary text-white font-semibold py-2.5 rounded-lg hover:bg-blue-800 transition text-sm">
+                            Save &amp; Preview
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== INVOICE PREVIEW MODAL ==================== -->
+            <div id="invoice-preview-modal" class="fixed inset-0 bg-black/70 z-[185] hidden flex items-center justify-center p-3">
+                <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl slide-up max-h-[95vh] flex flex-col">
+                    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+                        <h3 class="text-lg font-display font-bold text-gray-800">Invoice Preview</h3>
+                        <button onclick="closeInvoicePreview()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                    <div id="invoice-preview-body" class="flex-1 overflow-y-auto bg-gray-100 p-3"></div>
+                    <div class="px-3 py-3 border-t border-gray-100 grid grid-cols-2 gap-2 text-sm">
+                        <button onclick="downloadInvoicePdf(currentPreviewInvoiceId)" class="bg-primary text-white font-semibold py-2.5 rounded-lg hover:bg-blue-800 transition flex items-center justify-center gap-1">
+                            <i class="fas fa-file-pdf"></i> Download PDF
+                        </button>
+                        <button onclick="sendInvoiceByEmail(currentPreviewInvoiceId)" class="bg-emerald-600 text-white font-semibold py-2.5 rounded-lg hover:bg-emerald-700 transition flex items-center justify-center gap-1">
+                            <i class="fas fa-envelope"></i> Send by Email
+                        </button>
+                        <button onclick="confirmMarkInvoicePaid(currentPreviewInvoiceId)" id="invpreview-mark-paid"
+                                class="bg-amber-100 text-amber-700 font-semibold py-2.5 rounded-lg hover:bg-amber-200 transition flex items-center justify-center gap-1">
+                            <i class="fas fa-check"></i> Mark Paid
+                        </button>
+                        <button onclick="editInvoiceFromPreview()" class="bg-gray-100 text-gray-700 font-semibold py-2.5 rounded-lg hover:bg-gray-200 transition flex items-center justify-center gap-1">
+                            <i class="fas fa-pen-to-square"></i> Edit
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -5478,6 +5727,715 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    //  INVOICE ENGINE
+    //
+    //  Owner-isolated. Each business owner reads/writes their own
+    //  invoices. Premium-gated client-side; rules enforce isolation.
+    //  Status auto-syncs: any pending invoice past dueDate → 'overdue'.
+    // ═══════════════════════════════════════════════════════════════
+
+    function generateInvoiceNumber() {
+        const year = new Date().getFullYear();
+        const next = lastInvoiceCounter + 1;
+        return `INV-${year}-${String(next).padStart(4, '0')}`;
+    }
+
+    function recomputeInvoiceCounter() {
+        let max = 0;
+        invoices.forEach(inv => {
+            const m = (inv.invoiceNumber || '').match(/INV-\d{4}-(\d+)/);
+            if (m) max = Math.max(max, parseInt(m[1], 10));
+        });
+        lastInvoiceCounter = max;
+    }
+
+    // Pure math helper used by form, render, and PDF — single source of truth.
+    function calcInvoiceTotals(items, taxRate, discountAmount) {
+        const subtotal = (items || []).reduce((s, i) =>
+            s + (parseFloat(i.quantity) || 0) * (parseFloat(i.unitPrice) || 0), 0);
+        const discount = parseFloat(discountAmount) || 0;
+        const taxableBase = Math.max(0, subtotal - discount);
+        const taxAmount = taxableBase * ((parseFloat(taxRate) || 0) / 100);
+        const total = taxableBase + taxAmount;
+        return {
+            subtotal:  round2(subtotal),
+            discount:  round2(discount),
+            taxAmount: round2(taxAmount),
+            total:     round2(total)
+        };
+    }
+    function round2(n) { return Math.round((n || 0) * 100) / 100; }
+
+    async function loadInvoices() {
+        if (!firestoreReady) { invoices = []; return; }
+        const user = firebase.auth().currentUser;
+        if (!user) return;
+        try {
+            const q = await db.collection('invoices').where('ownerUid', '==', user.uid).get();
+            invoices = q.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => {
+                const ta = a.createdAt?.toMillis?.() || 0;
+                const tb = b.createdAt?.toMillis?.() || 0;
+                return tb - ta;
+            });
+            recomputeInvoiceCounter();
+            await syncOverdueStatuses();
+        } catch (err) {
+            console.warn('[Invoices] load failed:', err);
+        }
+    }
+
+    async function syncOverdueStatuses() {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const updates = [];
+        invoices.forEach(inv => {
+            if (inv.status !== 'pending' || !inv.dueDate) return;
+            const due = new Date(inv.dueDate); due.setHours(0, 0, 0, 0);
+            if (due < today) {
+                inv.status = 'overdue';
+                updates.push(db.collection('invoices').doc(inv.id).update({ status: 'overdue' }));
+            }
+        });
+        if (updates.length) {
+            try { await Promise.all(updates); } catch (e) { console.warn('[Invoices] overdue sync failed:', e); }
+        }
+    }
+
+    async function saveInvoice(payload) {
+        const user = firebase.auth().currentUser;
+        if (!user || !firestoreReady) throw new Error('Sign in required');
+
+        const totals = calcInvoiceTotals(payload.items, payload.taxRate, payload.discountAmount);
+        const doc = {
+            ownerUid:        user.uid,
+            invoiceNumber:   payload.invoiceNumber,
+            customerName:    (payload.customerName || '').trim(),
+            customerEmail:   (payload.customerEmail || '').trim(),
+            customerPhone:   (payload.customerPhone || '').trim(),
+            customerAddress: (payload.customerAddress || '').trim(),
+            issueDate:       payload.issueDate,
+            dueDate:         payload.dueDate,
+            items:           (payload.items || []).map(i => ({
+                description: (i.description || '').trim(),
+                quantity:    parseFloat(i.quantity) || 0,
+                unitPrice:   parseFloat(i.unitPrice) || 0
+            })).filter(i => i.description && i.quantity > 0),
+            taxRate:         parseFloat(payload.taxRate) || 0,
+            discountAmount:  parseFloat(payload.discountAmount) || 0,
+            subtotal:        totals.subtotal,
+            taxAmount:       totals.taxAmount,
+            total:           totals.total,
+            currency:        profile.currency || 'USD',
+            status:          payload.status || 'pending',
+            paidDate:        payload.paidDate || null,
+            notes:           (payload.notes || '').trim(),
+            updatedAt:       firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (editingInvoiceId) {
+            await db.collection('invoices').doc(editingInvoiceId).set(doc, { merge: true });
+            const idx = invoices.findIndex(i => i.id === editingInvoiceId);
+            if (idx >= 0) invoices[idx] = { ...invoices[idx], ...doc };
+            return editingInvoiceId;
+        } else {
+            doc.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            const ref = await db.collection('invoices').add(doc);
+            invoices.unshift({ id: ref.id, ...doc, createdAt: { toMillis: () => Date.now() } });
+            lastInvoiceCounter++;
+            return ref.id;
+        }
+    }
+
+    async function deleteInvoice(id) {
+        if (!firestoreReady) return;
+        await db.collection('invoices').doc(id).delete();
+        invoices = invoices.filter(i => i.id !== id);
+    }
+
+    async function markInvoicePaid(id) {
+        if (!firestoreReady) return;
+        const today = new Date().toISOString().split('T')[0];
+        await db.collection('invoices').doc(id).update({
+            status:    'paid',
+            paidDate:  today,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        const inv = invoices.find(i => i.id === id);
+        if (inv) { inv.status = 'paid'; inv.paidDate = today; }
+    }
+
+    function duplicateInvoice(id) {
+        const src = invoices.find(i => i.id === id);
+        if (!src) return null;
+        editingInvoiceId = null;
+        return {
+            invoiceNumber:   generateInvoiceNumber(),
+            customerName:    src.customerName,
+            customerEmail:   src.customerEmail,
+            customerPhone:   src.customerPhone,
+            customerAddress: src.customerAddress,
+            issueDate:       new Date().toISOString().split('T')[0],
+            dueDate:         addDaysISO(new Date(), 14),
+            items:           (src.items || []).map(i => ({ ...i })),
+            taxRate:         src.taxRate || 0,
+            discountAmount:  0,
+            notes:           src.notes || '',
+            status:          'pending'
+        };
+    }
+
+    function addDaysISO(date, days) {
+        const d = new Date(date); d.setDate(d.getDate() + days);
+        return d.toISOString().split('T')[0];
+    }
+
+    function computeInvoiceStats() {
+        const totalInvoiced = invoices.reduce((s, i) => s + (i.total || 0), 0);
+        const totalPaid     = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (i.total || 0), 0);
+        const outstanding   = invoices.filter(i => i.status !== 'paid' && i.status !== 'cancelled').reduce((s, i) => s + (i.total || 0), 0);
+        const counts = {
+            all:     invoices.length,
+            pending: invoices.filter(i => i.status === 'pending').length,
+            paid:    invoices.filter(i => i.status === 'paid').length,
+            overdue: invoices.filter(i => i.status === 'overdue').length
+        };
+        return { totalInvoiced, totalPaid, outstanding, counts };
+    }
+
+    function getFilteredInvoices() {
+        const q = (invoiceFilter.search || '').toLowerCase().trim();
+        return invoices.filter(inv => {
+            if (invoiceFilter.status !== 'all' && inv.status !== invoiceFilter.status) return false;
+            if (q) {
+                const hay = [inv.invoiceNumber, inv.customerName, inv.customerEmail].join(' ').toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
+            return true;
+        });
+    }
+
+    // ── Invoice screen lifecycle ────────────────────────────────────
+    let currentPreviewInvoiceId = null;
+
+    async function showInvoicesScreen() {
+        showScreen('invoices');
+        const gate    = document.getElementById('invoices-gate');
+        const setup   = document.getElementById('invoices-setup-needed');
+        const active  = document.getElementById('invoices-active');
+        const newBtn  = document.getElementById('invoices-new-btn');
+        gate.classList.add('hidden'); setup.classList.add('hidden');
+        active.classList.add('hidden'); newBtn.classList.add('hidden');
+
+        if (!profile.isPremium) {
+            setText('invoices-gate-price', fmt(PREMIUM_PRICE));
+            gate.classList.remove('hidden');
+            return;
+        }
+        if (!firestoreReady || !firebase.auth().currentUser) {
+            gate.classList.remove('hidden');
+            document.querySelector('#invoices-gate p').textContent = 'Sign in with Google to use invoicing — your data syncs across devices.';
+            return;
+        }
+        // Need a businessProfile so the invoice can include business details
+        if (!businessProfile) {
+            await loadBusinessData();
+            if (!businessProfile) { setup.classList.remove('hidden'); return; }
+        }
+
+        active.classList.remove('hidden');
+        newBtn.classList.remove('hidden');
+        await loadInvoices();
+        renderInvoicesList();
+    }
+
+    function renderInvoicesList() {
+        const stats = computeInvoiceStats();
+        setText('inv-stat-total', fmt(stats.totalInvoiced));
+        setText('inv-stat-paid',  fmt(stats.totalPaid));
+        setText('inv-stat-out',   fmt(stats.outstanding));
+
+        // Counts on filter chips
+        Object.entries(stats.counts).forEach(([k, v]) => {
+            const span = document.querySelector(`[data-count="${k}"]`);
+            if (span) span.textContent = `(${v})`;
+        });
+        document.querySelectorAll('.inv-filter-btn').forEach(btn => {
+            const active = btn.dataset.istatus === invoiceFilter.status;
+            btn.className = `inv-filter-btn shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold ${active ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`;
+        });
+
+        const list = document.getElementById('invoices-list');
+        const filtered = getFilteredInvoices();
+        if (filtered.length === 0) {
+            list.innerHTML = `
+                <div class="bg-white rounded-2xl p-8 text-center text-gray-400">
+                    <i class="fas fa-file-invoice-dollar text-3xl mb-2 empty-pulse"></i>
+                    <p class="text-sm">${invoices.length === 0 ? 'No invoices yet' : 'No invoices match your filters'}</p>
+                    <p class="text-xs mt-1">${invoices.length === 0 ? 'Tap "New" to create your first one' : ''}</p>
+                </div>`;
+            return;
+        }
+        list.innerHTML = filtered.map(inv => renderInvoiceCard(inv)).join('');
+    }
+
+    function renderInvoiceCard(inv) {
+        const statusStyles = {
+            pending:   { bg: 'bg-amber-100', text: 'text-amber-700',  label: 'Pending' },
+            paid:      { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Paid' },
+            overdue:   { bg: 'bg-red-100',   text: 'text-red-700',    label: 'Overdue' },
+            cancelled: { bg: 'bg-gray-100',  text: 'text-gray-600',   label: 'Cancelled' }
+        };
+        const s = statusStyles[inv.status] || statusStyles.pending;
+        const due = inv.dueDate ? `Due ${new Date(inv.dueDate).toLocaleDateString()}` : '—';
+        return `
+            <div class="bg-white rounded-2xl shadow-sm p-3 hover:shadow-md transition cursor-pointer" onclick="openInvoicePreview('${inv.id}')">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <span class="font-mono text-[11px] text-gray-500">${escapeHtml(inv.invoiceNumber)}</span>
+                            <span class="text-[10px] ${s.bg} ${s.text} px-2 py-0.5 rounded-full font-semibold">${s.label}</span>
+                        </div>
+                        <p class="text-sm font-semibold text-gray-800 truncate">${escapeHtml(inv.customerName || 'Unnamed customer')}</p>
+                        <p class="text-[11px] text-gray-500">${due}</p>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <p class="font-display font-bold text-base text-gray-800">${fmt(inv.total)}</p>
+                        <p class="text-[10px] text-gray-400">${(inv.items || []).length} item${(inv.items || []).length !== 1 ? 's' : ''}</p>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    function setInvoiceFilter(status) { invoiceFilter.status = status; renderInvoicesList(); }
+    function setInvoiceSearch(q)      { invoiceFilter.search = q;       renderInvoicesList(); }
+
+    // ── Invoice form ────────────────────────────────────────────────
+    function openInvoiceForm(seedInvoiceOrNull) {
+        editingInvoiceId = seedInvoiceOrNull && seedInvoiceOrNull.id ? seedInvoiceOrNull.id : null;
+        const isEdit = !!editingInvoiceId;
+        setText('invform-title', isEdit ? 'Edit Invoice' : (seedInvoiceOrNull ? 'Duplicate Invoice' : 'New Invoice'));
+
+        const today = new Date().toISOString().split('T')[0];
+        const seed = seedInvoiceOrNull || {
+            invoiceNumber: generateInvoiceNumber(),
+            customerName: '', customerEmail: '', customerPhone: '', customerAddress: '',
+            issueDate: today,
+            dueDate:   addDaysISO(new Date(), 14),
+            items: [{ description: '', quantity: 1, unitPrice: 0 }],
+            taxRate: 0, discountAmount: 0, status: 'pending', notes: ''
+        };
+
+        document.getElementById('invform-number').value   = seed.invoiceNumber;
+        document.getElementById('invform-status').value   = seed.status || 'pending';
+        document.getElementById('invform-issue').value    = seed.issueDate;
+        document.getElementById('invform-due').value      = seed.dueDate;
+        document.getElementById('invform-cname').value    = seed.customerName || '';
+        document.getElementById('invform-cemail').value   = seed.customerEmail || '';
+        document.getElementById('invform-cphone').value   = seed.customerPhone || '';
+        document.getElementById('invform-caddress').value = seed.customerAddress || '';
+        document.getElementById('invform-tax').value      = seed.taxRate || 0;
+        document.getElementById('invform-discount').value = seed.discountAmount || 0;
+        document.getElementById('invform-notes').value    = seed.notes || '';
+
+        invoiceFormItems = (seed.items && seed.items.length)
+            ? seed.items.map(i => ({ ...i }))
+            : [{ description: '', quantity: 1, unitPrice: 0 }];
+        renderInvoiceFormItems();
+        updateInvoiceTotals();
+
+        const err = document.getElementById('invform-error');
+        err.textContent = ''; err.classList.add('hidden');
+
+        document.getElementById('invoice-form-modal').classList.remove('hidden');
+    }
+    function closeInvoiceForm() { document.getElementById('invoice-form-modal').classList.add('hidden'); }
+
+    function renderInvoiceFormItems() {
+        const wrap = document.getElementById('invform-items');
+        if (!wrap) return;
+        wrap.innerHTML = invoiceFormItems.map((it, idx) => `
+            <div class="grid grid-cols-12 gap-2 items-start">
+                <input type="text" value="${escapeHtml(it.description)}" placeholder="Description"
+                       oninput="updateInvoiceItemField(${idx}, 'description', this.value)"
+                       class="col-span-6 p-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-xs">
+                <input type="number" value="${it.quantity}" min="0" step="1" placeholder="Qty"
+                       oninput="updateInvoiceItemField(${idx}, 'quantity', this.value); updateInvoiceTotals()"
+                       class="col-span-2 p-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-xs text-center">
+                <input type="number" value="${it.unitPrice}" min="0" step="0.01" placeholder="Price"
+                       oninput="updateInvoiceItemField(${idx}, 'unitPrice', this.value); updateInvoiceTotals()"
+                       class="col-span-3 p-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-xs text-right">
+                <button onclick="removeInvoiceItem(${idx})" class="col-span-1 text-gray-400 hover:text-danger text-xs py-2">
+                    <i class="fas fa-trash-can"></i>
+                </button>
+            </div>`).join('');
+    }
+
+    function addInvoiceItem() {
+        invoiceFormItems.push({ description: '', quantity: 1, unitPrice: 0 });
+        renderInvoiceFormItems();
+        updateInvoiceTotals();
+    }
+    function removeInvoiceItem(idx) {
+        if (invoiceFormItems.length === 1) {
+            // Always keep at least one row — clear instead of removing
+            invoiceFormItems[0] = { description: '', quantity: 1, unitPrice: 0 };
+        } else {
+            invoiceFormItems.splice(idx, 1);
+        }
+        renderInvoiceFormItems();
+        updateInvoiceTotals();
+    }
+    function updateInvoiceItemField(idx, field, value) {
+        if (!invoiceFormItems[idx]) return;
+        invoiceFormItems[idx][field] = value;
+    }
+
+    function updateInvoiceTotals() {
+        const tax = parseFloat(document.getElementById('invform-tax').value) || 0;
+        const discount = parseFloat(document.getElementById('invform-discount').value) || 0;
+        const t = calcInvoiceTotals(invoiceFormItems, tax, discount);
+        setText('invform-subtotal',     fmt(t.subtotal));
+        setText('invform-disp-discount','-' + fmt(t.discount));
+        setText('invform-disp-tax',     fmt(t.taxAmount));
+        setText('invform-total',        fmt(t.total));
+    }
+
+    async function submitInvoiceForm(thenPreview) {
+        const err = document.getElementById('invform-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+
+        const customerName = document.getElementById('invform-cname').value.trim();
+        if (!customerName) return showErr('Customer name is required');
+        const validItems = invoiceFormItems.filter(i =>
+            (i.description || '').trim() && parseFloat(i.quantity) > 0);
+        if (validItems.length === 0) return showErr('Add at least one line item with description and quantity');
+
+        const payload = {
+            invoiceNumber:   document.getElementById('invform-number').value,
+            customerName,
+            customerEmail:   document.getElementById('invform-cemail').value,
+            customerPhone:   document.getElementById('invform-cphone').value,
+            customerAddress: document.getElementById('invform-caddress').value,
+            issueDate:       document.getElementById('invform-issue').value,
+            dueDate:         document.getElementById('invform-due').value,
+            items:           validItems,
+            taxRate:         document.getElementById('invform-tax').value,
+            discountAmount:  document.getElementById('invform-discount').value,
+            status:          document.getElementById('invform-status').value,
+            notes:           document.getElementById('invform-notes').value
+        };
+        try {
+            const id = await saveInvoice(payload);
+            closeInvoiceForm();
+            renderInvoicesList();
+            showPayToast(editingInvoiceId ? '✅ Invoice updated' : '✅ Invoice created');
+            editingInvoiceId = null;
+            if (thenPreview) openInvoicePreview(id);
+        } catch (e) {
+            console.warn('[Invoice] save failed:', e);
+            showErr('Could not save. Check your connection.');
+        }
+    }
+
+    // ── Invoice preview ─────────────────────────────────────────────
+    function openInvoicePreview(id) {
+        const inv = invoices.find(i => i.id === id);
+        if (!inv) return;
+        currentPreviewInvoiceId = id;
+        const body = document.getElementById('invoice-preview-body');
+        body.innerHTML = renderInvoicePreviewHTML(inv);
+        // Hide "Mark Paid" button if already paid
+        const markBtn = document.getElementById('invpreview-mark-paid');
+        if (markBtn) markBtn.style.display = (inv.status === 'paid') ? 'none' : '';
+        document.getElementById('invoice-preview-modal').classList.remove('hidden');
+    }
+    function closeInvoicePreview() {
+        document.getElementById('invoice-preview-modal').classList.add('hidden');
+    }
+    function editInvoiceFromPreview() {
+        const inv = invoices.find(i => i.id === currentPreviewInvoiceId);
+        if (!inv) return;
+        closeInvoicePreview();
+        openInvoiceForm({ ...inv, id: inv.id });
+    }
+    async function confirmMarkInvoicePaid(id) {
+        if (!confirm('Mark this invoice as paid?')) return;
+        try {
+            await markInvoicePaid(id);
+            renderInvoicesList();
+            // Refresh preview if open
+            const inv = invoices.find(i => i.id === id);
+            if (inv && document.getElementById('invoice-preview-modal').classList.contains('hidden') === false) {
+                openInvoicePreview(id);
+            }
+            showPayToast('✅ Marked as paid');
+        } catch { showPayToast('Could not update'); }
+    }
+
+    function renderInvoicePreviewHTML(inv) {
+        const itemsRows = (inv.items || []).map(i => `
+            <tr class="border-b border-gray-100">
+                <td class="py-2 pr-2 align-top">${escapeHtml(i.description)}</td>
+                <td class="py-2 px-2 text-center align-top">${i.quantity}</td>
+                <td class="py-2 px-2 text-right align-top">${fmt(i.unitPrice)}</td>
+                <td class="py-2 pl-2 text-right align-top font-semibold">${fmt((i.quantity || 0) * (i.unitPrice || 0))}</td>
+            </tr>`).join('');
+        const logoBlock = businessProfile?.logoUrl
+            ? `<img src="${businessProfile.logoUrl}" class="w-14 h-14 rounded-lg object-cover">`
+            : `<div class="w-14 h-14 rounded-lg bg-primary text-white flex items-center justify-center text-2xl font-bold">${(businessProfile?.name || 'B')[0].toUpperCase()}</div>`;
+
+        const statusStyles = {
+            pending:   'bg-amber-100 text-amber-700',
+            paid:      'bg-emerald-100 text-emerald-700',
+            overdue:   'bg-red-100 text-red-700',
+            cancelled: 'bg-gray-100 text-gray-600'
+        };
+        const sCls = statusStyles[inv.status] || statusStyles.pending;
+
+        return `
+            <div class="bg-white rounded-xl shadow-sm p-5 text-xs space-y-4">
+                <!-- Header -->
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex gap-3 min-w-0">
+                        ${logoBlock}
+                        <div class="min-w-0">
+                            <p class="font-display font-bold text-gray-800 text-base truncate">${escapeHtml(businessProfile?.name || 'Business')}</p>
+                            <p class="text-gray-500 truncate">${escapeHtml(businessProfile?.email || '')}</p>
+                            <p class="text-gray-500 truncate">${escapeHtml(businessProfile?.phone || '')}</p>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <p class="font-display font-bold text-lg text-primary">INVOICE</p>
+                        <p class="font-mono text-gray-500 mt-0.5">${escapeHtml(inv.invoiceNumber)}</p>
+                        <span class="inline-block mt-1 px-2 py-0.5 rounded-full font-semibold ${sCls}">${inv.status.toUpperCase()}</span>
+                    </div>
+                </div>
+
+                <!-- Bill To / Dates -->
+                <div class="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100">
+                    <div>
+                        <p class="text-[10px] uppercase tracking-wide text-gray-400 font-semibold mb-1">Bill To</p>
+                        <p class="font-semibold text-gray-800">${escapeHtml(inv.customerName)}</p>
+                        ${inv.customerEmail ? `<p class="text-gray-500">${escapeHtml(inv.customerEmail)}</p>` : ''}
+                        ${inv.customerPhone ? `<p class="text-gray-500">${escapeHtml(inv.customerPhone)}</p>` : ''}
+                        ${inv.customerAddress ? `<p class="text-gray-500 whitespace-pre-line">${escapeHtml(inv.customerAddress)}</p>` : ''}
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase tracking-wide text-gray-400 font-semibold mb-1">Dates</p>
+                        <p class="text-gray-700"><span class="text-gray-400">Issued:</span> ${escapeHtml(inv.issueDate || '')}</p>
+                        <p class="text-gray-700"><span class="text-gray-400">Due:</span> ${escapeHtml(inv.dueDate || '')}</p>
+                        ${inv.paidDate ? `<p class="text-emerald-600"><span class="text-gray-400">Paid:</span> ${escapeHtml(inv.paidDate)}</p>` : ''}
+                    </div>
+                </div>
+
+                <!-- Items -->
+                <table class="w-full text-xs">
+                    <thead>
+                        <tr class="text-[10px] uppercase tracking-wide text-gray-400 font-semibold border-b-2 border-gray-200">
+                            <th class="text-left py-2 pr-2">Description</th>
+                            <th class="text-center py-2 px-2">Qty</th>
+                            <th class="text-right py-2 px-2">Unit</th>
+                            <th class="text-right py-2 pl-2">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>${itemsRows}</tbody>
+                </table>
+
+                <!-- Totals -->
+                <div class="flex justify-end">
+                    <div class="w-44 space-y-1 text-xs">
+                        <div class="flex justify-between text-gray-600"><span>Subtotal</span><span>${fmt(inv.subtotal)}</span></div>
+                        ${inv.discountAmount > 0 ? `<div class="flex justify-between text-gray-600"><span>Discount</span><span>-${fmt(inv.discountAmount)}</span></div>` : ''}
+                        ${inv.taxRate > 0 ? `<div class="flex justify-between text-gray-600"><span>Tax (${inv.taxRate}%)</span><span>${fmt(inv.taxAmount)}</span></div>` : ''}
+                        <div class="flex justify-between border-t border-gray-300 pt-1 mt-1 font-display font-bold text-sm text-gray-800"><span>Total</span><span class="text-primary">${fmt(inv.total)}</span></div>
+                    </div>
+                </div>
+
+                ${inv.notes ? `<div class="pt-3 border-t border-gray-100"><p class="text-[10px] uppercase tracking-wide text-gray-400 font-semibold mb-1">Notes</p><p class="text-gray-600 whitespace-pre-line">${escapeHtml(inv.notes)}</p></div>` : ''}
+
+                <p class="text-center text-[10px] text-gray-400 pt-3 border-t border-gray-100">Generated by SafeSpend · safespend.app</p>
+
+                <!-- Action row inside preview -->
+                <div class="flex gap-2 pt-3 border-t border-gray-100">
+                    <button onclick="duplicateInvoiceFromPreview()" class="flex-1 bg-gray-100 text-gray-700 font-semibold py-2 rounded-lg hover:bg-gray-200 text-xs">
+                        <i class="fas fa-copy mr-1"></i> Duplicate
+                    </button>
+                    <button onclick="confirmDeleteInvoice('${inv.id}')" class="flex-1 bg-red-50 text-red-600 font-semibold py-2 rounded-lg hover:bg-red-100 text-xs">
+                        <i class="fas fa-trash-can mr-1"></i> Delete
+                    </button>
+                </div>
+            </div>`;
+    }
+
+    function duplicateInvoiceFromPreview() {
+        const seed = duplicateInvoice(currentPreviewInvoiceId);
+        if (!seed) return;
+        closeInvoicePreview();
+        openInvoiceForm(seed);
+    }
+
+    async function confirmDeleteInvoice(id) {
+        if (!confirm('Delete this invoice? This cannot be undone.')) return;
+        try {
+            await deleteInvoice(id);
+            closeInvoicePreview();
+            renderInvoicesList();
+            showPayToast('Invoice deleted');
+        } catch { showPayToast('Delete failed'); }
+    }
+
+    // ── Email send (mailto fallback — pure-frontend constraint) ─────
+    function sendInvoiceByEmail(id) {
+        const inv = invoices.find(i => i.id === id);
+        if (!inv) return;
+        if (!inv.customerEmail) {
+            showPayToast('Add a customer email to this invoice first');
+            return;
+        }
+        const subject = `Invoice ${inv.invoiceNumber} from ${businessProfile?.name || 'us'}`;
+        const body =
+`Hi ${inv.customerName},
+
+Please find your invoice attached.
+
+Invoice #: ${inv.invoiceNumber}
+Total Due: ${fmt(inv.total)}
+Due Date: ${inv.dueDate}
+
+${inv.notes ? inv.notes + '\n\n' : ''}Thank you,
+${businessProfile?.name || 'SafeSpend Business'}`;
+
+        // Trigger PDF download so user can attach it manually, then open mailto
+        downloadInvoicePdf(id);
+        setTimeout(() => {
+            const mailto = `mailto:${encodeURIComponent(inv.customerEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.location.href = mailto;
+        }, 800);
+        showPayToast('PDF downloaded — attach it to the email that just opened');
+    }
+
+    // ── Invoice PDF generator ───────────────────────────────────────
+    function downloadInvoicePdf(id) {
+        if (typeof window.jspdf === 'undefined') { showPayToast('PDF engine not loaded'); return; }
+        const inv = invoices.find(i => i.id === id);
+        if (!inv) { showPayToast('Invoice not found'); return; }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+        const W = doc.internal.pageSize.getWidth();
+
+        // Brand band
+        doc.setFillColor(30, 58, 138);
+        doc.rect(0, 0, W, 70, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22); doc.setFont('helvetica', 'bold');
+        doc.text(businessProfile?.name || 'Business', 40, 38);
+        doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+        const headerLine2 = [businessProfile?.email, businessProfile?.phone].filter(Boolean).join(' · ');
+        if (headerLine2) doc.text(headerLine2, 40, 56);
+
+        // INVOICE label
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(20); doc.setFont('helvetica', 'bold');
+        doc.text('INVOICE', W - 40, 38, { align: 'right' });
+        doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+        doc.text(inv.invoiceNumber, W - 40, 56, { align: 'right' });
+
+        // Bill To / Dates block
+        let y = 100;
+        doc.setTextColor(120, 120, 120); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+        doc.text('BILL TO', 40, y);
+        doc.text('DATES', W / 2, y);
+        y += 14;
+        doc.setTextColor(40, 40, 40); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+        doc.text(inv.customerName || '', 40, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Issued:  ${inv.issueDate || '—'}`, W / 2, y);
+        y += 13;
+        if (inv.customerEmail) { doc.text(inv.customerEmail, 40, y); }
+        doc.text(`Due:     ${inv.dueDate || '—'}`, W / 2, y);
+        y += 13;
+        if (inv.customerPhone) { doc.text(inv.customerPhone, 40, y); }
+        if (inv.paidDate) {
+            doc.setTextColor(16, 185, 129);
+            doc.text(`Paid:    ${inv.paidDate}`, W / 2, y);
+            doc.setTextColor(40, 40, 40);
+        }
+        y += 13;
+        if (inv.customerAddress) {
+            const wrapped = doc.splitTextToSize(inv.customerAddress, W / 2 - 50);
+            doc.text(wrapped, 40, y);
+            y += wrapped.length * 12;
+        }
+
+        // Line items table
+        if (doc.autoTable) {
+            doc.autoTable({
+                startY: y + 16,
+                head: [['Description', 'Qty', 'Unit Price', 'Total']],
+                body: (inv.items || []).map(i => [
+                    i.description || '',
+                    String(i.quantity || 0),
+                    fmt(i.unitPrice),
+                    fmt((i.quantity || 0) * (i.unitPrice || 0))
+                ]),
+                theme: 'striped',
+                headStyles: { fillColor: [30, 58, 138] },
+                styles: { fontSize: 9, cellPadding: 6 },
+                columnStyles: {
+                    1: { halign: 'center', cellWidth: 50 },
+                    2: { halign: 'right',  cellWidth: 80 },
+                    3: { halign: 'right',  cellWidth: 80 }
+                }
+            });
+            y = doc.lastAutoTable.finalY;
+        }
+
+        // Totals block (right-aligned)
+        const labelX = W - 200;
+        const valueX = W - 40;
+        y += 14;
+        doc.setFontSize(10); doc.setTextColor(80, 80, 80);
+        doc.text('Subtotal', labelX, y);
+        doc.text(fmt(inv.subtotal), valueX, y, { align: 'right' });
+        y += 14;
+        if (inv.discountAmount > 0) {
+            doc.text('Discount', labelX, y);
+            doc.text('-' + fmt(inv.discountAmount), valueX, y, { align: 'right' });
+            y += 14;
+        }
+        if (inv.taxRate > 0) {
+            doc.text(`Tax (${inv.taxRate}%)`, labelX, y);
+            doc.text(fmt(inv.taxAmount), valueX, y, { align: 'right' });
+            y += 14;
+        }
+        // Total bar
+        doc.setFillColor(30, 58, 138);
+        doc.rect(labelX - 10, y - 2, valueX - labelX + 20, 22, 'F');
+        doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+        doc.text('TOTAL', labelX, y + 13);
+        doc.text(fmt(inv.total), valueX, y + 13, { align: 'right' });
+        y += 32;
+
+        // Notes
+        if (inv.notes) {
+            doc.setTextColor(120, 120, 120); doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+            doc.text('NOTES', 40, y + 6);
+            doc.setTextColor(60, 60, 60); doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+            const wrapped = doc.splitTextToSize(inv.notes, W - 80);
+            doc.text(wrapped, 40, y + 20);
+        }
+
+        // Footer
+        doc.setFontSize(8); doc.setTextColor(150);
+        doc.text('Generated by SafeSpend · safespend.app',
+            W / 2, doc.internal.pageSize.getHeight() - 20, { align: 'center' });
+
+        const safeName = (inv.invoiceNumber || 'invoice').replace(/[^a-z0-9-]/gi, '-');
+        doc.save(`${safeName}.pdf`);
+        showPayToast('✅ Invoice PDF downloaded');
+    }
+
     // ── PDF export — reuses jsPDF + AutoTable already loaded ───────
     function exportBusinessReport() {
         if (typeof window.jspdf === 'undefined') { showPayToast('PDF engine not loaded'); return; }
@@ -6493,6 +7451,17 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
     let businessProfile = null;            // { name, type, email, phone, address, logoUrl, createdAt }
     let businessTransactions = [];         // [{id, type, amount, category, source, note, date, createdAt}]
     let businessFilter = { period: 'month', type: 'all' };
+
+    // ─── Invoice state ────────────────────────────────────────────
+    // Each invoice doc:
+    //   ownerUid, invoiceNumber, customer*, issueDate, dueDate,
+    //   items:[{description, quantity, unitPrice}], taxRate, discountAmount,
+    //   subtotal, taxAmount, total, currency, status, paidDate, notes, timestamps
+    let invoices = [];                                    // local cache
+    let invoiceFilter = { status: 'all', search: '' };    // UI filter state
+    let editingInvoiceId = null;                          // null when creating new
+    let invoiceFormItems = [];                            // working copy while form is open
+    let lastInvoiceCounter = 0;                           // incrementing counter for INV numbers (per-business)
 
     // ═══════════════════════════════════════════════════════════════
     //  SUPPORT / HELP CENTER CONFIG
