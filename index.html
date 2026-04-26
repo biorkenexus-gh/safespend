@@ -5,13 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>SafeSpend - Weekly Expense Tracker</title>
 
-    <!-- PWA -->
+    <!-- PWA / Android / iOS install metadata -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1E3A8A">
+    <meta name="description" content="SafeSpend — smart weekly budgeting + Mobile Money wallet + business invoicing. Track expenses, send money, manage your business in one place.">
+
+    <!-- iOS install -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SafeSpend">
     <link rel="apple-touch-icon" href="icon-192.svg">
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192.svg">
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.svg">
+
+    <!-- Android / Chrome install -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="SafeSpend">
+    <link rel="icon" type="image/svg+xml" sizes="192x192" href="icon-192.svg">
+    <link rel="icon" type="image/svg+xml" sizes="512x512" href="icon-512.svg">
+    <link rel="shortcut icon" href="logo.png">
+
+    <!-- Open Graph (Play Store, social previews) -->
+    <meta property="og:title" content="SafeSpend - Weekly Expense Tracker">
+    <meta property="og:description" content="Smart weekly budgeting + Mobile Money wallet + business invoicing.">
+    <meta property="og:image" content="logo.png">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="SafeSpend">
+    <meta name="twitter:description" content="Smart weekly budgeting for individuals & businesses.">
+    <meta name="twitter:image" content="logo.png">
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>

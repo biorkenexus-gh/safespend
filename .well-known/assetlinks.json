@@ -1,0 +1,16 @@
+[
+  {
+    "_comment": "REQUIRED: After Bubblewrap generates your signing key (during `bubblewrap init`), it prints a SHA-256 fingerprint. Replace the placeholder below with that fingerprint, then host this file at https://YOUR-DOMAIN.com/.well-known/assetlinks.json so Google can verify your app owns the domain. Without this, the TWA falls back to showing a Chrome browser bar at the top instead of running fullscreen.",
+
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.safespend.app",
+      "sha256_cert_fingerprints": [
+        "REPLACE_WITH_YOUR_SHA256_FINGERPRINT_FROM_BUBBLEWRAP"
+      ]
+    }
+  }
+]

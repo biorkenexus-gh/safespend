@@ -1,0 +1,54 @@
+{
+  "_comment": "Bubblewrap TWA config — RUN `bubblewrap init --manifest twa-manifest.json` then `bubblewrap build` to produce the AAB. Replace YOUR-DOMAIN.com below with your real hosted PWA URL before running.",
+
+  "packageId": "com.safespend.app",
+  "host": "YOUR-DOMAIN.com",
+  "name": "SafeSpend",
+  "launcherName": "SafeSpend",
+  "display": "standalone",
+  "themeColor": "#1E3A8A",
+  "themeColorDark": "#0F172A",
+  "navigationColor": "#1E3A8A",
+  "navigationColorDark": "#0F172A",
+  "navigationDividerColor": "#1E3A8A",
+  "navigationDividerColorDark": "#0F172A",
+  "backgroundColor": "#1E3A8A",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://YOUR-DOMAIN.com/icon-512.svg",
+  "maskableIconUrl": "https://YOUR-DOMAIN.com/icon-512.svg",
+  "monochromeIconUrl": "https://YOUR-DOMAIN.com/icon-512.svg",
+  "splashScreenFadeOutDuration": 300,
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Add Expense",
+      "shortName": "Add",
+      "url": "/?action=add",
+      "iconUrl": "https://YOUR-DOMAIN.com/icon-192.svg"
+    },
+    {
+      "name": "Wallet",
+      "shortName": "Wallet",
+      "url": "/?action=wallet",
+      "iconUrl": "https://YOUR-DOMAIN.com/icon-192.svg"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": { "enabled": false },
+    "playBilling": { "enabled": false }
+  },
+  "alphaDependencies": { "enabled": false },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://YOUR-DOMAIN.com/",
+  "minSdkVersion": 21,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": []
+}
