@@ -639,6 +639,69 @@
                 </div>
             </div>
 
+            <!-- ==================== EDIT TRANSACTION MODAL ==================== -->
+            <div id="edit-tx-modal" class="fixed inset-0 bg-black/60 z-[185] hidden flex items-center justify-center p-3">
+                <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl slide-up max-h-[95vh] overflow-y-auto">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                        <h3 class="text-lg font-display font-bold text-gray-800">Edit Expense</h3>
+                        <button onclick="closeEditTxModal()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+
+                    <div class="p-5 space-y-4">
+                        <!-- Amount -->
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Amount *</label>
+                            <div class="relative mt-1">
+                                <span id="edit-tx-currency" class="absolute left-3 top-1/2 -translate-y-1/2 text-2xl text-gray-400">$</span>
+                                <input type="number" id="edit-tx-amount" min="0" step="0.01"
+                                       class="w-full pl-10 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none text-2xl font-bold"
+                                       placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <!-- Category -->
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1.5 block">Category *</label>
+                            <div id="edit-tx-cats" class="grid grid-cols-3 gap-2"></div>
+                        </div>
+
+                        <!-- Description / Note -->
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Description</label>
+                            <input type="text" id="edit-tx-note" maxlength="100"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none"
+                                   placeholder="What was this for?">
+                        </div>
+
+                        <!-- Date -->
+                        <div>
+                            <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Date *</label>
+                            <input type="date" id="edit-tx-date"
+                                   class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
+                        </div>
+
+                        <p id="edit-tx-error" class="hidden text-xs text-danger"></p>
+                    </div>
+
+                    <div class="px-5 py-3 border-t border-gray-100 grid grid-cols-3 gap-2">
+                        <button onclick="confirmDeleteTx()"
+                                class="bg-red-50 text-danger font-semibold py-2.5 rounded-lg hover:bg-red-100 transition text-sm">
+                            <i class="fas fa-trash-can"></i> Delete
+                        </button>
+                        <button onclick="closeEditTxModal()"
+                                class="bg-gray-100 text-gray-600 font-semibold py-2.5 rounded-lg hover:bg-gray-200 transition text-sm">
+                            Cancel
+                        </button>
+                        <button onclick="submitEditTx()"
+                                class="bg-primary text-white font-semibold py-2.5 rounded-lg hover:bg-blue-800 transition text-sm">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- ==================== PROFILE SCREEN ==================== -->
             <div id="profile-screen" class="screen p-4">
                 <div class="flex items-center mb-6">
@@ -7121,103 +7184,28 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
     //  /supportMessages in Firestore — visible in the Admin Dashboard.
     // ═══════════════════════════════════════════════════════════════
 
-    function showHelpScreen() {
-        renderHelpCenter();
-        renderFaqs();
-        showScreen('help');
-        // Reset character counter hooks
+    // NOTE: A duplicate `showHelpScreen`, `renderHelpCenter`, `renderFaqs`,
+    // `toggleFaq`, `filterFaqs` block previously lived here. It was a STALE
+    // version that referenced wrong DOM IDs (faq-list, help-offices,
+    // help-whatsapp-display, etc.) and overrode the working originals
+    // (lines ~5319-5416) via JS hoisting. That's why the Help Center was
+    // showing blank Office Address, FAQ, and Troubleshooting sections.
+    // Removed in v27 — the working originals now run as intended.
+
+    // Pre-fill the contact form when Help screen opens. Keeps the original
+    // showHelpScreen's render call but adds the form pre-fill that the
+    // duplicate had usefully introduced.
+    const _origShowHelpScreen = showHelpScreen;
+    showHelpScreen = function() {
+        _origShowHelpScreen();
         const msg = document.getElementById('contact-message');
-        if (msg) {
-            msg.oninput = () => setText('contact-char-count', msg.value.length);
-        }
-        // Pre-fill name/email from signed-in profile
+        if (msg) msg.oninput = () => setText('contact-char-count', msg.value.length);
         const user = firebase.auth().currentUser;
         const nameEl  = document.getElementById('contact-name');
         const emailEl = document.getElementById('contact-email');
-        if (nameEl && !nameEl.value) nameEl.value = profile.name || user?.displayName || '';
+        if (nameEl  && !nameEl.value)  nameEl.value  = profile.name || user?.displayName || '';
         if (emailEl && !emailEl.value) emailEl.value = user?.email || profile.email || '';
-    }
-
-    function renderHelpCenter() {
-        // Wire up contact links from SUPPORT_CONFIG
-        const waBtn    = document.getElementById('help-whatsapp');
-        const phoneBtn = document.getElementById('help-phone');
-        const emailBtn = document.getElementById('help-email');
-        if (waBtn)    waBtn.href    = buildWhatsAppURL();
-        if (phoneBtn) phoneBtn.href = buildPhoneURL();
-        if (emailBtn) emailBtn.href = buildMailtoURL();
-
-        setText('help-whatsapp-display', SUPPORT_CONFIG.whatsappDisplay);
-        setText('help-phone-display',    SUPPORT_CONFIG.phoneDisplay);
-        setText('help-phone-hours',      SUPPORT_CONFIG.phoneHours);
-        setText('help-email-display',    SUPPORT_CONFIG.supportEmail);
-
-        // Office addresses
-        const offices = document.getElementById('help-offices');
-        if (offices) {
-            offices.innerHTML = SUPPORT_CONFIG.officeAddresses.map(o => {
-                const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.address)}`;
-                return `
-                <div class="flex items-start gap-3">
-                    <div class="w-9 h-9 bg-blue-100 text-primary rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                        <i class="fas fa-building"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">${o.label}</p>
-                        <p class="text-sm text-gray-800 mt-0.5">${o.address}</p>
-                        <a href="${mapUrl}" target="_blank"
-                           class="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1">
-                            <i class="fas fa-map-location-dot"></i> Open in Maps
-                        </a>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-    }
-
-    // ── FAQ accordion + search ───────────────────────────────────
-    let faqExpanded = new Set();
-
-    function renderFaqs(filterText = '') {
-        const list    = document.getElementById('faq-list');
-        const noRes   = document.getElementById('faq-no-results');
-        if (!list) return;
-        const needle  = (filterText || '').toLowerCase().trim();
-        const matched = FAQ_ITEMS.map((item, idx) => ({ ...item, idx }))
-            .filter(it => !needle || it.q.toLowerCase().includes(needle) || it.a.toLowerCase().includes(needle));
-
-        if (matched.length === 0) {
-            list.innerHTML = '';
-            noRes?.classList.remove('hidden');
-            return;
-        }
-        noRes?.classList.add('hidden');
-
-        list.innerHTML = matched.map(it => {
-            const open = faqExpanded.has(it.idx) || (needle && true);  // auto-open when searching
-            return `
-            <div class="faq-item">
-                <button onclick="toggleFaq(${it.idx})"
-                        class="w-full text-left px-4 py-3 flex items-center justify-between gap-3 hover:bg-gray-50 transition">
-                    <span class="text-sm font-semibold text-gray-800 flex-1">${highlightMatch(it.q, needle)}</span>
-                    <i class="fas fa-chevron-${open ? 'up' : 'down'} text-xs text-gray-400 shrink-0"></i>
-                </button>
-                ${open ? `<div class="px-4 pb-4 text-sm text-gray-600 leading-relaxed">${highlightMatch(it.a, needle)}</div>` : ''}
-            </div>`;
-        }).join('');
-    }
-
-    function toggleFaq(idx) {
-        if (faqExpanded.has(idx)) faqExpanded.delete(idx);
-        else                      faqExpanded.add(idx);
-        const search = document.getElementById('help-search')?.value || '';
-        renderFaqs(search);
-    }
-
-    function filterFaqs() {
-        const q = document.getElementById('help-search')?.value || '';
-        renderFaqs(q);
-    }
+    };
 
     function highlightMatch(text, needle) {
         if (!needle) return text;
@@ -10319,7 +10307,8 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
                 ? '<span class="text-[10px] bg-blue-100 text-primary px-1.5 py-0.5 rounded ml-1"><i class="fas fa-wand-magic-sparkles mr-0.5"></i>auto</span>'
                 : '';
             return `
-            <div class="transaction-item flex items-center justify-between p-3 rounded-xl bg-gray-50">
+            <div class="transaction-item flex items-center justify-between p-3 rounded-xl bg-gray-50 cursor-pointer hover:bg-gray-100 active:scale-98 transition"
+                 onclick="openEditTxModal(${t.id})" title="Tap to edit">
                 <div class="flex items-center gap-3 flex-1 min-w-0">
                     <div class="w-10 h-10 ${cat.color} rounded-full flex items-center justify-center shrink-0">
                         <i class="fas fa-${cat.icon}"></i>
@@ -10508,6 +10497,157 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
 
         // If this is the very first expense this session, activate any pending referral
         if (wasFirst) maybeActivateReferral();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  EDIT TRANSACTION
+    //
+    //  Tapping a transaction row (recent list on Home OR full History)
+    //  opens this modal. Lets the user update amount, category, date,
+    //  description; or delete the entry. Adjusts appState.spent so the
+    //  budget bar stays in sync, and bumps any week-history archive
+    //  totals if the edited tx lives in archived history.
+    // ═══════════════════════════════════════════════════════════════
+
+    let editingTxId = null;
+    let editingTxLocation = null;       // 'current' | { weekIdx } for archived
+
+    function findTransactionById(id) {
+        const numId = typeof id === 'number' ? id : Number(id);
+        // Look in current week first
+        const inCurrent = (appState.transactions || []).find(t => t.id === numId);
+        if (inCurrent) return { tx: inCurrent, location: 'current' };
+        // Then check archived weeks
+        for (let i = 0; i < weekHistory.length; i++) {
+            const wk = weekHistory[i];
+            const found = (wk.transactions || []).find(t => t.id === numId);
+            if (found) return { tx: found, location: { weekIdx: i } };
+        }
+        return null;
+    }
+
+    function openEditTxModal(id) {
+        const result = findTransactionById(id);
+        if (!result) { showPayToast('Transaction not found'); return; }
+        if (result.tx.isTopUp) {
+            showPayToast("Top-ups can't be edited — they're system records of funding events");
+            return;
+        }
+        editingTxId = result.tx.id;
+        editingTxLocation = result.location;
+
+        // Populate fields
+        document.getElementById('edit-tx-amount').value = result.tx.amount || '';
+        document.getElementById('edit-tx-note').value   = result.tx.note   || '';
+        document.getElementById('edit-tx-date').value   = result.tx.date   || new Date().toISOString().split('T')[0];
+
+        // Currency prefix
+        const sym = (typeof CURRENCIES !== 'undefined' && CURRENCIES[profile.currency]) || '$';
+        setText('edit-tx-currency', sym);
+
+        // Category grid (matches the categories defined for this user)
+        const wrap = document.getElementById('edit-tx-cats');
+        wrap.innerHTML = Object.entries(categories).map(([id, c]) => {
+            const selected = id === result.tx.category;
+            return `
+                <button type="button" data-cat="${id}" onclick="selectEditTxCat('${id}')"
+                        class="edit-tx-cat-btn p-2 rounded-xl border-2 flex flex-col items-center gap-1 transition ${selected ? 'border-primary bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}">
+                    <i class="fas fa-${c.icon} text-base" style="color:${c.hex || '#6B7280'}"></i>
+                    <span class="text-[10px] font-semibold text-gray-700">${escapeHtml(c.label)}</span>
+                </button>`;
+        }).join('');
+
+        // Reset error
+        const err = document.getElementById('edit-tx-error');
+        err.textContent = ''; err.classList.add('hidden');
+
+        document.getElementById('edit-tx-modal').classList.remove('hidden');
+    }
+
+    function selectEditTxCat(id) {
+        document.querySelectorAll('.edit-tx-cat-btn').forEach(btn => {
+            const on = btn.dataset.cat === id;
+            btn.classList.toggle('border-primary', on);
+            btn.classList.toggle('bg-blue-50',     on);
+            btn.classList.toggle('border-gray-200', !on);
+        });
+    }
+
+    function closeEditTxModal() {
+        document.getElementById('edit-tx-modal').classList.add('hidden');
+        editingTxId = null;
+        editingTxLocation = null;
+    }
+
+    function submitEditTx() {
+        if (editingTxId == null) return;
+        const err = document.getElementById('edit-tx-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+
+        const newAmount = parseFloat(document.getElementById('edit-tx-amount').value);
+        const newNote   = document.getElementById('edit-tx-note').value.trim();
+        const newDate   = document.getElementById('edit-tx-date').value;
+        const selBtn    = document.querySelector('.edit-tx-cat-btn.border-primary');
+        const newCat    = selBtn ? selBtn.dataset.cat : null;
+
+        if (!newAmount || newAmount <= 0)            return showErr('Enter a valid amount greater than 0');
+        if (newAmount > 1_000_000)                   return showErr('Amount too large');
+        if (!newCat || !categories[newCat])          return showErr('Pick a category');
+        if (!newDate)                                return showErr('Pick a date');
+
+        const result = findTransactionById(editingTxId);
+        if (!result) { showErr('Transaction disappeared'); return; }
+        const tx = result.tx;
+        const oldAmount = tx.amount || 0;
+
+        // Apply changes
+        tx.amount   = newAmount;
+        tx.category = newCat;
+        tx.note     = newNote;
+        tx.date     = newDate;
+
+        // Keep totals in sync. Current-week tx counts toward appState.spent;
+        // archived-week tx counts toward that week's spent total in weekHistory.
+        if (editingTxLocation === 'current') {
+            appState.spent = (appState.spent || 0) + (newAmount - oldAmount);
+            if (appState.spent < 0) appState.spent = 0;
+        } else if (editingTxLocation && typeof editingTxLocation.weekIdx === 'number') {
+            const wk = weekHistory[editingTxLocation.weekIdx];
+            if (wk) wk.spent = Math.max(0, (wk.spent || 0) + (newAmount - oldAmount));
+        }
+
+        saveData();
+        closeEditTxModal();
+        updateUI();
+        if (typeof renderHistory === 'function') renderHistory();
+        showPayToast('✅ Transaction updated');
+    }
+
+    function confirmDeleteTx() {
+        if (editingTxId == null) return;
+        if (!confirm('Delete this transaction? This cannot be undone.')) return;
+
+        const result = findTransactionById(editingTxId);
+        if (!result) { closeEditTxModal(); return; }
+        const tx = result.tx;
+        const amt = tx.amount || 0;
+
+        if (editingTxLocation === 'current') {
+            appState.transactions = (appState.transactions || []).filter(t => t.id !== tx.id);
+            appState.spent = Math.max(0, (appState.spent || 0) - amt);
+        } else if (editingTxLocation && typeof editingTxLocation.weekIdx === 'number') {
+            const wk = weekHistory[editingTxLocation.weekIdx];
+            if (wk) {
+                wk.transactions = (wk.transactions || []).filter(t => t.id !== tx.id);
+                wk.spent = Math.max(0, (wk.spent || 0) - amt);
+            }
+        }
+
+        saveData();
+        closeEditTxModal();
+        updateUI();
+        if (typeof renderHistory === 'function') renderHistory();
+        showPayToast('🗑️ Transaction deleted');
     }
 
     function resetAddForm() {
@@ -10800,7 +10940,8 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         const autoBadge = !isSmsImport && t.autoCategorized
             ? '<span class="text-[10px] bg-blue-50 text-primary px-1.5 py-0.5 rounded ml-1">auto</span>' : '';
         return `
-            <div class="flex items-center gap-3 p-3">
+            <div class="flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 transition"
+                 onclick="openEditTxModal(${t.id})" title="Tap to edit">
                 <div class="w-9 h-9 rounded-full ${iconClass} flex items-center justify-center shrink-0">
                     <i class="fas fa-${c.icon} text-sm" style="color:${c.hex || '#6B7280'}"></i>
                 </div>
@@ -10813,6 +10954,7 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
                 </div>
                 <div class="text-right">
                     <p class="font-bold text-gray-800 text-sm">${fmt(t.amount)}</p>
+                    <i class="fas fa-pen-to-square text-[10px] text-gray-300 mt-1"></i>
                 </div>
             </div>`;
     }
