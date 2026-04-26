@@ -148,9 +148,232 @@
         /* Card hover lift */
         .lift-on-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .lift-on-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
+
+        /* ═══════════════════════════════════════════════════════════
+           v28 POLISH LAYER — additive, no breaking changes
+           Lifts perceived quality across every existing screen via:
+             • Better motion (cubic-bezier easing, transform-only animations)
+             • Accessible focus rings on all interactive elements
+             • Premium shadow scale
+             • Improved screen transitions (slide-in vs fade)
+             • Bottom-nav active pill indicator
+             • Splash screen overlay
+           ═══════════════════════════════════════════════════════════ */
+
+        /* Design tokens */
+        :root {
+            --shadow-xs:  0 1px 2px rgba(15,23,42,0.04);
+            --shadow-sm:  0 2px 8px rgba(15,23,42,0.06);
+            --shadow-md:  0 6px 16px rgba(15,23,42,0.08);
+            --shadow-lg:  0 12px 32px rgba(15,23,42,0.12);
+            --shadow-xl:  0 24px 48px rgba(15,23,42,0.16);
+            --ease-out:   cubic-bezier(0.22, 1, 0.36, 1);
+            --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+            --motion-fast: 180ms;
+            --motion-base: 280ms;
+            --motion-slow: 420ms;
+        }
+
+        /* Smooth font rendering (subtle but felt) */
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+
+        /* Improved screen transitions — slide-in from right + fade */
+        .screen { animation: screen-enter var(--motion-base) var(--ease-out); }
+        @keyframes screen-enter {
+            from { opacity: 0; transform: translateX(8px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Accessible focus rings on every interactive element */
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible,
+        [tabindex]:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.35);
+            border-radius: 8px;
+        }
+
+        /* Universal tactile button feedback (without breaking selected/active classes) */
+        button:not(:disabled):active {
+            transform: scale(0.98);
+        }
+        button { transition: transform var(--motion-fast) var(--ease-out); }
+
+        /* Smoother modal entrance — slide-up + fade */
+        .slide-up {
+            animation: slide-up-enter var(--motion-base) var(--ease-out);
+        }
+        @keyframes slide-up-enter {
+            from { transform: translateY(24px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+
+        /* Premium gradient backdrops (used on hero cards) get a subtle inner glow */
+        .glass-card { box-shadow: var(--shadow-md); }
+
+        /* Bottom nav: active pill indicator */
+        .nav-btn { position: relative; transition: color var(--motion-fast) var(--ease-out); }
+        .nav-btn::before {
+            content: '';
+            position: absolute;
+            top: -2px; left: 50%;
+            width: 24px; height: 3px;
+            background: var(--tw-color, #1E3A8A);
+            border-radius: 999px;
+            transform: translateX(-50%) scaleX(0);
+            transition: transform var(--motion-base) var(--ease-out);
+            opacity: 0;
+        }
+        .nav-btn.active::before,
+        .nav-btn.text-primary::before {
+            transform: translateX(-50%) scaleX(1);
+            opacity: 1;
+        }
+
+        /* Skeleton loader (use on async loads) */
+        .skel {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: skel-shimmer 1.4s ease-in-out infinite;
+            border-radius: 8px;
+        }
+        .dark-mode .skel {
+            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+            background-size: 200% 100%;
+        }
+        @keyframes skel-shimmer {
+            0%   { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Toast: slide-up + auto-fade */
+        @keyframes toast-enter {
+            from { transform: translateY(20px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+
+        /* ═══ SPLASH SCREEN ═══ */
+        #splash-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: linear-gradient(135deg, #0F1E5C 0%, #1E3A8A 40%, #3B82F6 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 400ms ease-out, visibility 400ms;
+        }
+        #splash-screen.splash-hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        #splash-screen .splash-logo {
+            width: 96px; height: 96px;
+            background: white;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 24px;
+            animation: splash-pop 700ms var(--ease-out);
+        }
+        #splash-screen .splash-logo img { width: 76px; height: 76px; object-fit: contain; }
+        #splash-screen h1 {
+            color: white;
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            opacity: 0;
+            animation: splash-fade-in 600ms 200ms var(--ease-out) forwards;
+        }
+        #splash-screen .splash-tag {
+            color: rgba(255,255,255,0.85);
+            font-size: 13px;
+            margin-top: 4px;
+            opacity: 0;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            animation: splash-fade-in 600ms 400ms var(--ease-out) forwards;
+        }
+        #splash-screen .splash-spinner {
+            position: absolute;
+            bottom: 64px;
+            width: 28px; height: 28px;
+            border: 3px solid rgba(255,255,255,0.15);
+            border-top-color: rgba(255,255,255,0.85);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+            opacity: 0;
+            animation: splash-fade-in 400ms 600ms var(--ease-out) forwards, spin 0.9s 600ms linear infinite;
+        }
+        @keyframes splash-pop {
+            0%   { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+            60%  { transform: scale(1.08) rotate(2deg);  opacity: 1; }
+            100% { transform: scale(1) rotate(0);       opacity: 1; }
+        }
+        @keyframes splash-fade-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ═══ DARK MODE coverage for splash (dark looks even better here) ═══ */
+        .dark-mode #splash-screen {
+            background: linear-gradient(135deg, #020617 0%, #0F1E5C 40%, #1E3A8A 100%);
+        }
+
+        /* Reduced-motion: respect user preference */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
     </style>
 </head>
 <body class="font-sans antialiased">
+
+    <!-- ============================================================
+         SPLASH SCREEN — first-impression brand moment
+         Auto-hides after first paint (or 1.4s minimum for visual quality)
+    ============================================================ -->
+    <div id="splash-screen">
+        <div class="splash-logo">
+            <img src="logo.png" alt="SafeSpend" onerror="this.style.display='none'">
+        </div>
+        <h1>SafeSpend</h1>
+        <p class="splash-tag">Track · Save · Thrive</p>
+        <div class="splash-spinner"></div>
+    </div>
+    <script>
+        // Hide splash after first paint completes — minimum 900ms for visual quality
+        (function() {
+            const start = performance.now();
+            const MIN_SPLASH_MS = 900;
+            function hideSplash() {
+                const elapsed = performance.now() - start;
+                const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
+                setTimeout(() => {
+                    const el = document.getElementById('splash-screen');
+                    if (el) el.classList.add('splash-hidden');
+                }, wait);
+            }
+            if (document.readyState === 'complete') hideSplash();
+            else window.addEventListener('load', hideSplash, { once: true });
+        })();
+    </script>
 
     <!-- ============================================================
          LOGIN OVERLAY (shown when not authenticated)
