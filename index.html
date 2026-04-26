@@ -7586,14 +7586,27 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
     // Ensure a Firestore user doc exists for the currently-authenticated user.
     // Creates one with a fresh referral code on first login.
     // Generate a unique referral code, retrying on rare collisions.
+    // If the uniqueness query fails (e.g. missing Firestore index, network
+    // error, rules), we fall back to a longer code that's statistically
+    // unique enough on its own — we'd rather hand the user a working code
+    // with 1-in-millions collision risk than fail entirely.
     async function generateUniqueReferralCode() {
-        let code, attempts = 0;
-        while (attempts++ < 5) {
+        let code;
+        for (let attempts = 0; attempts < 5; attempts++) {
             code = generateReferralCode();
-            const clash = await db.collection('users').where('referralCode', '==', code).limit(1).get();
-            if (clash.empty) return code;
+            try {
+                const clash = await db.collection('users').where('referralCode', '==', code).limit(1).get();
+                if (clash.empty) return code;
+            } catch (e) {
+                console.warn('[Referral] uniqueness check failed (using statistical uniqueness fallback):', e?.message || e);
+                // Boost entropy: append 4 more chars from the same alphabet
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                let suffix = '';
+                for (let i = 0; i < 4; i++) suffix += chars[Math.floor(Math.random() * chars.length)];
+                return `${code}${suffix}`;
+            }
         }
-        return code;  // best-effort after 5 attempts
+        return code;  // best-effort after 5 collision retries
     }
 
     async function ensureUserDoc(user) {
@@ -7617,11 +7630,13 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
                 createdAt:         firebase.firestore.FieldValue.serverTimestamp()
             };
             await ref.set(record);
+            // Optimistically populate state so callers don't need a re-read
+            refState.myCode = code;
             return record;
         }
 
-        // Case 2: doc exists. Backfill any missing fields (referralCode is the
-        // critical one — older accounts created before the referral system was
+        // Case 2: doc exists. Backfill any missing fields (referralCode is
+        // critical — older accounts created before the referral system was
         // added had no code, which broke the dashboard "Copy" buttons).
         const existing = snap.data() || {};
         const patch = {};
@@ -7631,12 +7646,18 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         if (!existing.deviceFingerprint) {
             patch.deviceFingerprint = await getDeviceFingerprint();
         }
-        if (typeof existing.referredBy === 'undefined') patch.referredBy = null;
-        if (typeof existing.firstExpenseAt === 'undefined') patch.firstExpenseAt = null;
+        // Only set referredBy if the field doesn't exist at all — null is a
+        // valid value that means "no referrer". Same for firstExpenseAt.
+        if (!('referredBy' in existing))     patch.referredBy = null;
+        if (!('firstExpenseAt' in existing)) patch.firstExpenseAt = null;
         if (Object.keys(patch).length > 0) {
             await ref.update(patch);
+            // Optimistically populate state
+            if (patch.referralCode) refState.myCode = patch.referralCode;
             return { ...existing, ...patch };
         }
+        // No patch needed but make sure refState reflects the existing code
+        if (existing.referralCode) refState.myCode = existing.referralCode;
         return existing;
     }
 
@@ -7957,17 +7978,32 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
             showPayToast('Firestore not configured — referral codes unavailable');
             return false;
         }
-        // Self-heal: ensureUserDoc will create the doc OR backfill the code
-        // if a legacy doc is missing it. Then re-load the dashboard.
+        // Self-heal: ensureUserDoc creates the doc OR backfills the code
+        // (it now optimistically sets refState.myCode internally too).
+        showPayToast('Generating your code…');
         try {
-            showPayToast('Generating your code…');
             await ensureUserDoc(user);
-            await loadReferralDashboard();
-            renderReferralDashboard();
         } catch (e) {
-            console.warn('[Referral] code generation failed:', e);
+            console.error('[Referral] ensureUserDoc failed:', e);
+            const code = e?.code || '';
+            if (code === 'permission-denied') {
+                showPayToast('❌ Firestore rules block this — publish the latest rules from firestore.rules');
+            } else if (code === 'unavailable' || code.includes('network')) {
+                showPayToast('❌ Network error — check your connection and retry');
+            } else {
+                showPayToast(`❌ Could not generate code: ${e?.message || 'unknown error'}`);
+            }
+            return false;
         }
-        return !!refState.myCode;
+        // Re-pull the dashboard so all the stat cards update too. Failure
+        // here is non-fatal — the code itself is already populated.
+        try { await loadReferralDashboard(); } catch (e) { console.warn('[Referral] dashboard reload failed:', e); }
+        renderReferralDashboard();
+        if (!refState.myCode) {
+            showPayToast('❌ Code generated but did not save. Open DevTools console for details.');
+            return false;
+        }
+        return true;
     }
 
     async function copyReferralCode() {
