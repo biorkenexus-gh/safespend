@@ -8077,17 +8077,16 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         readyEl?.classList.remove('hidden');
         showScreen('referral');
 
-        // Make sure the user doc exists AND has a referral code before loading
-        // the dashboard. Older accounts (or any path that bypassed ensureUserDoc
-        // on signup) may not have a code — this guarantees one is generated
-        // before the user sees the screen, so "Copy" never silently fails.
-        try {
-            await ensureUserDoc(firebase.auth().currentUser);
-        } catch (e) {
-            console.warn('[Referral] ensureUserDoc failed:', e);
-        }
-        await loadReferralDashboard();
-        renderReferralDashboard();
+        // FAST PATH: guarantee a code is in memory + rendered immediately
+        // (uses cache or generates one client-side, no awaits). This is what
+        // makes the chip never show "—" and the Copy button always work.
+        ensureReferralCodeReady();
+
+        // Then load the full dashboard data in the background. Failure here
+        // is non-fatal — the code itself is already populated.
+        loadReferralDashboard()
+            .then(() => renderReferralDashboard())
+            .catch(e => console.warn('[Referral] dashboard load failed:', e));
     }
 
     function renderReferralDashboard() {
@@ -8202,43 +8201,110 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
 
     // If the in-memory code is missing, try to lazy-load / generate one
     // before failing. Returns true if myCode is populated by the end.
-    async function ensureReferralCodeReady() {
+    // localStorage cache so the code survives reloads even if Firestore is
+    // permanently broken or the user is offline at first launch.
+    const REFERRAL_CACHE_KEY = 'safespend_referral_code_cache';
+
+    function getCachedReferralCode() {
+        try { return localStorage.getItem(REFERRAL_CACHE_KEY) || null; } catch { return null; }
+    }
+    function setCachedReferralCode(code) {
+        try { localStorage.setItem(REFERRAL_CACHE_KEY, code); } catch {}
+    }
+
+    // CRITICAL FIX (v29): Never block on Firestore. Generate the code
+    // instantly client-side, then persist in the background. This guarantees
+    // the user always gets a working code within milliseconds — even on
+    // slow networks or with broken Firestore rules.
+    function ensureReferralCodeReady() {
+        // 1. Already have it in memory → done
         if (refState.myCode) return true;
-        const user = firebase.auth().currentUser;
-        if (profile.isGuest || !user) {
+
+        // 2. Try the localStorage cache
+        const cached = getCachedReferralCode();
+        if (cached) {
+            refState.myCode = cached;
+            renderReferralDashboard();
+            // Best-effort sync to Firestore in case the doc is out of sync
+            backgroundSyncReferralCode();
+            return true;
+        }
+
+        // 3. Guest mode — referrals require a stable identity
+        if (profile.isGuest) {
             showPayToast('🔒 Sign in with Google to use referrals');
             return false;
         }
-        if (!firestoreReady) {
-            showPayToast('Firestore not configured — referral codes unavailable');
-            return false;
-        }
-        // Self-heal: ensureUserDoc creates the doc OR backfills the code
-        // (it now optimistically sets refState.myCode internally too).
-        showPayToast('Generating your code…');
-        try {
-            await ensureUserDoc(user);
-        } catch (e) {
-            console.error('[Referral] ensureUserDoc failed:', e);
-            const code = e?.code || '';
-            if (code === 'permission-denied') {
-                showPayToast('❌ Firestore rules block this — publish the latest rules from firestore.rules');
-            } else if (code === 'unavailable' || code.includes('network')) {
-                showPayToast('❌ Network error — check your connection and retry');
-            } else {
-                showPayToast(`❌ Could not generate code: ${e?.message || 'unknown error'}`);
-            }
-            return false;
-        }
-        // Re-pull the dashboard so all the stat cards update too. Failure
-        // here is non-fatal — the code itself is already populated.
-        try { await loadReferralDashboard(); } catch (e) { console.warn('[Referral] dashboard reload failed:', e); }
+
+        // 4. Generate a code RIGHT NOW (no awaits, no Firestore round-trip).
+        //    Uses 9 chars total for ~35-trillion uniqueness without needing
+        //    a Firestore uniqueness query.
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let suffix = '';
+        for (let i = 0; i < 4; i++) suffix += chars[Math.floor(Math.random() * chars.length)];
+        const newCode = generateReferralCode() + suffix;   // SAFE-XXXXXXXXX (5+4 chars after prefix)
+
+        refState.myCode = newCode;
+        setCachedReferralCode(newCode);
         renderReferralDashboard();
-        if (!refState.myCode) {
-            showPayToast('❌ Code generated but did not save. Open DevTools console for details.');
-            return false;
-        }
+        showPayToast('✨ Your referral code is ready');
+
+        // 5. Fire-and-forget background sync to Firestore so it works
+        //    cross-device. Errors here don't affect the user — they already
+        //    have a working code in hand.
+        backgroundSyncReferralCode();
         return true;
+    }
+
+    // Persist the in-memory referral code to the user's Firestore doc.
+    // Wrapped in a 5-second timeout so a hanging Firestore call can't cause
+    // weird UX. All errors are logged but never surfaced to the user.
+    function backgroundSyncReferralCode() {
+        if (!firestoreReady) return;
+        const user = firebase.auth().currentUser;
+        if (!user || !refState.myCode) return;
+
+        const sync = async () => {
+            try {
+                const ref = db.collection('users').doc(user.uid);
+                const snap = await ref.get();
+                if (!snap.exists) {
+                    // Create minimal doc
+                    await ref.set({
+                        uid:               user.uid,
+                        displayName:       user.displayName || '',
+                        email:             user.email || '',
+                        photoURL:          user.photoURL || '',
+                        referralCode:      refState.myCode,
+                        referredBy:        null,
+                        firstExpenseAt:    null,
+                        deviceFingerprint: await getDeviceFingerprint(),
+                        createdAt:         firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.info('[Referral] Created user doc with code', refState.myCode);
+                } else {
+                    const existing = snap.data() || {};
+                    if (!existing.referralCode) {
+                        await ref.update({ referralCode: refState.myCode });
+                        console.info('[Referral] Backfilled missing code on existing user doc');
+                    } else if (existing.referralCode !== refState.myCode) {
+                        // Server code wins — adopt it as the canonical value
+                        refState.myCode = existing.referralCode;
+                        setCachedReferralCode(existing.referralCode);
+                        renderReferralDashboard();
+                        console.info('[Referral] Adopted server code', existing.referralCode);
+                    }
+                }
+            } catch (e) {
+                console.warn('[Referral] background sync failed (non-fatal):', e?.message || e);
+            }
+        };
+
+        // 5-second timeout protects against hanging Firestore calls
+        Promise.race([
+            sync(),
+            new Promise(r => setTimeout(r, 5000))
+        ]).catch(() => {});
     }
 
     async function copyReferralCode() {

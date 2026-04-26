@@ -1,4 +1,4 @@
-const CACHE_NAME = 'safespend-v28';
+const CACHE_NAME = 'safespend-v29';
 
 const PRECACHE_URLS = [
     './',
