@@ -735,16 +735,30 @@
                 <!-- Hero card: code + share -->
                 <div id="referral-ready" class="hidden space-y-4">
                     <div class="bg-gradient-to-br from-primary via-blue-600 to-indigo-600 rounded-3xl p-6 text-white shadow-xl">
-                        <div class="flex items-center gap-2 mb-1">
+                        <div class="flex items-center gap-2 mb-2">
                             <i class="fas fa-gift text-yellow-300"></i>
                             <p class="text-xs font-semibold uppercase tracking-wide text-blue-100">Your referral code</p>
                         </div>
-                        <p id="ref-code-display" class="font-display font-bold text-3xl tracking-wider mb-3">—</p>
-                        <p class="text-xs text-blue-100 mb-4 break-all" id="ref-link-display">—</p>
-                        <div class="grid grid-cols-4 gap-2">
-                            <button onclick="copyReferralLink()" class="bg-white/20 hover:bg-white/30 backdrop-blur text-white rounded-xl py-2.5 text-xs font-semibold transition">
-                                <i class="fas fa-copy block text-base mb-0.5"></i> Copy
-                            </button>
+
+                        <!-- Tappable code chip — entire chip copies the code -->
+                        <button onclick="copyReferralCode()" id="ref-code-chip"
+                                class="w-full flex items-center justify-between gap-2 bg-white/15 hover:bg-white/25 backdrop-blur rounded-2xl px-4 py-3 mb-3 transition active:scale-98 cursor-pointer text-left border border-white/20">
+                            <span id="ref-code-display" class="font-mono font-bold text-2xl tracking-[0.3em] truncate">—</span>
+                            <span class="flex items-center gap-1 text-xs font-semibold bg-white/20 px-2.5 py-1.5 rounded-lg shrink-0">
+                                <i class="fas fa-copy"></i> Copy
+                            </span>
+                        </button>
+
+                        <!-- Tappable link chip — entire chip copies the link -->
+                        <button onclick="copyReferralLink()" id="ref-link-chip"
+                                class="w-full flex items-center justify-between gap-2 bg-white/10 hover:bg-white/20 backdrop-blur rounded-xl px-3 py-2 mb-4 transition active:scale-98 cursor-pointer text-left">
+                            <span id="ref-link-display" class="text-[11px] text-blue-100 break-all truncate">—</span>
+                            <span class="flex items-center gap-1 text-[10px] font-semibold text-blue-100 shrink-0">
+                                <i class="fas fa-link"></i> Copy link
+                            </span>
+                        </button>
+
+                        <div class="grid grid-cols-3 gap-2">
                             <button onclick="shareReferralWA()" class="bg-white/20 hover:bg-white/30 backdrop-blur text-white rounded-xl py-2.5 text-xs font-semibold transition">
                                 <i class="fab fa-whatsapp block text-base mb-0.5"></i> WhatsApp
                             </button>
@@ -3663,6 +3677,262 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         categories[id] = { ...DEFAULT_CATEGORIES[id] };
         saveCategoriesState();
         return { ok: true };
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  CATEGORIES MANAGEMENT UI
+    //
+    //  The HTML at #categories-screen + #category-modal +
+    //  #category-delete-modal previously had no JS handlers, so the
+    //  Manage Categories button did nothing. These functions wire up
+    //  every CRUD operation to the existing engine (createCategory,
+    //  updateCategory, deleteCategory, resetCategoryToDefault).
+    // ═══════════════════════════════════════════════════════════════
+
+    let editingCategoryId = null;             // null when creating new
+    let categoryModalState = { icon: 'tag', hex: '#3B82F6' };
+    let pendingDeleteCategoryId = null;       // for the second confirm modal
+
+    function showCategoriesScreen() {
+        renderCategoriesScreen();
+        showScreen('categories');
+    }
+
+    function renderCategoriesScreen() {
+        const list = document.getElementById('cat-list');
+        const info = document.getElementById('cat-count-info');
+        if (!list) return;
+
+        const entries = Object.entries(categories);
+        // Sort: built-ins first (in DEFAULT_CATEGORIES order), then customs by label
+        const order = (id) => {
+            const builtinKeys = Object.keys(DEFAULT_CATEGORIES);
+            const idx = builtinKeys.indexOf(id);
+            return idx >= 0 ? idx : 100 + (categories[id].label || '').toLowerCase().charCodeAt(0);
+        };
+        entries.sort((a, b) => order(a[0]) - order(b[0]));
+
+        list.innerHTML = entries.map(([id, c]) => {
+            const usage = countTransactionsForCategory(id);
+            const customBadge  = !c.builtin
+                ? '<span class="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">Custom</span>'
+                : '';
+            const usageBadge = usage > 0
+                ? `<span class="text-[10px] text-gray-400">${usage} tx</span>`
+                : '';
+            return `
+                <div class="flex items-center gap-3 p-3 hover:bg-gray-50 transition cursor-pointer" onclick="openCategoryModal('${id}')">
+                    <div class="w-10 h-10 rounded-full ${c.color} flex items-center justify-center shrink-0">
+                        <i class="fas fa-${c.icon}" style="color:${c.hex}"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <p class="text-sm font-semibold text-gray-800 truncate">${escapeHtml(c.label)}</p>
+                            ${customBadge}
+                        </div>
+                        ${usageBadge}
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-300 text-xs shrink-0"></i>
+                </div>`;
+        }).join('');
+
+        if (info) {
+            info.textContent = `${entries.length} of ${CATEGORY_MAX_COUNT} categories`;
+        }
+    }
+
+    // Render icon + color picker grids (called once when modal opens)
+    function renderCategoryPickers() {
+        const iconWrap  = document.getElementById('cat-icon-picker');
+        const colorWrap = document.getElementById('cat-color-picker');
+        if (iconWrap) {
+            iconWrap.innerHTML = CATEGORY_ICON_CHOICES.map(ic => `
+                <button type="button" data-icon="${ic}" onclick="selectCatIcon('${ic}')"
+                        class="cat-icon-btn w-10 h-10 rounded-lg flex items-center justify-center transition border-2 border-transparent">
+                    <i class="fas fa-${ic} text-base text-gray-600"></i>
+                </button>`).join('');
+        }
+        if (colorWrap) {
+            colorWrap.innerHTML = CATEGORY_COLOR_PALETTE.map(p => `
+                <button type="button" data-hex="${p.hex}" onclick="selectCatColor('${p.hex}')" title="${p.label}"
+                        class="cat-color-btn w-9 h-9 rounded-full transition border-2 border-transparent"
+                        style="background:${p.hex}"></button>`).join('');
+        }
+    }
+
+    function selectCatIcon(ic) {
+        categoryModalState.icon = ic;
+        document.querySelectorAll('.cat-icon-btn').forEach(btn => {
+            const on = btn.dataset.icon === ic;
+            btn.classList.toggle('border-primary', on);
+            btn.classList.toggle('bg-blue-50', on);
+            btn.classList.toggle('border-transparent', !on);
+        });
+        updateCatModalPreview();
+    }
+
+    function selectCatColor(hex) {
+        categoryModalState.hex = hex;
+        document.querySelectorAll('.cat-color-btn').forEach(btn => {
+            const on = btn.dataset.hex === hex;
+            btn.classList.toggle('border-gray-800', on);
+            btn.classList.toggle('scale-110', on);
+            btn.classList.toggle('border-transparent', !on);
+        });
+        updateCatModalPreview();
+    }
+
+    function updateCatModalPreview() {
+        const wrap = document.getElementById('cat-modal-preview-icon');
+        if (!wrap) return;
+        const cls = cssForHex(categoryModalState.hex);
+        wrap.className = `w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 ${cls}`;
+        wrap.innerHTML = `<i class="fas fa-${categoryModalState.icon} text-2xl" style="color:${categoryModalState.hex}"></i>`;
+    }
+
+    function openCategoryModal(id) {
+        editingCategoryId = id;
+        const isEdit = !!id;
+        const c = isEdit ? categories[id] : null;
+
+        setText('cat-modal-title', isEdit ? `Edit: ${c.label}` : 'New Category');
+        document.getElementById('cat-label').value = isEdit ? (c.label || '') : '';
+        categoryModalState.icon = isEdit ? (c.icon || 'tag') : 'tag';
+        categoryModalState.hex  = isEdit ? (c.hex  || '#3B82F6') : '#3B82F6';
+
+        renderCategoryPickers();
+        selectCatIcon(categoryModalState.icon);
+        selectCatColor(categoryModalState.hex);
+        updateCatModalPreview();
+
+        // Show/hide action buttons based on category type
+        const delBtn   = document.getElementById('cat-modal-delete-btn');
+        const resetBtn = document.getElementById('cat-modal-reset-btn');
+        const errEl    = document.getElementById('cat-modal-error');
+        errEl.textContent = ''; errEl.classList.add('hidden');
+
+        if (isEdit) {
+            // Built-ins: show Reset, hide Delete. Customs: show Delete, hide Reset.
+            if (c.builtin) {
+                delBtn.classList.add('hidden');
+                resetBtn.classList.remove('hidden');
+            } else {
+                delBtn.classList.remove('hidden');
+                resetBtn.classList.add('hidden');
+            }
+        } else {
+            delBtn.classList.add('hidden');
+            resetBtn.classList.add('hidden');
+        }
+
+        document.getElementById('category-modal').classList.remove('hidden');
+        // Focus the name input for fast editing
+        setTimeout(() => document.getElementById('cat-label')?.focus(), 100);
+    }
+
+    function closeCategoryModal() {
+        document.getElementById('category-modal').classList.add('hidden');
+        editingCategoryId = null;
+    }
+
+    function submitCategoryModal() {
+        const label = document.getElementById('cat-label').value.trim();
+        const errEl = document.getElementById('cat-modal-error');
+        const showErr = msg => { errEl.textContent = msg; errEl.classList.remove('hidden'); };
+
+        let result;
+        if (editingCategoryId) {
+            result = updateCategory(editingCategoryId, {
+                label, icon: categoryModalState.icon, hex: categoryModalState.hex
+            });
+        } else {
+            result = createCategory({
+                label, icon: categoryModalState.icon, hex: categoryModalState.hex
+            });
+        }
+
+        if (!result.ok) return showErr(result.error);
+
+        // Refresh everything that depends on categories
+        closeCategoryModal();
+        renderCategoriesScreen();
+        renderRecentTransactions();
+        if (typeof renderCategoryButtons === 'function') renderCategoryButtons();
+        showPayToast(editingCategoryId ? '✅ Category updated' : '✅ Category created');
+    }
+
+    // ── Delete flow: opens the confirm modal with reassignment dropdown ──
+    function handleDeleteCategoryFromModal() {
+        if (!editingCategoryId) return;
+        pendingDeleteCategoryId = editingCategoryId;
+        const c = categories[editingCategoryId];
+        if (!c) return;
+        if (c.builtin) {
+            const errEl = document.getElementById('cat-modal-error');
+            errEl.textContent = 'Built-in categories cannot be deleted (try Reset to default instead).';
+            errEl.classList.remove('hidden');
+            return;
+        }
+        // Close the edit modal first
+        closeCategoryModal();
+
+        // Populate the count + reassignment dropdown
+        const count = countTransactionsForCategory(pendingDeleteCategoryId);
+        setText('cat-del-count', count);
+        const pluralEl = document.getElementById('cat-del-plural');
+        if (pluralEl) pluralEl.textContent = count === 1 ? '' : 's';
+
+        const sel = document.getElementById('cat-del-reassign');
+        sel.innerHTML = Object.entries(categories)
+            .filter(([id]) => id !== pendingDeleteCategoryId)
+            .map(([id, c]) => `<option value="${id}">${escapeHtml(c.label)}</option>`).join('');
+        // Default to "other" if it exists
+        if (categories.other) sel.value = 'other';
+
+        document.getElementById('category-delete-modal').classList.remove('hidden');
+    }
+
+    function confirmDeleteCategory() {
+        if (!pendingDeleteCategoryId) return;
+        const reassignTo = document.getElementById('cat-del-reassign').value;
+        const result = deleteCategory(pendingDeleteCategoryId, reassignTo);
+        if (!result.ok) {
+            alert(result.error);
+            return;
+        }
+        closeCategoryDeleteModal();
+        renderCategoriesScreen();
+        // Refresh anything that displays category data
+        renderRecentTransactions();
+        if (typeof renderCategoryButtons === 'function') renderCategoryButtons();
+        if (typeof updateUI === 'function') updateUI();
+        showPayToast('✅ Category deleted');
+        pendingDeleteCategoryId = null;
+    }
+
+    function closeCategoryDeleteModal() {
+        document.getElementById('category-delete-modal').classList.add('hidden');
+        pendingDeleteCategoryId = null;
+    }
+
+    // ── Reset built-in to its default values ───────────────────────
+    function handleResetCategoryFromModal() {
+        if (!editingCategoryId) return;
+        const c = categories[editingCategoryId];
+        if (!c || !c.builtin) return;
+        if (!confirm(`Reset "${c.label}" to its default name, icon, and color?`)) return;
+        const result = resetCategoryToDefault(editingCategoryId);
+        if (!result.ok) {
+            const errEl = document.getElementById('cat-modal-error');
+            errEl.textContent = result.error;
+            errEl.classList.remove('hidden');
+            return;
+        }
+        closeCategoryModal();
+        renderCategoriesScreen();
+        renderRecentTransactions();
+        if (typeof renderCategoryButtons === 'function') renderCategoryButtons();
+        showPayToast('✅ Reset to default');
     }
 
     // Keyword → category mapping for auto-categorization.
@@ -7590,14 +7860,77 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
     }
 
     // ── Share handlers ────────────────────────────────────────────
-    function copyReferralLink() {
-        if (!refState.myCode) return;
+    // Robust clipboard helper — falls back to execCommand for iOS Safari /
+    // older browsers that block navigator.clipboard outside of user gestures.
+    async function copyToClipboardReliable(text) {
+        if (!text) return false;
+        // Try the modern API first
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+                return true;
+            }
+        } catch {}
+        // Fallback: execCommand on a temporary textarea
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.top = '0';
+            ta.style.left = '0';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            ta.setSelectionRange(0, text.length);
+            const ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            return ok;
+        } catch { return false; }
+    }
+
+    // Visual flash on the chip after a successful copy
+    function flashChip(id) {
+        const chip = document.getElementById(id);
+        if (!chip) return;
+        const orig = chip.style.background;
+        chip.style.background = 'rgba(16, 185, 129, 0.4)';
+        setTimeout(() => { chip.style.background = orig; }, 600);
+    }
+
+    // Last-resort fallback when both Clipboard API and execCommand fail —
+    // tries prompt() in a try/catch (some embedded browsers reject it),
+    // otherwise just keeps the value visible in a long-lived toast so the
+    // user can manually long-press to select.
+    function showManualCopyFallback(value, label) {
+        try {
+            window.prompt(`Copy your ${label}:`, value);
+        } catch {
+            showPayToast(`📋 ${label}: ${value}  — long-press to copy`);
+        }
+    }
+
+    async function copyReferralCode() {
+        if (!refState.myCode) { showPayToast('Code not ready yet — try again in a sec'); return; }
+        const ok = await copyToClipboardReliable(refState.myCode);
+        if (ok) {
+            showPayToast(`✅ Code copied: ${refState.myCode}`);
+            flashChip('ref-code-chip');
+        } else {
+            showManualCopyFallback(refState.myCode, 'referral code');
+        }
+    }
+
+    async function copyReferralLink() {
+        if (!refState.myCode) { showPayToast('Link not ready yet — try again in a sec'); return; }
         const link = buildReferralLink(refState.myCode);
-        navigator.clipboard.writeText(link).then(() => {
-            showPayToast('Link copied to clipboard');
-        }).catch(() => {
-            prompt('Copy your referral link:', link);
-        });
+        const ok = await copyToClipboardReliable(link);
+        if (ok) {
+            showPayToast('✅ Link copied to clipboard');
+            flashChip('ref-link-chip');
+        } else {
+            showManualCopyFallback(link, 'referral link');
+        }
     }
 
     function shareReferralWA() {
