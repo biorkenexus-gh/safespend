@@ -7585,33 +7585,59 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
 
     // Ensure a Firestore user doc exists for the currently-authenticated user.
     // Creates one with a fresh referral code on first login.
-    async function ensureUserDoc(user) {
-        if (!firestoreReady || !user || !user.uid) return null;
-        const ref = db.collection('users').doc(user.uid);
-        const snap = await ref.get();
-        if (snap.exists) return snap.data();
-
-        // New user: create doc with a unique code (retry on rare collision)
+    // Generate a unique referral code, retrying on rare collisions.
+    async function generateUniqueReferralCode() {
         let code, attempts = 0;
         while (attempts++ < 5) {
             code = generateReferralCode();
             const clash = await db.collection('users').where('referralCode', '==', code).limit(1).get();
-            if (clash.empty) break;
+            if (clash.empty) return code;
         }
-        const fp = await getDeviceFingerprint();
-        const record = {
-            uid:               user.uid,
-            displayName:       user.displayName || '',
-            email:             user.email || '',
-            photoURL:          user.photoURL || '',
-            referralCode:      code,
-            referredBy:        null,
-            firstExpenseAt:    null,
-            deviceFingerprint: fp,
-            createdAt:         firebase.firestore.FieldValue.serverTimestamp()
-        };
-        await ref.set(record);
-        return record;
+        return code;  // best-effort after 5 attempts
+    }
+
+    async function ensureUserDoc(user) {
+        if (!firestoreReady || !user || !user.uid) return null;
+        const ref = db.collection('users').doc(user.uid);
+        const snap = await ref.get();
+
+        // Case 1: doc doesn't exist → create from scratch with code + device fp
+        if (!snap.exists) {
+            const code = await generateUniqueReferralCode();
+            const fp = await getDeviceFingerprint();
+            const record = {
+                uid:               user.uid,
+                displayName:       user.displayName || '',
+                email:             user.email || '',
+                photoURL:          user.photoURL || '',
+                referralCode:      code,
+                referredBy:        null,
+                firstExpenseAt:    null,
+                deviceFingerprint: fp,
+                createdAt:         firebase.firestore.FieldValue.serverTimestamp()
+            };
+            await ref.set(record);
+            return record;
+        }
+
+        // Case 2: doc exists. Backfill any missing fields (referralCode is the
+        // critical one — older accounts created before the referral system was
+        // added had no code, which broke the dashboard "Copy" buttons).
+        const existing = snap.data() || {};
+        const patch = {};
+        if (!existing.referralCode) {
+            patch.referralCode = await generateUniqueReferralCode();
+        }
+        if (!existing.deviceFingerprint) {
+            patch.deviceFingerprint = await getDeviceFingerprint();
+        }
+        if (typeof existing.referredBy === 'undefined') patch.referredBy = null;
+        if (typeof existing.firstExpenseAt === 'undefined') patch.firstExpenseAt = null;
+        if (Object.keys(patch).length > 0) {
+            await ref.update(patch);
+            return { ...existing, ...patch };
+        }
+        return existing;
     }
 
     // Try to link the current user to a referrer, using the pending code in localStorage.
@@ -7795,7 +7821,15 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         readyEl?.classList.remove('hidden');
         showScreen('referral');
 
-        // Always refresh the dashboard when opened
+        // Make sure the user doc exists AND has a referral code before loading
+        // the dashboard. Older accounts (or any path that bypassed ensureUserDoc
+        // on signup) may not have a code — this guarantees one is generated
+        // before the user sees the screen, so "Copy" never silently fails.
+        try {
+            await ensureUserDoc(firebase.auth().currentUser);
+        } catch (e) {
+            console.warn('[Referral] ensureUserDoc failed:', e);
+        }
         await loadReferralDashboard();
         renderReferralDashboard();
     }
@@ -7910,8 +7944,35 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         }
     }
 
+    // If the in-memory code is missing, try to lazy-load / generate one
+    // before failing. Returns true if myCode is populated by the end.
+    async function ensureReferralCodeReady() {
+        if (refState.myCode) return true;
+        const user = firebase.auth().currentUser;
+        if (profile.isGuest || !user) {
+            showPayToast('🔒 Sign in with Google to use referrals');
+            return false;
+        }
+        if (!firestoreReady) {
+            showPayToast('Firestore not configured — referral codes unavailable');
+            return false;
+        }
+        // Self-heal: ensureUserDoc will create the doc OR backfill the code
+        // if a legacy doc is missing it. Then re-load the dashboard.
+        try {
+            showPayToast('Generating your code…');
+            await ensureUserDoc(user);
+            await loadReferralDashboard();
+            renderReferralDashboard();
+        } catch (e) {
+            console.warn('[Referral] code generation failed:', e);
+        }
+        return !!refState.myCode;
+    }
+
     async function copyReferralCode() {
-        if (!refState.myCode) { showPayToast('Code not ready yet — try again in a sec'); return; }
+        const ready = await ensureReferralCodeReady();
+        if (!ready) return;
         const ok = await copyToClipboardReliable(refState.myCode);
         if (ok) {
             showPayToast(`✅ Code copied: ${refState.myCode}`);
@@ -7922,7 +7983,8 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
     }
 
     async function copyReferralLink() {
-        if (!refState.myCode) { showPayToast('Link not ready yet — try again in a sec'); return; }
+        const ready = await ensureReferralCodeReady();
+        if (!ready) return;
         const link = buildReferralLink(refState.myCode);
         const ok = await copyToClipboardReliable(link);
         if (ok) {
@@ -7933,22 +7995,22 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         }
     }
 
-    function shareReferralWA() {
-        if (!refState.myCode) return;
+    async function shareReferralWA() {
+        if (!(await ensureReferralCodeReady())) return;
         const link = buildReferralLink(refState.myCode);
         const msg  = `Hey! I've been using SafeSpend to track my weekly budget — it's actually helping me save. Sign up with my link and we both get a reward: ${link}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
     }
 
-    function shareReferralSMS() {
-        if (!refState.myCode) return;
+    async function shareReferralSMS() {
+        if (!(await ensureReferralCodeReady())) return;
         const link = buildReferralLink(refState.myCode);
         const msg  = `Try SafeSpend with me — great for weekly budgets. ${link}`;
         window.location.href = `sms:?&body=${encodeURIComponent(msg)}`;
     }
 
     async function shareReferralNative() {
-        if (!refState.myCode) return;
+        if (!(await ensureReferralCodeReady())) return;
         const link = buildReferralLink(refState.myCode);
         const data = {
             title: 'Join me on SafeSpend',
