@@ -357,6 +357,12 @@
             background: linear-gradient(135deg, #020617 0%, #0F1E5C 40%, #1E3A8A 100%);
         }
 
+        /* v30: Paid transaction styling — faded row + strikethrough amount */
+        .tx-paid { opacity: 0.55; }
+        .tx-paid .tx-amount { text-decoration: line-through; text-decoration-color: rgba(0,0,0,0.4); }
+        .tx-paid:hover { opacity: 0.85; }
+        .paid-toggle:active { transform: scale(0.9); }
+
         /* Reduced-motion: respect user preference */
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
@@ -928,6 +934,16 @@
                             <input type="date" id="edit-tx-date"
                                    class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none">
                         </div>
+
+                        <!-- Paid status toggle -->
+                        <button type="button" id="edit-tx-paid-btn" onclick="toggleEditTxPaidBtn()"
+                                class="w-full p-3 rounded-xl border-2 border-gray-200 flex items-center justify-between transition">
+                            <span class="flex items-center gap-2">
+                                <i id="edit-tx-paid-icon" class="far fa-circle text-lg"></i>
+                                <span class="text-sm font-medium" id="edit-tx-paid-label">Mark as Paid</span>
+                            </span>
+                            <span id="edit-tx-paid-status" class="text-xs text-gray-400 font-semibold">Unpaid</span>
+                        </button>
 
                         <p id="edit-tx-error" class="hidden text-xs text-danger"></p>
                     </div>
@@ -2882,8 +2898,32 @@
                     </div>
                 </div>
 
+                <!-- v30: filter pills -->
+                <div id="bills-filter-pills" class="flex gap-1.5 pb-1"></div>
+
                 <div id="bills-list" class="space-y-3">
                     <!-- Empty state filled dynamically -->
+                </div>
+            </div>
+
+            <!-- ==================== BILL PAID-HISTORY MODAL ==================== -->
+            <div id="bill-history-modal" class="fixed inset-0 bg-black/60 z-[185] hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl slide-up max-h-[90vh] flex flex-col">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                        <h3 id="bill-history-title" class="text-lg font-display font-bold text-gray-800">Payment History</h3>
+                        <button onclick="closeBillHistoryModal()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                    <div id="bill-history-body" class="flex-1 overflow-y-auto px-5 py-3 divide-y divide-gray-100">
+                        <!-- Filled dynamically -->
+                    </div>
+                    <div class="px-5 py-3 border-t border-gray-100">
+                        <button onclick="closeBillHistoryModal()"
+                                class="w-full bg-gray-100 text-gray-700 font-semibold py-2.5 rounded-lg hover:bg-gray-200 transition text-sm">
+                            Close
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -3367,6 +3407,19 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
                                placeholder="Search notes, tags, amount…">
                     </div>
                     <div class="flex gap-2 overflow-x-auto pb-1" id="history-cat-filters"></div>
+                    <!-- v30: Paid status filter -->
+                    <div class="flex gap-1.5 pb-1" id="history-paid-filters">
+                        <button onclick="setHistoryPaid('all')" data-paidf="all"
+                                class="hist-paid-btn flex-1 px-3 py-1.5 rounded-full text-xs font-semibold">All</button>
+                        <button onclick="setHistoryPaid('paid')" data-paidf="paid"
+                                class="hist-paid-btn flex-1 px-3 py-1.5 rounded-full text-xs font-semibold">
+                            <i class="fas fa-check"></i> Paid
+                        </button>
+                        <button onclick="setHistoryPaid('unpaid')" data-paidf="unpaid"
+                                class="hist-paid-btn flex-1 px-3 py-1.5 rounded-full text-xs font-semibold">
+                            <i class="far fa-circle"></i> Unpaid
+                        </button>
+                    </div>
                     <div class="flex gap-2 items-center text-xs">
                         <span class="text-gray-500">Range:</span>
                         <select id="history-range" onchange="renderHistory()"
@@ -4952,6 +5005,7 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
             if (typeof t.autoCategorized !== 'boolean') t.autoCategorized = false;
             if (!t.createdAt) t.createdAt = t.id || Date.now();
             if (!t.category) t.category = 'other';
+            if (typeof t.paid !== 'boolean') t.paid = false;     // v30: paid status
         });
     }
 
@@ -5102,6 +5156,37 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
     function deleteBill(billId) {
         bills = bills.filter(b => b.id !== billId);
         saveData();
+    }
+
+    // v30: Edit an existing bill. If frequency or dueDay changes, recompute
+    // the next due date so reminders and "due soon" filters stay accurate.
+    function updateBill(id, updates) {
+        const idx = bills.findIndex(b => b.id === id);
+        if (idx < 0) return { ok: false, error: 'Bill not found' };
+        const merged = { ...bills[idx], ...updates };
+        if ('frequency' in updates || 'dueDay' in updates) {
+            merged.nextDueDate = computeNextDueDate(merged);
+        }
+        bills[idx] = merged;
+        saveData();
+        return { ok: true, bill: merged };
+    }
+
+    // v30: Undo the most recent payment on a bill. Pops the latest entry
+    // from paidHistory, restores lastPaidDate to the previous one (or null),
+    // recomputes nextDueDate from there. Does NOT delete the auto-logged
+    // expense from appState.transactions — user can delete that separately
+    // from the History screen if they want full revert.
+    function unmarkLastBillPayment(billId) {
+        const b = bills.find(x => x.id === billId);
+        if (!b || !Array.isArray(b.paidHistory) || b.paidHistory.length === 0) {
+            return { ok: false, error: 'No payments to undo' };
+        }
+        b.paidHistory.shift();    // remove the most recent entry
+        b.lastPaidDate = b.paidHistory[0]?.date || null;
+        b.nextDueDate = computeNextDueDate({ ...b });
+        saveData();
+        return { ok: true };
     }
 
     function getUpcomingBills(maxDays = 30) {
@@ -5418,17 +5503,45 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
             return;
         }
 
-        const sorted = getUpcomingBills(365);
+        // v30: filter bills by status
+        const filterMode = billsState?.filter || 'all';
+        let sorted = getUpcomingBills(365);
+        if (filterMode === 'due')  sorted = sorted.filter(b => b.daysUntil <= 7 && !isPaidThisCycle(b));
+        if (filterMode === 'paid') sorted = sorted.filter(b => isPaidThisCycle(b));
+
+        // Render filter pills (v30)
+        const pillsWrap = document.getElementById('bills-filter-pills');
+        if (pillsWrap) {
+            const pillStyle = on => `flex-1 px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+                on ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`;
+            pillsWrap.innerHTML = `
+                <button onclick="setBillsFilter('all')"  class="${pillStyle(filterMode === 'all')}">All</button>
+                <button onclick="setBillsFilter('due')"  class="${pillStyle(filterMode === 'due')}">Due Soon</button>
+                <button onclick="setBillsFilter('paid')" class="${pillStyle(filterMode === 'paid')}"><i class="fas fa-check"></i> Paid This Cycle</button>`;
+        }
+
+        if (sorted.length === 0) {
+            list.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center text-gray-400 text-sm"><i class="fas fa-calendar-check text-3xl mb-2 empty-pulse"></i><p>No bills match this filter</p></div>`;
+            return;
+        }
+
         list.innerHTML = sorted.map(b => {
             const daysUntil = b.daysUntil;
+            const paidCycle = isPaidThisCycle(b);
             let urgency, urgencyLbl;
-            if (daysUntil < 0)        { urgency = 'bg-red-100 text-danger';    urgencyLbl = `${-daysUntil}d overdue`; }
+            if (paidCycle)            { urgency = 'bg-emerald-100 text-emerald-700'; urgencyLbl = '✓ Paid this cycle'; }
+            else if (daysUntil < 0)   { urgency = 'bg-red-100 text-danger';    urgencyLbl = `${-daysUntil}d overdue`; }
             else if (daysUntil === 0) { urgency = 'bg-red-100 text-danger';    urgencyLbl = 'Due today'; }
             else if (daysUntil <= 3)  { urgency = 'bg-amber-100 text-amber-700'; urgencyLbl = `In ${daysUntil}d`; }
             else if (daysUntil <= 7)  { urgency = 'bg-yellow-100 text-yellow-700'; urgencyLbl = `In ${daysUntil}d`; }
             else                      { urgency = 'bg-gray-100 text-gray-500'; urgencyLbl = `In ${daysUntil}d`; }
+            const histCount = (b.paidHistory || []).length;
+            const histLink = histCount > 0
+                ? `<button onclick="openBillHistoryModal('${b.id}')" class="text-[10px] text-primary hover:underline mt-0.5">View ${histCount} payment${histCount !== 1 ? 's' : ''}</button>`
+                : '';
             return `
-            <div class="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-3">
+            <div class="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-3 ${paidCycle ? 'opacity-70' : ''}">
                 <div class="text-3xl shrink-0">${b.emoji}</div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
@@ -5436,11 +5549,17 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
                         <span class="text-[10px] ${urgency} px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">${urgencyLbl}</span>
                     </div>
                     <p class="text-xs text-gray-500 mt-0.5">${fmt(b.amount)} · ${b.frequency} · Due ${b.nextDueDate}</p>
+                    ${histLink}
                 </div>
                 <div class="flex flex-col gap-1 shrink-0">
+                    ${!paidCycle ? `
                     <button onclick="handleMarkBillPaid('${b.id}')"
                             class="text-xs bg-safe text-white px-3 py-1.5 rounded-full font-semibold hover:bg-green-600 transition">
                         Paid
+                    </button>` : ''}
+                    <button onclick="openCreateBillModal('${b.id}')"
+                            class="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full font-semibold hover:bg-gray-200 transition">
+                        <i class="fas fa-pen-to-square"></i> Edit
                     </button>
                     <button onclick="confirmDeleteBill('${b.id}')" class="text-xs text-gray-400 hover:text-danger">Delete</button>
                 </div>
@@ -5448,19 +5567,61 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         }).join('');
     }
 
-    function openCreateBillModal() {
-        document.getElementById('bill-name').value = '';
-        document.getElementById('bill-emoji').value = '📄';
-        document.getElementById('bill-amount').value = '';
-        document.getElementById('bill-category').value = 'bills';
-        document.getElementById('bill-frequency').value = 'monthly';
-        document.getElementById('bill-due-day').value = '1';
-        document.getElementById('bill-reminder').value = '3';
+    // v30: bills filter state
+    let billsState = { filter: 'all' };
+    function setBillsFilter(f) { billsState.filter = f; renderBillsScreen(); }
+
+    // v30: "Paid this cycle" = lastPaidDate is within the current frequency window.
+    // Uses a forward-looking definition: if lastPaidDate is on/after the previous
+    // cycle boundary, this cycle's payment is done.
+    function isPaidThisCycle(bill) {
+        if (!bill.lastPaidDate) return false;
+        const last = new Date(bill.lastPaidDate);
+        const now  = new Date();
+        const ms   = now.getTime() - last.getTime();
+        const days = ms / 86400000;
+        if (bill.frequency === 'weekly')  return days < 7;
+        if (bill.frequency === 'yearly')  return days < 365;
+        // monthly (default)
+        return days < 28;
+    }
+
+    // v30: now accepts an optional billId — if provided, switches to Edit mode.
+    let editingBillId = null;
+    function openCreateBillModal(billId) {
+        editingBillId = billId || null;
+        const modal = document.getElementById('bill-modal');
+        const titleEl = modal.querySelector('h3');
+
+        if (editingBillId) {
+            const b = bills.find(x => x.id === editingBillId);
+            if (!b) { showPayToast('Bill not found'); return; }
+            if (titleEl) titleEl.textContent = `Edit: ${b.name}`;
+            document.getElementById('bill-name').value     = b.name || '';
+            document.getElementById('bill-emoji').value    = b.emoji || '📄';
+            document.getElementById('bill-amount').value   = b.amount || '';
+            document.getElementById('bill-category').value = b.category || 'bills';
+            document.getElementById('bill-frequency').value = b.frequency || 'monthly';
+            document.getElementById('bill-due-day').value   = b.dueDay || 1;
+            document.getElementById('bill-reminder').value  = (typeof b.reminderDays === 'number') ? b.reminderDays : 3;
+        } else {
+            if (titleEl) titleEl.textContent = 'New Bill';
+            document.getElementById('bill-name').value = '';
+            document.getElementById('bill-emoji').value = '📄';
+            document.getElementById('bill-amount').value = '';
+            document.getElementById('bill-category').value = 'bills';
+            document.getElementById('bill-frequency').value = 'monthly';
+            document.getElementById('bill-due-day').value = '1';
+            document.getElementById('bill-reminder').value = '3';
+        }
         const err = document.getElementById('bill-error');
         err.textContent = ''; err.classList.add('hidden');
-        document.getElementById('bill-modal').classList.remove('hidden');
+        modal.classList.remove('hidden');
     }
-    function closeBillModal() { document.getElementById('bill-modal').classList.add('hidden'); }
+    function closeBillModal() {
+        document.getElementById('bill-modal').classList.add('hidden');
+        editingBillId = null;
+    }
 
     function submitBill() {
         const name       = document.getElementById('bill-name').value.trim();
@@ -5476,11 +5637,20 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         if (!name)                      return showErr('Enter a name for this bill');
         if (!amount || amount <= 0)     return showErr('Enter the amount');
 
-        createBill({ name, emoji, amount, category, frequency, dueDay, reminderDays: reminder });
-        closeBillModal();
-        renderBillsScreen();
-        updateUI();
-        showPayToast(`📅 "${name}" added to recurring bills`);
+        if (editingBillId) {
+            const result = updateBill(editingBillId, { name, emoji, amount, category, frequency, dueDay, reminderDays: reminder });
+            if (!result.ok) return showErr(result.error);
+            closeBillModal();
+            renderBillsScreen();
+            updateUI();
+            showPayToast(`✏️ "${name}" updated`);
+        } else {
+            createBill({ name, emoji, amount, category, frequency, dueDay, reminderDays: reminder });
+            closeBillModal();
+            renderBillsScreen();
+            updateUI();
+            showPayToast(`📅 "${name}" added to recurring bills`);
+        }
     }
 
     function handleMarkBillPaid(billId) {
@@ -5491,6 +5661,68 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         renderBillsScreen();
         updateUI();
         showPayToast(`✅ ${b.name} marked as paid`);
+    }
+
+    // ── v30: Bill payment history modal ────────────────────────────
+    let viewingBillId = null;
+
+    function openBillHistoryModal(billId) {
+        const b = bills.find(x => x.id === billId);
+        if (!b) return;
+        viewingBillId = billId;
+        setText('bill-history-title', `${b.emoji} ${b.name}`);
+        renderBillHistoryBody();
+        document.getElementById('bill-history-modal').classList.remove('hidden');
+    }
+    function closeBillHistoryModal() {
+        document.getElementById('bill-history-modal').classList.add('hidden');
+        viewingBillId = null;
+    }
+
+    function renderBillHistoryBody() {
+        const b = bills.find(x => x.id === viewingBillId);
+        const body = document.getElementById('bill-history-body');
+        if (!b || !body) return;
+        const history = b.paidHistory || [];
+        if (history.length === 0) {
+            body.innerHTML = `<div class="py-8 text-center text-gray-400 text-sm">
+                <i class="fas fa-receipt text-2xl mb-2 empty-pulse"></i>
+                <p>No payments recorded yet</p></div>`;
+            return;
+        }
+        // Total + count summary at top, then list. Most recent gets an "Unmark" button.
+        const total = history.reduce((s, p) => s + (p.amount || 0), 0);
+        body.innerHTML = `
+            <div class="py-3 px-1 mb-2 bg-emerald-50 rounded-xl text-center">
+                <p class="text-[10px] text-emerald-700 uppercase tracking-wide font-semibold">Total Paid</p>
+                <p class="font-display font-bold text-2xl text-emerald-700">${fmt(total)}</p>
+                <p class="text-[11px] text-emerald-600 mt-0.5">${history.length} payment${history.length !== 1 ? 's' : ''}</p>
+            </div>
+            ${history.map((p, i) => `
+                <div class="py-3 flex items-center justify-between gap-2">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-800">${fmt(p.amount)}</p>
+                        <p class="text-[11px] text-gray-500">${escapeHtml(p.date || '')}</p>
+                    </div>
+                    ${i === 0 ? `
+                        <button onclick="handleUnmarkLastBillPayment()"
+                                class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-3 py-1.5 rounded-full transition">
+                            <i class="fas fa-rotate-left"></i> Unmark
+                        </button>` : ''}
+                </div>`).join('')}`;
+    }
+
+    function handleUnmarkLastBillPayment() {
+        if (!viewingBillId) return;
+        const b = bills.find(x => x.id === viewingBillId);
+        if (!b) return;
+        if (!confirm(`Undo the last payment on "${b.name}"? The auto-logged expense in History stays — delete it separately if needed.`)) return;
+        const result = unmarkLastBillPayment(viewingBillId);
+        if (!result.ok) { showPayToast(result.error || 'Could not unmark'); return; }
+        renderBillHistoryBody();
+        renderBillsScreen();
+        updateUI();
+        showPayToast('↩️ Most recent payment removed');
     }
 
     function confirmDeleteBill(billId) {
@@ -10620,9 +10852,14 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
                 ? '<span class="text-[10px] bg-blue-100 text-primary px-1.5 py-0.5 rounded ml-1"><i class="fas fa-wand-magic-sparkles mr-0.5"></i>auto</span>'
                 : '';
             return `
-            <div class="transaction-item flex items-center justify-between p-3 rounded-xl bg-gray-50 cursor-pointer hover:bg-gray-100 active:scale-98 transition"
+            <div class="transaction-item ${t.paid ? 'tx-paid' : ''} flex items-center justify-between p-3 rounded-xl bg-gray-50 cursor-pointer hover:bg-gray-100 active:scale-98 transition"
                  onclick="openEditTxModal(${t.id})" title="Tap to edit">
                 <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <button onclick="toggleTxPaid(${t.id}, event)"
+                            class="paid-toggle w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition ${t.paid ? 'bg-emerald-100 text-emerald-700' : 'bg-white border-2 border-gray-300 text-gray-400 hover:border-emerald-400 hover:text-emerald-500'}"
+                            title="${t.paid ? 'Mark as unpaid' : 'Mark as paid'}">
+                        <i class="fas ${t.paid ? 'fa-check' : 'fa-circle'} text-xs ${t.paid ? '' : 'opacity-0'}"></i>
+                    </button>
                     <div class="w-10 h-10 ${cat.color} rounded-full flex items-center justify-center shrink-0">
                         <i class="fas fa-${cat.icon}"></i>
                     </div>
@@ -10633,10 +10870,11 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
                             ${tagChips}
                             ${smsBadge}
                             ${aiBadge}
+                            ${t.paid ? '<span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded ml-1 font-semibold">PAID</span>' : ''}
                         </div>
                     </div>
                 </div>
-                <span class="font-bold text-gray-800 shrink-0 ml-2">-${fmt(t.amount)}</span>
+                <span class="tx-amount font-bold text-gray-800 shrink-0 ml-2">-${fmt(t.amount)}</span>
             </div>`;
         }).join('');
     }
@@ -10795,7 +11033,8 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
             date,
             tags: tags || [],
             autoCategorized: !!autoCategorized,
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            paid: false                          // v30: starts unpaid; user toggles via row icon or edit modal
         });
         appState.spent += amount;
         saveData();
@@ -10839,6 +11078,21 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         return null;
     }
 
+    // One-tap toggle from a tx row. event.stopPropagation prevents the row
+    // click handler (which opens the edit modal) from also firing.
+    function toggleTxPaid(id, event) {
+        if (event) { event.stopPropagation(); event.preventDefault(); }
+        const result = findTransactionById(id);
+        if (!result) { showPayToast('Transaction not found'); return; }
+        if (result.tx.isTopUp) return;     // top-ups have no paid status
+        result.tx.paid = !result.tx.paid;
+        saveData();
+        // Refresh whichever views are mounted. updateUI handles Home, renderHistory the History screen.
+        updateUI();
+        if (typeof renderHistory === 'function') renderHistory();
+        showPayToast(result.tx.paid ? '✅ Marked paid' : '↩️ Marked unpaid');
+    }
+
     function openEditTxModal(id) {
         const result = findTransactionById(id);
         if (!result) { showPayToast('Transaction not found'); return; }
@@ -10870,11 +11124,43 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
                 </button>`;
         }).join('');
 
+        // Paid toggle state — set visual based on tx.paid
+        renderEditTxPaidBtn(!!result.tx.paid);
+
         // Reset error
         const err = document.getElementById('edit-tx-error');
         err.textContent = ''; err.classList.add('hidden');
 
         document.getElementById('edit-tx-modal').classList.remove('hidden');
+    }
+
+    // Render the Mark-as-Paid button inside the edit modal in the given state.
+    // The button itself stores its current value in dataset.paid.
+    function renderEditTxPaidBtn(isPaid) {
+        const btn   = document.getElementById('edit-tx-paid-btn');
+        const icon  = document.getElementById('edit-tx-paid-icon');
+        const label = document.getElementById('edit-tx-paid-label');
+        const stat  = document.getElementById('edit-tx-paid-status');
+        if (!btn) return;
+        btn.dataset.paid = isPaid ? '1' : '0';
+        if (isPaid) {
+            btn.className = 'w-full p-3 rounded-xl border-2 border-emerald-300 bg-emerald-50 flex items-center justify-between transition';
+            icon.className  = 'fas fa-circle-check text-lg text-emerald-600';
+            label.textContent = 'Marked as Paid';
+            stat.className  = 'text-xs font-semibold text-emerald-700';
+            stat.textContent = '✓ Paid';
+        } else {
+            btn.className = 'w-full p-3 rounded-xl border-2 border-gray-200 hover:border-gray-300 flex items-center justify-between transition';
+            icon.className  = 'far fa-circle text-lg text-gray-400';
+            label.textContent = 'Mark as Paid';
+            stat.className  = 'text-xs font-semibold text-gray-400';
+            stat.textContent = 'Unpaid';
+        }
+    }
+
+    function toggleEditTxPaidBtn() {
+        const btn = document.getElementById('edit-tx-paid-btn');
+        renderEditTxPaidBtn(btn.dataset.paid !== '1');
     }
 
     function selectEditTxCat(id) {
@@ -10918,6 +11204,9 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         tx.category = newCat;
         tx.note     = newNote;
         tx.date     = newDate;
+        // Paid status from the toggle
+        const paidBtn = document.getElementById('edit-tx-paid-btn');
+        if (paidBtn) tx.paid = paidBtn.dataset.paid === '1';
 
         // Keep totals in sync. Current-week tx counts toward appState.spent;
         // archived-week tx counts toward that week's spent total in weekHistory.
@@ -11124,7 +11413,7 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
 
     // ── History ───────────────────────────────────────────────────
     // ── History with search + filter + grouped transactions ────────
-    let historyState = { cat: 'all' };  // persists filter across renders
+    let historyState = { cat: 'all', paid: 'all' };  // persists filter across renders (v30: + paid)
 
     function renderHistoryFilters() {
         const wrap = document.getElementById('history-cat-filters');
@@ -11141,6 +11430,16 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
     }
 
     function setHistoryCat(c) { historyState.cat = c; renderHistory(); }
+    function setHistoryPaid(p) { historyState.paid = p; renderHistory(); }
+
+    function renderHistoryPaidPills() {
+        document.querySelectorAll('.hist-paid-btn').forEach(btn => {
+            const on = btn.dataset.paidf === historyState.paid;
+            btn.className = `hist-paid-btn flex-1 px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+                on ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`;
+        });
+    }
 
     function clearHistoryFilters() {
         const search = document.getElementById('history-search');
@@ -11148,6 +11447,7 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         if (search) search.value = '';
         if (range)  range.value = 'all';
         historyState.cat = 'all';
+        historyState.paid = 'all';
         renderHistory();
     }
 
@@ -11162,6 +11462,7 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
 
     function renderHistory() {
         renderHistoryFilters();
+        renderHistoryPaidPills();
 
         const container = document.getElementById('history-list');
         const summaryEl = document.getElementById('history-summary');
@@ -11171,6 +11472,7 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         const rangeEl = document.getElementById('history-range');
         const range   = rangeEl ? rangeEl.value : 'all';
         const cat     = historyState.cat;
+        const paidF   = historyState.paid || 'all';
 
         let txs = getAllTransactionsFlat().filter(t => !t.isTopUp);
 
@@ -11188,6 +11490,10 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
 
         // Category filter
         if (cat !== 'all') txs = txs.filter(t => t.category === cat);
+
+        // Paid filter (v30)
+        if (paidF === 'paid')   txs = txs.filter(t => t.paid === true);
+        if (paidF === 'unpaid') txs = txs.filter(t => !t.paid);
 
         // Search: note, tags, amount
         if (search) {
@@ -11252,21 +11558,27 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
             : '';
         const autoBadge = !isSmsImport && t.autoCategorized
             ? '<span class="text-[10px] bg-blue-50 text-primary px-1.5 py-0.5 rounded ml-1">auto</span>' : '';
+        const paidBadge = t.paid ? '<span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded ml-1 font-semibold">PAID</span>' : '';
         return `
-            <div class="flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 transition"
+            <div class="${t.paid ? 'tx-paid' : ''} flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 transition"
                  onclick="openEditTxModal(${t.id})" title="Tap to edit">
+                <button onclick="toggleTxPaid(${t.id}, event)"
+                        class="paid-toggle w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition ${t.paid ? 'bg-emerald-100 text-emerald-700' : 'bg-white border-2 border-gray-300 text-gray-400 hover:border-emerald-400 hover:text-emerald-500'}"
+                        title="${t.paid ? 'Mark as unpaid' : 'Mark as paid'}">
+                    <i class="fas ${t.paid ? 'fa-check' : 'fa-circle'} text-xs ${t.paid ? '' : 'opacity-0'}"></i>
+                </button>
                 <div class="w-9 h-9 rounded-full ${iconClass} flex items-center justify-center shrink-0">
                     <i class="fas fa-${c.icon} text-sm" style="color:${c.hex || '#6B7280'}"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-gray-800 truncate">${t.note || c.label}${smsBadge}${autoBadge}</p>
+                    <p class="text-sm font-semibold text-gray-800 truncate">${t.note || c.label}${smsBadge}${autoBadge}${paidBadge}</p>
                     <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
                         <span class="text-[11px] text-gray-500">${c.label}</span>
                         ${tagBits}
                     </div>
                 </div>
                 <div class="text-right">
-                    <p class="font-bold text-gray-800 text-sm">${fmt(t.amount)}</p>
+                    <p class="tx-amount font-bold text-gray-800 text-sm">${fmt(t.amount)}</p>
                     <i class="fas fa-pen-to-square text-[10px] text-gray-300 mt-1"></i>
                 </div>
             </div>`;
