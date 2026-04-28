@@ -1761,15 +1761,15 @@
                     </button>
                 </div>
 
-                <!-- 1) Premium gate (shown when user is NOT premium) -->
-                <div id="business-gate" class="hidden bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 rounded-3xl p-6 text-white shadow-xl">
+                <!-- 1) Business Pro gate (shown when user does NOT have Business Pro) -->
+                <div id="business-gate" class="hidden bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 rounded-3xl p-6 text-white shadow-xl">
                     <div class="flex items-center gap-3 mb-3">
-                        <div class="w-12 h-12 bg-white/25 rounded-2xl flex items-center justify-center">
-                            <i class="fas fa-crown text-2xl text-yellow-200"></i>
+                        <div class="w-12 h-12 bg-amber-400/20 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-briefcase text-2xl text-amber-300"></i>
                         </div>
                         <div>
-                            <p class="text-xs uppercase tracking-wider opacity-90">Premium Feature</p>
-                            <h3 class="font-display font-bold text-xl">Business Profile</h3>
+                            <p class="text-xs uppercase tracking-wider opacity-90">Business Pro Feature</p>
+                            <h3 class="font-display font-bold text-xl">Business Pro</h3>
                         </div>
                     </div>
                     <p class="text-sm leading-relaxed opacity-95 mb-4">
@@ -1779,11 +1779,12 @@
                         <li><i class="fas fa-check-circle mr-2"></i>Income, expense, and bonus tracking</li>
                         <li><i class="fas fa-check-circle mr-2"></i>Auto-calculated profit &amp; loss</li>
                         <li><i class="fas fa-check-circle mr-2"></i>Staff payment history</li>
-                        <li><i class="fas fa-check-circle mr-2"></i>Period filters: week / month / year</li>
+                        <li><i class="fas fa-check-circle mr-2"></i>Branded invoices &amp; PDF reports</li>
+                        <li><i class="fas fa-check-circle mr-2"></i>Includes everything in SafeSpend Pro</li>
                     </ul>
-                    <button onclick="openPremiumModal()"
-                            class="w-full bg-white text-orange-600 font-bold py-3 rounded-xl shadow-md hover:shadow-lg active:scale-95 transition">
-                        <i class="fas fa-bolt mr-1"></i> Upgrade to Premium · <span id="business-gate-price">—</span>
+                    <button onclick="openPremiumModal('business')"
+                            class="w-full bg-amber-400 text-slate-900 font-bold py-3 rounded-xl shadow-md hover:shadow-lg active:scale-95 transition">
+                        <i class="fas fa-bolt mr-1"></i> Upgrade to Business Pro · from <span id="business-gate-price">—</span>
                     </button>
                 </div>
 
@@ -2046,14 +2047,14 @@
                     </button>
                 </div>
 
-                <!-- 1) Premium gate (non-premium users) -->
-                <div id="invoices-gate" class="hidden bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 rounded-3xl p-6 text-white shadow-xl">
+                <!-- 1) Business Pro gate (non-Business users) -->
+                <div id="invoices-gate" class="hidden bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 rounded-3xl p-6 text-white shadow-xl">
                     <div class="flex items-center gap-3 mb-3">
-                        <div class="w-12 h-12 bg-white/25 rounded-2xl flex items-center justify-center">
-                            <i class="fas fa-file-invoice-dollar text-2xl text-yellow-200"></i>
+                        <div class="w-12 h-12 bg-amber-400/20 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-file-invoice-dollar text-2xl text-amber-300"></i>
                         </div>
                         <div>
-                            <p class="text-xs uppercase tracking-wider opacity-90">Premium Feature</p>
+                            <p class="text-xs uppercase tracking-wider opacity-90">Business Pro Feature</p>
                             <h3 class="font-display font-bold text-xl">Invoicing</h3>
                         </div>
                     </div>
@@ -2066,9 +2067,9 @@
                         <li><i class="fas fa-check-circle mr-2"></i>PDF export with your business branding</li>
                         <li><i class="fas fa-check-circle mr-2"></i>Pending / Paid / Overdue tracking</li>
                     </ul>
-                    <button onclick="openPremiumModal()"
-                            class="w-full bg-white text-orange-600 font-bold py-3 rounded-xl shadow-md hover:shadow-lg active:scale-95 transition">
-                        <i class="fas fa-bolt mr-1"></i> Upgrade to Premium · <span id="invoices-gate-price">—</span>
+                    <button onclick="openPremiumModal('business')"
+                            class="w-full bg-amber-400 text-slate-900 font-bold py-3 rounded-xl shadow-md hover:shadow-lg active:scale-95 transition">
+                        <i class="fas fa-bolt mr-1"></i> Upgrade to Business Pro · from <span id="invoices-gate-price">—</span>
                     </button>
                 </div>
 
@@ -2723,33 +2724,74 @@
 
 
             <!-- ==================== PREMIUM UPGRADE MODAL ==================== -->
-            <div id="premium-modal" class="fixed inset-0 bg-black/60 z-[180] hidden flex items-center justify-center p-4">
-                <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl slide-up">
-                    <div class="text-center mb-5">
-                        <div class="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
-                            <i class="fas fa-crown text-3xl text-white"></i>
-                        </div>
-                        <h3 class="text-xl font-display font-bold text-gray-800">SafeSpend Premium</h3>
-                        <p class="text-3xl font-display font-bold text-primary mt-2" id="premium-price">—</p>
-                        <p class="text-xs text-gray-500">One-time lifetime purchase · No subscriptions</p>
+            <!-- ==================== SUBSCRIPTION PLAN PICKER (v31) ==================== -->
+            <div id="premium-modal" class="fixed inset-0 bg-black/60 z-[180] hidden flex items-center justify-center p-3">
+                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl slide-up max-h-[95vh] flex flex-col">
+                    <!-- Header -->
+                    <div class="px-5 pt-5 pb-3 text-center">
+                        <h3 class="text-xl font-display font-bold text-gray-800">Choose your plan</h3>
+                        <p class="text-xs text-gray-500 mt-1">Cancel anytime · Renews automatically</p>
                     </div>
-                    <ul class="space-y-2 text-sm text-gray-700 mb-5">
-                        <li class="flex items-center gap-2"><i class="fas fa-check text-safe"></i> ✨ Premium badge on your profile</li>
-                        <li class="flex items-center gap-2"><i class="fas fa-check text-safe"></i> 🎯 Unlimited savings goals</li>
-                        <li class="flex items-center gap-2"><i class="fas fa-check text-safe"></i> 📊 Advanced analytics &amp; insights</li>
-                        <li class="flex items-center gap-2"><i class="fas fa-check text-safe"></i> 📄 Priority PDF export styling</li>
-                        <li class="flex items-center gap-2"><i class="fas fa-check text-safe"></i> 💬 Priority support channel</li>
-                        <li class="flex items-center gap-2"><i class="fas fa-check text-safe"></i> 🎨 Exclusive theme customization</li>
-                    </ul>
-                    <p id="premium-error" class="hidden text-xs text-danger mb-2"></p>
-                    <button onclick="purchasePremium()"
-                            class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold py-3 rounded-xl shadow-md hover:shadow-lg transition">
-                        <i class="fas fa-crown mr-1"></i> Upgrade Now
-                    </button>
-                    <button onclick="closePremiumModal()"
-                            class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
-                        Maybe later
-                    </button>
+
+                    <!-- Tier tabs -->
+                    <div class="flex gap-2 px-5 mb-3">
+                        <button data-tier="pro" onclick="selectPlanTier('pro')"
+                                class="plan-tier-tab flex-1 py-2.5 px-3 rounded-xl text-sm font-bold transition">
+                            <i class="fas fa-star mr-1"></i> SafeSpend Pro
+                        </button>
+                        <button data-tier="business" onclick="selectPlanTier('business')"
+                                class="plan-tier-tab flex-1 py-2.5 px-3 rounded-xl text-sm font-bold transition">
+                            <i class="fas fa-briefcase mr-1"></i> Business Pro
+                        </button>
+                    </div>
+
+                    <!-- Billing toggle -->
+                    <div class="flex bg-gray-100 rounded-xl p-1 mx-5 mb-4 relative">
+                        <button data-billing="monthly" onclick="selectPlanBilling('monthly')"
+                                class="plan-billing-tab flex-1 py-2 rounded-lg text-xs font-semibold transition">
+                            Monthly
+                        </button>
+                        <button data-billing="yearly" onclick="selectPlanBilling('yearly')"
+                                class="plan-billing-tab flex-1 py-2 rounded-lg text-xs font-semibold transition">
+                            Yearly
+                            <span id="plan-savings-badge" class="absolute -top-2 -right-1 bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-md">
+                                BEST VALUE
+                            </span>
+                        </button>
+                    </div>
+
+                    <!-- Scrollable hero + features -->
+                    <div class="flex-1 overflow-y-auto px-5 pb-3">
+                        <div class="text-center mb-4">
+                            <p class="text-sm font-semibold text-gray-700" id="plan-tier-name">—</p>
+                            <p class="text-[11px] text-gray-500 mb-3" id="plan-tagline">—</p>
+                            <div class="flex items-baseline justify-center gap-1">
+                                <span class="font-display font-bold text-4xl text-primary" id="plan-price-amount">—</span>
+                                <span class="text-sm text-gray-500" id="plan-price-cycle">—</span>
+                            </div>
+                            <p class="text-[11px] text-gray-500 mt-1" id="plan-effective">—</p>
+                            <p class="text-[11px] font-semibold text-emerald-600 mt-1" id="plan-savings">—</p>
+                        </div>
+
+                        <ul id="plan-features" class="space-y-2.5 mb-3"></ul>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="px-5 pb-5">
+                        <p id="premium-error" class="hidden text-xs text-danger mb-2 text-center"></p>
+                        <button id="plan-subscribe-btn" onclick="purchaseSubscription()"
+                                class="w-full bg-primary text-white font-bold py-3.5 rounded-xl shadow-md hover:shadow-lg transition">
+                            Subscribe
+                        </button>
+                        <button onclick="closePremiumModal()"
+                                class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                            Maybe later
+                        </button>
+                        <p class="text-[10px] text-center text-gray-400 mt-2 leading-relaxed">
+                            Paid via your SafeSpend Wallet. <br>
+                            <span class="text-gray-500">Production: Google Play Billing — see <code class="bg-gray-100 px-1 rounded">PLAY-CONSOLE-SUBSCRIPTIONS.md</code></span>
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -3527,30 +3569,32 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
                         </div>
                     </div>
 
-                    <!-- Premium upgrade card (hidden if already premium) -->
-                    <div id="settings-premium-card" class="bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-lg transition text-white lift-on-hover"
-                         onclick="openPremiumModal()">
+                    <!-- v31: Get SafeSpend Pro card (hidden if already subscribed) -->
+                    <div id="settings-premium-card" class="bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-lg transition text-white lift-on-hover"
+                         onclick="openPremiumModal('pro')">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shrink-0">
-                                <i class="fas fa-crown text-white text-xl"></i>
+                                <i class="fas fa-star text-yellow-200 text-xl"></i>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <h3 class="font-bold text-base">Go Premium</h3>
-                                <p class="text-xs opacity-95">Unlock exclusive features · <span id="settings-premium-price">—</span></p>
+                                <h3 class="font-bold text-base">Get SafeSpend Pro</h3>
+                                <p class="text-xs opacity-95">From <span id="settings-premium-price">—</span> · Unlock advanced features</p>
                             </div>
                             <i class="fas fa-chevron-right opacity-75 shrink-0"></i>
                         </div>
                     </div>
-                    <!-- Premium active badge (shown instead when user is premium) -->
-                    <div id="settings-premium-active" class="hidden bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl p-4 shadow-sm text-white">
+                    <!-- v31: Active subscription badge — shown instead when user has Pro or Business Pro -->
+                    <div id="settings-premium-active" class="hidden bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-lg transition text-white"
+                         onclick="openPremiumModal()">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shrink-0">
-                                <i class="fas fa-crown text-white text-xl"></i>
+                                <i class="fas fa-circle-check text-yellow-200 text-xl"></i>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <h3 class="font-bold text-base">Premium Member ✓</h3>
-                                <p class="text-xs opacity-95">Thank you for your support</p>
+                                <h3 class="font-bold text-base">Active Subscription</h3>
+                                <p class="text-xs opacity-95" id="settings-premium-active-label">SafeSpend Pro</p>
                             </div>
+                            <i class="fas fa-chevron-right opacity-75 shrink-0"></i>
                         </div>
                     </div>
 
@@ -3593,10 +3637,10 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-1.5">
-                                    <h3 class="font-bold text-base">Business Profile</h3>
-                                    <span class="text-[9px] bg-amber-400 text-slate-900 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">Premium</span>
+                                    <h3 class="font-bold text-base">Business Pro</h3>
+                                    <span class="text-[9px] bg-amber-400 text-slate-900 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">Pro Plan</span>
                                 </div>
-                                <p class="text-xs opacity-80" id="settings-business-summary">Track income, expenses, and bonuses</p>
+                                <p class="text-xs opacity-80" id="settings-business-summary">Income · expenses · invoices · P&amp;L</p>
                             </div>
                             <i class="fas fa-chevron-right opacity-75 shrink-0"></i>
                         </div>
@@ -4952,6 +4996,24 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
             if (!Array.isArray(profile.settings.notifDays))         profile.settings.notifDays     = [0,1,2,3,4,5,6];
             if (typeof profile.settings.weeklySummary !== 'boolean')profile.settings.weeklySummary = false;
             if (typeof profile.settings.smartSkip     !== 'boolean')profile.settings.smartSkip     = true;
+        }
+
+        // v31 SUBSCRIPTION MIGRATION
+        // Convert legacy isPremium boolean (one-time $9.99 lifetime) into the
+        // new subscription model. Existing premium users are GRANDFATHERED:
+        // they get the Pro tier with billing='lifetime' and no expiry.
+        if (!profile.subscription) {
+            if (profile.isPremium) {
+                profile.subscription = {
+                    tier:       'pro',
+                    billing:    'lifetime',
+                    startedAt:  profile.premiumSince || Date.now(),
+                    expiresAt:  null,             // lifetime = never expires
+                    grandfathered: true
+                };
+            } else {
+                profile.subscription = { tier: null, billing: null, startedAt: null, expiresAt: null };
+            }
         }
 
         // Engagement features — independent persistence
@@ -6404,76 +6466,174 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
     }
 
     // ═══════════════════════════════════════════════════════════════
-    //  PREMIUM SUBSCRIPTION
+    //  v31 SUBSCRIPTION SYSTEM
+    //  Replaces the legacy one-time Premium purchase. Two tiers
+    //  (Pro / Business Pro) × two billing cycles (monthly / yearly).
+    //  Pricing comes from the PRICING constant. UI is the plan-picker
+    //  modal (#premium-modal — same DOM id for backward compat).
     // ═══════════════════════════════════════════════════════════════
 
-    function openPremiumModal() {
-        setText('premium-price', fmt(PREMIUM_PRICE));
+    let pickerState = { tier: 'pro', billing: 'yearly' };   // sticky during the modal session
+
+    function openPremiumModal(initialTier) {
+        if (initialTier && PRICING[initialTier]) pickerState.tier = initialTier;
+        renderPlanPicker();
         const err = document.getElementById('premium-error');
         err.textContent = ''; err.classList.add('hidden');
         document.getElementById('premium-modal').classList.remove('hidden');
     }
     function closePremiumModal() { document.getElementById('premium-modal').classList.add('hidden'); }
 
-    async function purchasePremium() {
+    function selectPlanTier(tier)       { pickerState.tier    = tier;    renderPlanPicker(); }
+    function selectPlanBilling(billing) { pickerState.billing = billing; renderPlanPicker(); }
+
+    function renderPlanPicker() {
+        const tier   = pickerState.tier;
+        const billing = pickerState.billing;
+        const cfg    = PRICING[tier];
+        if (!cfg) return;
+
+        // Tier tabs
+        document.querySelectorAll('.plan-tier-tab').forEach(btn => {
+            const on = btn.dataset.tier === tier;
+            btn.className = `plan-tier-tab flex-1 py-2.5 px-3 rounded-xl text-sm font-bold transition ${
+                on ? `bg-gradient-to-br ${PRICING[btn.dataset.tier].color} text-white shadow-md`
+                   : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`;
+        });
+
+        // Billing toggles
+        document.querySelectorAll('.plan-billing-tab').forEach(btn => {
+            const on = btn.dataset.billing === billing;
+            btn.className = `plan-billing-tab relative flex-1 py-2 rounded-lg text-xs font-semibold transition ${
+                on ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`;
+        });
+
+        // Hero block (price + tagline + features)
+        setText('plan-tier-name',  cfg.name);
+        setText('plan-tagline',    cfg.tagline);
+        const price = priceFor(tier, billing);
+        setText('plan-price-amount', fmt(price));
+        setText('plan-price-cycle',  billing === 'yearly' ? '/year' : '/month');
+        if (billing === 'yearly') {
+            setText('plan-effective', `${fmt(yearlyEffectiveMonthly(tier))}/mo billed yearly`);
+            setText('plan-savings',   `Save ${fmt(yearlySavings(tier))}/year`);
+            document.getElementById('plan-savings-badge')?.classList.remove('hidden');
+        } else {
+            setText('plan-effective', `Billed every month`);
+            setText('plan-savings',   `Save ${YEARLY_DISCOUNT_PCT}% by paying yearly`);
+            document.getElementById('plan-savings-badge')?.classList.add('hidden');
+        }
+
+        // Feature list
+        const featList = document.getElementById('plan-features');
+        if (featList) {
+            featList.innerHTML = cfg.features.map(f =>
+                `<li class="flex items-start gap-2 text-sm text-gray-700"><i class="fas fa-check text-safe mt-1 shrink-0"></i><span>${escapeHtml(f)}</span></li>`
+            ).join('');
+        }
+
+        // CTA + already-subscribed states
+        const cta = document.getElementById('plan-subscribe-btn');
+        if (cta) {
+            const alreadyHave = (tier === 'pro' && isProActive()) ||
+                                (tier === 'business' && isBusinessProActive());
+            if (alreadyHave) {
+                cta.disabled = true;
+                cta.innerHTML = `<i class="fas fa-check-circle"></i> You already have this`;
+                cta.className = 'w-full bg-gray-200 text-gray-500 font-bold py-3.5 rounded-xl cursor-not-allowed';
+            } else {
+                cta.disabled = false;
+                cta.innerHTML = `<i class="fas fa-bolt"></i> Subscribe · ${fmt(price)}${billing === 'yearly' ? '/yr' : '/mo'}`;
+                cta.className = `w-full bg-gradient-to-r ${cfg.color} text-white font-bold py-3.5 rounded-xl shadow-md hover:shadow-lg transition active:scale-95`;
+            }
+        }
+    }
+
+    async function purchaseSubscription() {
         const user = firebase.auth().currentUser;
         const err  = document.getElementById('premium-error');
         const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
 
-        if (!user || !firestoreReady) return showErr('Sign in with Google to purchase');
-        if (profile.isPremium)         return showErr('You are already Premium');
+        if (!user || !firestoreReady) return showErr('Sign in with Google to subscribe');
 
-        // Pay via wallet balance if available
-        if (walletState.balance >= PREMIUM_PRICE) {
-            try {
-                // Create wallet transaction (debit from user's wallet)
-                await db.collection('walletTransactions').add({
-                    type:          'withdraw',
-                    amount:        PREMIUM_PRICE,
-                    currency:      profile.currency || 'USD',
-                    senderId:      user.uid,
-                    recipientId:   'momo:premium',
-                    senderName:    user.displayName || profile.name || 'You',
-                    recipientName: 'SafeSpend Premium',
-                    phone:         null,
-                    network:       null,
-                    note:          'Premium upgrade (lifetime)',
-                    status:        'completed',
-                    mockRef:       `PREM-${Date.now().toString(36).toUpperCase()}`,
-                    createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
-                    completedAt:   firebase.firestore.FieldValue.serverTimestamp()
-                });
+        const { tier, billing } = pickerState;
+        const cfg   = PRICING[tier];
+        const price = priceFor(tier, billing);
+        if (!cfg || !price) return showErr('Pick a plan first');
 
-                // Record revenue event — this is money for the app
-                await recordRevenueEvent({
-                    type:         'subscription',
-                    amount:       PREMIUM_PRICE,
-                    sourceUserId: user.uid,
-                    description:  'Premium lifetime upgrade'
-                });
+        // Check wallet balance — REAL Play Billing in production (see PLAY-CONSOLE-SUBSCRIPTIONS.md)
+        if (walletState.balance < price) {
+            return showErr(`Insufficient wallet balance. You have ${fmt(walletState.balance)} — top up ${fmt(price - walletState.balance)} more first.`);
+        }
 
-                // Flip user to premium
-                profile.isPremium = true;
-                profile.premiumSince = Date.now();
-                saveData();
-                await db.collection('users').doc(user.uid).update({
-                    isPremium:     true,
-                    premiumSince:  firebase.firestore.FieldValue.serverTimestamp()
-                });
+        try {
+            // Compute expiry
+            const startedAt = Date.now();
+            const expiresAt = billing === 'yearly'
+                ? startedAt + 365 * 86400000
+                : startedAt + 30  * 86400000;
+            const billingLabel = billing === 'yearly' ? 'Yearly' : 'Monthly';
 
-                closePremiumModal();
-                showPayToast('👑 Welcome to SafeSpend Premium!');
-                await loadWallet();
-                updateUI();
-                updateProfilePhoto();
-            } catch (e) {
-                console.warn('[Premium] Purchase failed:', e);
-                showErr('Purchase failed. Try again.');
-            }
-        } else {
-            showErr(`Insufficient wallet balance. You have ${fmt(walletState.balance)}. Top up your Wallet or fund ${fmt(PREMIUM_PRICE - walletState.balance)} more.`);
+            // Debit wallet
+            await db.collection('walletTransactions').add({
+                type:          'withdraw',
+                amount:        price,
+                currency:      profile.currency || 'USD',
+                senderId:      user.uid,
+                recipientId:   `momo:subscription`,
+                senderName:    user.displayName || profile.name || 'You',
+                recipientName: `${cfg.name} (${billingLabel})`,
+                phone:         null,
+                network:       null,
+                note:          `${cfg.name} · ${billingLabel} subscription`,
+                status:        'completed',
+                mockRef:       `SUB-${tier.toUpperCase()}-${billing.toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
+                createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
+                completedAt:   firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Record revenue event
+            await recordRevenueEvent({
+                type:         'subscription',
+                amount:       price,
+                sourceUserId: user.uid,
+                description:  `${cfg.name} ${billingLabel}`
+            });
+
+            // Update local + remote subscription state
+            const newSub = {
+                tier:       tier,
+                billing:    billing,
+                startedAt:  startedAt,
+                expiresAt:  expiresAt,
+                grandfathered: false
+            };
+            profile.subscription = newSub;
+            // Keep legacy isPremium flag in sync so any not-yet-migrated reference still works
+            profile.isPremium = true;
+            profile.premiumSince = startedAt;
+            saveData();
+            await db.collection('users').doc(user.uid).update({
+                subscription:   newSub,
+                isPremium:      true,             // back-compat
+                premiumSince:   firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            closePremiumModal();
+            showPayToast(`${cfg.badgeEmoji} Welcome to ${cfg.name}!`);
+            await loadWallet();
+            updateUI();
+            updateProfilePhoto();
+        } catch (e) {
+            console.warn('[Subscription] Purchase failed:', e);
+            showErr('Purchase failed. Try again.');
         }
     }
+
+    // Backward-compat alias for any old reference
+    const purchasePremium = purchaseSubscription;
 
     // ═══════════════════════════════════════════════════════════════
     //  BUSINESS / COMPANY ENGINE
@@ -6591,9 +6751,10 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         dashboard.classList.add('hidden');
         editBtn.classList.add('hidden');
 
-        // Premium gate first
-        if (!profile.isPremium) {
-            setText('business-gate-price', fmt(PREMIUM_PRICE));
+        // Business Pro gate (v31): requires the Business tier specifically.
+        // Pro tier alone doesn't include business features — they need Business Pro.
+        if (!isBusinessProActive()) {
+            setText('business-gate-price', fmt(PRICING.business.monthly) + '/mo');
             gate.classList.remove('hidden');
             return;
         }
@@ -7073,8 +7234,9 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         gate.classList.add('hidden'); setup.classList.add('hidden');
         active.classList.add('hidden'); newBtn.classList.add('hidden');
 
-        if (!profile.isPremium) {
-            setText('invoices-gate-price', fmt(PREMIUM_PRICE));
+        // Invoices are part of Business Pro tier
+        if (!isBusinessProActive()) {
+            setText('invoices-gate-price', fmt(PRICING.business.monthly) + '/mo');
             gate.classList.remove('hidden');
             return;
         }
@@ -8709,8 +8871,116 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         withdraw: { percent: 2,   flat: 0 }      // 2% on cash-out to MoMo
     };
 
-    const PREMIUM_PRICE  = 9.99;                 // One-time lifetime purchase
-    const PREMIUM_LABEL  = 'SafeSpend Premium';
+    // ═══════════════════════════════════════════════════════════════
+    //  v31 SUBSCRIPTION PRICING — single source of truth
+    //
+    //  Two tiers, two billing cycles each.
+    //  Yearly applies a 2% discount on the 12-month total.
+    //  Business Pro is a SUPERSET of Pro — Business Pro users get all
+    //  Pro features plus business profile + invoicing.
+    //
+    //  All UI text and pricing flow through this config — no hardcoded
+    //  values elsewhere.  To change pricing in the future, edit only here.
+    //
+    //  Existing pre-v31 users with profile.isPremium === true are
+    //  grandfathered into the Pro tier with billing='lifetime' (no expiry)
+    //  via a migration in loadData(). They keep what they paid for.
+    // ═══════════════════════════════════════════════════════════════
+    const YEARLY_DISCOUNT_PCT = 2;     // 2% discount on yearly billing
+    const PRICING = {
+        pro: {
+            id:           'pro',
+            name:         'SafeSpend Pro',
+            shortName:    'Pro',
+            color:        'from-blue-500 to-indigo-600',
+            badgeEmoji:   '⭐',
+            badgeText:    'Pro',
+            tagline:      'For everyday money management',
+            monthly:      19.99,
+            // 12 months minus 2% discount, rounded to 2dp
+            yearly:       Math.round(19.99 * 12 * (1 - YEARLY_DISCOUNT_PCT / 100) * 100) / 100,
+            features: [
+                'Unlimited savings goals',
+                'Advanced AI insights & predictions',
+                'Custom expense categories',
+                'Priority PDF & CSV exports',
+                'Premium themes + dark-mode polish',
+                'Pro badge on your profile'
+            ]
+        },
+        business: {
+            id:           'business',
+            name:         'Business Pro',
+            shortName:    'Business',
+            color:        'from-slate-800 to-slate-700',
+            badgeEmoji:   '💼',
+            badgeText:    'Business',
+            tagline:      'For freelancers, side hustles & small businesses',
+            monthly:      49.99,
+            yearly:       Math.round(49.99 * 12 * (1 - YEARLY_DISCOUNT_PCT / 100) * 100) / 100,
+            features: [
+                'Everything in SafeSpend Pro',
+                'Business profile with logo + branding',
+                'Income / expense / bonus tracking',
+                'Branded P&L PDF reports',
+                'Unlimited invoices with payment tracking',
+                'Customer database',
+                'Priority business support'
+            ]
+        }
+    };
+
+    // Convenience helpers used by purchase flow + display
+    function priceFor(tier, billing) {
+        if (!PRICING[tier]) return 0;
+        return billing === 'yearly' ? PRICING[tier].yearly : PRICING[tier].monthly;
+    }
+    function yearlyEffectiveMonthly(tier) {
+        return PRICING[tier] ? PRICING[tier].yearly / 12 : 0;
+    }
+    function yearlySavings(tier) {
+        if (!PRICING[tier]) return 0;
+        return Math.round((PRICING[tier].monthly * 12 - PRICING[tier].yearly) * 100) / 100;
+    }
+
+    // Legacy alias kept ONLY so any not-yet-migrated reference shows a sensible
+    // value. Prefer PRICING.pro.monthly going forward.
+    const PREMIUM_PRICE  = PRICING.pro.monthly;
+    const PREMIUM_LABEL  = PRICING.pro.name;
+
+    // ── Subscription accessors — use these EVERYWHERE instead of profile.isPremium ──
+    // Returns true if user has an active Pro OR Business subscription (Business is a superset).
+    function isProActive() {
+        if (!profile || !profile.subscription) {
+            // Backward-compat: pre-migration users may still have isPremium set
+            return !!profile?.isPremium;
+        }
+        const sub = profile.subscription;
+        if (!sub.tier) return false;
+        // Lifetime never expires
+        if (sub.billing === 'lifetime' || !sub.expiresAt) return true;
+        // Otherwise check expiry
+        return Date.now() < sub.expiresAt;
+    }
+    // Returns true ONLY if user has an active Business Pro subscription.
+    function isBusinessProActive() {
+        if (!profile || !profile.subscription) return false;
+        const sub = profile.subscription;
+        if (sub.tier !== 'business') return false;
+        if (sub.billing === 'lifetime' || !sub.expiresAt) return true;
+        return Date.now() < sub.expiresAt;
+    }
+    // Active sub label for display ("SafeSpend Pro · Monthly", "Business Pro · Yearly", etc.)
+    function activeSubLabel() {
+        if (!isProActive()) return null;
+        const sub = profile.subscription || {};
+        const tierName = PRICING[sub.tier]?.name || PRICING.pro.name;
+        const billingLabel = sub.billing === 'lifetime' ? 'Lifetime'
+                           : sub.billing === 'yearly'   ? 'Yearly'
+                           : sub.billing === 'monthly'  ? 'Monthly'
+                           :                              '';
+        return billingLabel ? `${tierName} · ${billingLabel}` : tierName;
+    }
 
     // ═══════════════════════════════════════════════════════════════
     //  BUSINESS / COMPANY PROFILE
@@ -10287,22 +10557,30 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
     }
 
     function updateProfileDisplay() {
+        // v31: tier-aware badge in greeting
+        const tierBadge = isBusinessProActive() ? ' 💼'
+                        : isProActive()         ? ' ⭐'
+                        : '';
         const greetEl = document.getElementById('user-greeting');
-        if (greetEl) greetEl.textContent = `${profile.name || 'User'} 👋${profile.isPremium ? ' 👑' : ''}`;
+        if (greetEl) greetEl.textContent = `${profile.name || 'User'} 👋${tierBadge}`;
         const greetTime = document.getElementById('greeting-time');
         if (greetTime) greetTime.textContent = timeOfDayGreeting();
         updateProfilePhoto();
 
-        // Premium card: show "Go Premium" or "Premium Member ✓"
+        // Settings subscription card: shows "Get SafeSpend Pro" or current tier label
         const premiumCard   = document.getElementById('settings-premium-card');
         const premiumActive = document.getElementById('settings-premium-active');
-        if (profile.isPremium) {
+        if (isProActive()) {
             premiumCard?.classList.add('hidden');
             premiumActive?.classList.remove('hidden');
+            // If we have a label slot, show the current tier + billing
+            const lblEl = document.getElementById('settings-premium-active-label');
+            if (lblEl) lblEl.textContent = activeSubLabel() || PRICING.pro.name;
         } else {
             premiumCard?.classList.remove('hidden');
             premiumActive?.classList.add('hidden');
-            setText('settings-premium-price', fmt(PREMIUM_PRICE));
+            // Show "from $X/mo" on the card
+            setText('settings-premium-price', `${fmt(PRICING.pro.monthly)}/mo`);
         }
 
         // Admin card: show only if current user's UID is in ADMIN_UIDS
