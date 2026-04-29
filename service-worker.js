@@ -1,4 +1,4 @@
-const CACHE_NAME = 'safespend-v33';
+const CACHE_NAME = 'safespend-v34';
 
 const PRECACHE_URLS = [
     './',
@@ -77,6 +77,13 @@ self.addEventListener('fetch', event => {
 let notifTimeout = null;
 let notifConfig  = { time: '20:00', message: "Have you logged today's expenses?", days: [0,1,2,3,4,5,6] };
 
+// v34 — per-activity reminders. The frontend posts SCHEDULE_ACTIVITY_REMINDERS
+// with a list of { id, title, fireAt (epoch ms) }. We replace any prior schedule
+// (the frontend sends the FULL set every time, never a delta) and arm a setTimeout
+// per item. Posting an empty list cancels all pending reminders — used by the
+// master notifications toggle to disable.
+let activityTimeouts = {};   // { activityId: timeoutId }
+
 self.addEventListener('message', event => {
     if (!event.data) return;
     if (event.data.type === 'SKIP_WAITING') {
@@ -87,6 +94,32 @@ self.addEventListener('message', event => {
         if (event.data.message)          notifConfig.message = event.data.message;
         if (Array.isArray(event.data.days)) notifConfig.days  = event.data.days;
         scheduleDailyNotification();
+    }
+    if (event.data.type === 'SCHEDULE_ACTIVITY_REMINDERS') {
+        // Cancel anything previously scheduled — the frontend sends the
+        // complete set every time so we don't need to diff.
+        Object.values(activityTimeouts).forEach(t => clearTimeout(t));
+        activityTimeouts = {};
+
+        const list = Array.isArray(event.data.list) ? event.data.list : [];
+        const now = Date.now();
+        const HORIZON_MS = 24 * 60 * 60 * 1000;
+        list.forEach(item => {
+            if (!item || !item.id || !item.title) return;
+            const delay = Number(item.fireAt) - now;
+            if (delay <= 0 || delay > HORIZON_MS) return;
+            activityTimeouts[item.id] = setTimeout(() => {
+                self.registration.showNotification('SafeSpend Reminder ⏰', {
+                    body:    item.title,
+                    icon:    './icon-192.svg',
+                    badge:   './icon-192.svg',
+                    tag:     'activity-' + item.id,
+                    renotify: true,
+                    actions: [{ action: 'open', title: 'Open App' }]
+                });
+                delete activityTimeouts[item.id];
+            }, delay);
+        });
     }
 });
 
