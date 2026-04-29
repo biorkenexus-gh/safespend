@@ -41,6 +41,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <!-- v32: Cloud Functions for server-side payment verification (Flutterwave / Paystack) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -2788,9 +2790,190 @@
                             Maybe later
                         </button>
                         <p class="text-[10px] text-center text-gray-400 mt-2 leading-relaxed">
-                            Paid via your SafeSpend Wallet. <br>
-                            <span class="text-gray-500">Production: Google Play Billing — see <code class="bg-gray-100 px-1 rounded">PLAY-CONSOLE-SUBSCRIPTIONS.md</code></span>
+                            Pay with Card, Mobile Money, or your SafeSpend Wallet.<br>
+                            <span class="text-gray-500">256-bit secure · Powered by Flutterwave</span>
                         </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== PAYMENT METHOD PICKER (v32) ==================== -->
+            <div id="pay-method-modal" class="fixed inset-0 bg-black/60 z-[200] hidden flex items-center justify-center p-3">
+                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl slide-up flex flex-col max-h-[95vh]">
+                    <!-- Header -->
+                    <div class="px-5 pt-5 pb-3 text-center border-b border-gray-100">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <i class="fas fa-credit-card text-xl text-primary"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-gray-800">How would you like to pay?</h3>
+                        <p class="text-[11px] text-gray-500 mt-1" id="pay-method-summary">—</p>
+                    </div>
+
+                    <!-- Methods -->
+                    <div class="flex-1 overflow-y-auto p-4 space-y-2.5" id="pay-method-list">
+                        <!-- Card / Bank -->
+                        <button onclick="selectPayMethod('card')"
+                                class="pay-method-btn w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-gray-200 hover:border-primary hover:bg-blue-50/40 transition text-left">
+                            <div class="w-11 h-11 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center text-white shrink-0">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-sm text-gray-800">Card or Bank</p>
+                                <p class="text-[11px] text-gray-500">Visa, Mastercard, Verve · Bank Transfer</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-300"></i>
+                        </button>
+
+                        <!-- Mobile Money -->
+                        <button onclick="selectPayMethod('momo')"
+                                class="pay-method-btn w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-gray-200 hover:border-primary hover:bg-blue-50/40 transition text-left">
+                            <div class="w-11 h-11 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center text-white shrink-0">
+                                <i class="fas fa-mobile-screen-button"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-sm text-gray-800">Mobile Money</p>
+                                <p class="text-[11px] text-gray-500">MTN · Vodafone · AirtelTigo · M-Pesa</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-300"></i>
+                        </button>
+
+                        <!-- Wallet -->
+                        <button onclick="selectPayMethod('wallet')"
+                                class="pay-method-btn w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-gray-200 hover:border-primary hover:bg-blue-50/40 transition text-left">
+                            <div class="w-11 h-11 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center text-white shrink-0">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-sm text-gray-800">SafeSpend Wallet</p>
+                                <p class="text-[11px] text-gray-500" id="pay-method-wallet-bal">—</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-300"></i>
+                        </button>
+
+                        <!-- Play Billing notice (TWA only) -->
+                        <div id="pay-method-twa-notice" class="hidden p-3 rounded-xl bg-blue-50 border border-blue-100 text-[11px] text-blue-700">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Detected Play Store install. Your subscription will be billed via Google Play.
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="px-5 pb-4 pt-2 border-t border-gray-100">
+                        <p class="text-[10px] text-center text-gray-400 leading-relaxed">
+                            <i class="fas fa-lock mr-1"></i>
+                            Your payment is encrypted and verified server-side.<br>
+                            We never store your card details.
+                        </p>
+                        <button onclick="closePayMethodModal()"
+                                class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== MOBILE MONEY FLOW (v32) ==================== -->
+            <!-- IDs are prefixed `sub-momo-*` to avoid collision with the wallet
+                 send-money form (which uses `momo-phone`, `momo-network-btn`, etc.). -->
+            <div id="pay-momo-modal" class="fixed inset-0 bg-black/60 z-[210] hidden flex items-center justify-center p-3">
+                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl slide-up flex flex-col max-h-[95vh]">
+
+                    <!-- ─── STEP 1: Phone + network input ─── -->
+                    <div id="sub-momo-step-input" class="flex flex-col">
+                        <div class="px-5 pt-5 pb-3 text-center">
+                            <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <i class="fas fa-mobile-screen-button text-xl text-amber-600"></i>
+                            </div>
+                            <h3 class="text-xl font-display font-bold text-gray-800">Mobile Money</h3>
+                            <p class="text-[11px] text-gray-500 mt-1" id="sub-momo-summary">—</p>
+                        </div>
+
+                        <div class="flex-1 overflow-y-auto px-5 pb-3 space-y-3">
+                            <div>
+                                <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Network</label>
+                                <div id="sub-momo-networks" class="grid grid-cols-2 gap-2 mt-1.5">
+                                    <!-- filled by renderSubMomoNetworks() -->
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Phone Number</label>
+                                <input type="tel" id="sub-momo-phone" inputmode="numeric" maxlength="15"
+                                       placeholder="0244 123 456"
+                                       class="w-full mt-1 p-3 rounded-xl border-2 border-gray-200 focus:border-primary outline-none font-mono text-base">
+                                <p class="text-[10px] text-gray-400 mt-1">Enter the number registered with your mobile-money provider.</p>
+                            </div>
+                            <p id="sub-momo-error" class="hidden text-xs text-danger text-center"></p>
+                        </div>
+
+                        <div class="px-5 pb-5 pt-2 border-t border-gray-100">
+                            <button id="sub-momo-pay-btn" onclick="submitSubMomoPayment()"
+                                    class="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold py-3.5 rounded-xl shadow-md hover:shadow-lg transition active:scale-95">
+                                <i class="fas fa-lock mr-1"></i>
+                                <span id="sub-momo-pay-btn-label">Pay</span>
+                            </button>
+                            <button onclick="cancelSubMomoFlow()"
+                                    class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                                Back
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ─── STEP 2: Waiting for confirmation ─── -->
+                    <div id="sub-momo-step-waiting" class="hidden p-6 text-center">
+                        <div class="w-20 h-20 mx-auto mb-4 relative">
+                            <div class="absolute inset-0 rounded-full border-4 border-amber-100"></div>
+                            <div class="absolute inset-0 rounded-full border-4 border-amber-500 border-t-transparent animate-spin"></div>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <i class="fas fa-mobile-screen-button text-2xl text-amber-600"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-display font-bold text-gray-800 mb-2">Check your phone</h3>
+                        <p class="text-sm text-gray-600 leading-relaxed">
+                            We've sent a payment prompt to<br>
+                            <span class="font-semibold text-gray-800" id="sub-momo-waiting-phone">—</span>
+                        </p>
+                        <p class="text-xs text-gray-500 mt-3">
+                            Enter your PIN to approve. This usually takes 10–30 seconds.
+                        </p>
+                        <p class="text-[11px] text-amber-600 mt-4">
+                            <i class="fas fa-circle-notch fa-spin mr-1"></i>
+                            <span id="sub-momo-waiting-status">Waiting for confirmation…</span>
+                        </p>
+                        <button onclick="cancelSubMomoFlow()"
+                                class="mt-6 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                            Cancel
+                        </button>
+                    </div>
+
+                    <!-- ─── STEP 3: Success ─── -->
+                    <div id="sub-momo-step-success" class="hidden p-6 text-center">
+                        <div class="w-20 h-20 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-check text-3xl text-green-600"></i>
+                        </div>
+                        <h3 class="text-lg font-display font-bold text-gray-800 mb-2">Payment Successful!</h3>
+                        <p class="text-sm text-gray-600">Your subscription is now active.</p>
+                        <p class="text-[11px] text-gray-400 mt-2 font-mono" id="sub-momo-success-ref">—</p>
+                        <button onclick="closeSubMomoFlow()"
+                                class="w-full mt-5 bg-primary text-white font-bold py-3 rounded-xl">
+                            Continue
+                        </button>
+                    </div>
+
+                    <!-- ─── STEP 4: Failure / Timeout ─── -->
+                    <div id="sub-momo-step-error" class="hidden p-6 text-center">
+                        <div class="w-20 h-20 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-times text-3xl text-red-500"></i>
+                        </div>
+                        <h3 class="text-lg font-display font-bold text-gray-800 mb-2" id="sub-momo-error-title">Payment Failed</h3>
+                        <p class="text-sm text-gray-600" id="sub-momo-error-msg">We couldn't confirm your payment.</p>
+                        <button onclick="retrySubMomoPayment()"
+                                class="w-full mt-5 bg-amber-500 text-white font-bold py-3 rounded-xl">
+                            <i class="fas fa-redo mr-1"></i> Try Again
+                        </button>
+                        <button onclick="closeSubMomoFlow()"
+                                class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                            Close
+                        </button>
                     </div>
                 </div>
             </div>
@@ -6551,6 +6734,27 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    //  v32 — PAYMENT ROUTER
+    //
+    //  purchaseSubscription() is the single CTA on the plan picker.
+    //  It now ROUTES to one of three flows based on the user's choice:
+    //
+    //     ┌─ Card / Bank  → Flutterwave inline checkout (hosted) ──┐
+    //     ├─ Mobile Money → Flutterwave Charges API + push prompt ─┼─→ verifySubscriptionPayment (Cloud Fn)
+    //     └─ Wallet       → debits SafeSpend wallet directly ──────┘
+    //
+    //  Server-side verification is REQUIRED for MoMo + Card. The wallet
+    //  path stays client-side because funds are already escrowed in the
+    //  user's own SafeSpend wallet (no external gateway needed).
+    //
+    //  In TWA mode (Play Store install) the picker is hidden and the
+    //  wallet path is used (will be swapped to Play Billing — see
+    //  PLAY-CONSOLE-SUBSCRIPTIONS.md).
+    // ═══════════════════════════════════════════════════════════════
+
+    let pendingPayment = null;   // { tier, billing, price, txRef, phone, network, pollHandle, timeoutHandle }
+
     async function purchaseSubscription() {
         const user = firebase.auth().currentUser;
         const err  = document.getElementById('premium-error');
@@ -6563,19 +6767,88 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         const price = priceFor(tier, billing);
         if (!cfg || !price) return showErr('Pick a plan first');
 
-        // Check wallet balance — REAL Play Billing in production (see PLAY-CONSOLE-SUBSCRIPTIONS.md)
+        // Pre-stage payment context — used by every flow
+        pendingPayment = {
+            tier,
+            billing,
+            price,
+            cfg,
+            billingLabel: billing === 'yearly' ? 'Yearly' : 'Monthly',
+            createdAt:    Date.now()
+        };
+
+        // Open the payment-method picker
+        openPayMethodModal();
+    }
+
+    // Backward-compat alias for any old reference
+    const purchasePremium = purchaseSubscription;
+
+    // ─────────────────────────────────────────────────────────────
+    //  PAYMENT METHOD PICKER
+    // ─────────────────────────────────────────────────────────────
+    function openPayMethodModal() {
+        if (!pendingPayment) return;
+        const { cfg, billingLabel, price } = pendingPayment;
+
+        setText('pay-method-summary',
+            `${cfg.badgeEmoji} ${cfg.name} · ${billingLabel} · ${fmt(price)}`);
+
+        // Show wallet balance (or hide row if wallet not loaded)
+        if (typeof walletState !== 'undefined' && walletState && typeof walletState.balance === 'number') {
+            const enough = walletState.balance >= price;
+            setText('pay-method-wallet-bal',
+                enough ? `Balance: ${fmt(walletState.balance)}`
+                       : `Balance: ${fmt(walletState.balance)} (top up ${fmt(price - walletState.balance)} more)`);
+        } else {
+            setText('pay-method-wallet-bal', 'Tap to use your in-app balance');
+        }
+
+        // TWA mode: only Play Billing path
+        const twa = isInTWA();
+        document.getElementById('pay-method-twa-notice')?.classList.toggle('hidden', !twa);
+        document.querySelectorAll('#pay-method-list .pay-method-btn').forEach(btn => {
+            btn.classList.toggle('hidden', twa); // hide card+momo+wallet rows in TWA
+        });
+        // In TWA, we still need *some* path — show wallet only (until Play Billing wired)
+        if (twa) {
+            const walletBtn = document.querySelector('#pay-method-list button[onclick*="wallet"]');
+            walletBtn?.classList.remove('hidden');
+        }
+
+        document.getElementById('pay-method-modal').classList.remove('hidden');
+    }
+    function closePayMethodModal() {
+        document.getElementById('pay-method-modal').classList.add('hidden');
+    }
+
+    function selectPayMethod(method) {
+        if (!pendingPayment) return closePayMethodModal();
+        closePayMethodModal();
+
+        if (method === 'wallet') return purchaseWithWallet();
+        if (method === 'momo')   return openSubMomoFlow();
+        if (method === 'card')   return purchaseWithCard();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  FLOW 1: WALLET (preserved from v31, server-trust unchanged)
+    // ─────────────────────────────────────────────────────────────
+    async function purchaseWithWallet() {
+        if (!pendingPayment) return;
+        const user = firebase.auth().currentUser;
+        const err  = document.getElementById('premium-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+        const { tier, billing, price, cfg, billingLabel } = pendingPayment;
+
+        if (!user || !firestoreReady) return showErr('Sign in with Google to subscribe');
+
         if (walletState.balance < price) {
+            openPremiumModal(tier);  // re-open plan picker for context
             return showErr(`Insufficient wallet balance. You have ${fmt(walletState.balance)} — top up ${fmt(price - walletState.balance)} more first.`);
         }
 
         try {
-            // Compute expiry
-            const startedAt = Date.now();
-            const expiresAt = billing === 'yearly'
-                ? startedAt + 365 * 86400000
-                : startedAt + 30  * 86400000;
-            const billingLabel = billing === 'yearly' ? 'Yearly' : 'Monthly';
-
             // Debit wallet
             await db.collection('walletTransactions').add({
                 type:          'withdraw',
@@ -6587,38 +6860,22 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
                 recipientName: `${cfg.name} (${billingLabel})`,
                 phone:         null,
                 network:       null,
-                note:          `${cfg.name} · ${billingLabel} subscription`,
+                note:          `${cfg.name} · ${billingLabel} subscription · paid with wallet`,
                 status:        'completed',
                 mockRef:       `SUB-${tier.toUpperCase()}-${billing.toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
                 createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
                 completedAt:   firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Record revenue event
             await recordRevenueEvent({
-                type:         'subscription',
-                amount:       price,
-                sourceUserId: user.uid,
-                description:  `${cfg.name} ${billingLabel}`
+                type: 'subscription', amount: price, sourceUserId: user.uid,
+                description: `${cfg.name} ${billingLabel} (wallet)`
             });
 
-            // Update local + remote subscription state
-            const newSub = {
-                tier:       tier,
-                billing:    billing,
-                startedAt:  startedAt,
-                expiresAt:  expiresAt,
-                grandfathered: false
-            };
-            profile.subscription = newSub;
-            // Keep legacy isPremium flag in sync so any not-yet-migrated reference still works
-            profile.isPremium = true;
-            profile.premiumSince = startedAt;
-            saveData();
-            await db.collection('users').doc(user.uid).update({
-                subscription:   newSub,
-                isPremium:      true,             // back-compat
-                premiumSince:   firebase.firestore.FieldValue.serverTimestamp()
+            await activateSubscriptionLocally({
+                tier, billing,
+                paymentMethod: 'wallet',
+                providerRef:   null
             });
 
             closePremiumModal();
@@ -6626,14 +6883,308 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
             await loadWallet();
             updateUI();
             updateProfilePhoto();
+            pendingPayment = null;
         } catch (e) {
-            console.warn('[Subscription] Purchase failed:', e);
+            console.warn('[Subscription] Wallet payment failed:', e);
             showErr('Purchase failed. Try again.');
         }
     }
 
-    // Backward-compat alias for any old reference
-    const purchasePremium = purchaseSubscription;
+    // ─────────────────────────────────────────────────────────────
+    //  FLOW 2: MOBILE MONEY (Flutterwave push-prompt + polling)
+    //
+    //  All identifiers in this block are prefixed `sub-momo-*` /
+    //  `subMomo*` to avoid colliding with the wallet send-money form
+    //  in #wallet-send-modal, which uses the bare `momo-*` namespace.
+    // ─────────────────────────────────────────────────────────────
+    let subMomoSelectedNetwork = 'MTN';
+
+    function openSubMomoFlow() {
+        if (!pendingPayment) return;
+        const { cfg, billingLabel, price } = pendingPayment;
+        setText('sub-momo-summary',
+            `${cfg.name} · ${billingLabel} · ${fmtCcy(price, PAYMENT_GATEWAY.currency)}`);
+        setText('sub-momo-pay-btn-label', `Pay ${fmtCcy(price, PAYMENT_GATEWAY.currency)}`);
+        // Reset state
+        document.getElementById('sub-momo-phone').value = '';
+        document.getElementById('sub-momo-error').classList.add('hidden');
+        showSubMomoStep('input');
+        renderSubMomoNetworks();
+        document.getElementById('pay-momo-modal').classList.remove('hidden');
+    }
+
+    function renderSubMomoNetworks() {
+        const host = document.getElementById('sub-momo-networks');
+        if (!host) return;
+        host.innerHTML = PAYMENT_GATEWAY.momoNetworks.map(n => {
+            const sel = subMomoSelectedNetwork === n.code;
+            return `<button onclick="selectSubMomoNetwork('${n.code}')"
+                            class="momo-net-pill p-2.5 rounded-xl border-2 text-left transition ${
+                                sel ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-200'
+                                    : 'border-gray-200 hover:border-amber-300'
+                            }">
+                        <p class="text-xs font-semibold text-gray-700">${n.flag} ${escapeHtml(n.code)}</p>
+                        <p class="text-[10px] text-gray-500 leading-tight">${escapeHtml(n.name)}</p>
+                    </button>`;
+        }).join('');
+    }
+    function selectSubMomoNetwork(code) { subMomoSelectedNetwork = code; renderSubMomoNetworks(); }
+
+    function showSubMomoStep(step) {
+        ['input', 'waiting', 'success', 'error'].forEach(s => {
+            document.getElementById(`sub-momo-step-${s}`)?.classList.toggle('hidden', s !== step);
+        });
+    }
+    function showSubMomoError(title, msg) {
+        setText('sub-momo-error-title', title || 'Payment Failed');
+        setText('sub-momo-error-msg',   msg   || "We couldn't confirm your payment.");
+        showSubMomoStep('error');
+    }
+    function cancelSubMomoFlow() {
+        stopSubMomoPolling();
+        closeSubMomoFlow();
+    }
+    function closeSubMomoFlow() {
+        stopSubMomoPolling();
+        document.getElementById('pay-momo-modal').classList.add('hidden');
+    }
+    function retrySubMomoPayment() {
+        // Reset for another attempt — keep tier/billing context
+        showSubMomoStep('input');
+    }
+
+    function stopSubMomoPolling() {
+        if (pendingPayment?.pollHandle)    { clearInterval(pendingPayment.pollHandle);    pendingPayment.pollHandle = null; }
+        if (pendingPayment?.timeoutHandle) { clearTimeout(pendingPayment.timeoutHandle);   pendingPayment.timeoutHandle = null; }
+    }
+
+    async function submitSubMomoPayment() {
+        if (!pendingPayment) return;
+        const errEl = document.getElementById('sub-momo-error');
+        const showErr = msg => { errEl.textContent = msg; errEl.classList.remove('hidden'); };
+        errEl.classList.add('hidden');
+
+        const phone = document.getElementById('sub-momo-phone').value.trim();
+        if (!phone || phone.length < 9) return showErr('Enter a valid phone number');
+        if (!subMomoSelectedNetwork)     return showErr('Pick a network');
+
+        const user = firebase.auth().currentUser;
+        if (!user) return showErr('Sign in to subscribe');
+
+        const { tier, billing, price, cfg, billingLabel } = pendingPayment;
+
+        // Lock UI + go to waiting state
+        const btn = document.getElementById('sub-momo-pay-btn');
+        btn.disabled = true;
+        btn.classList.add('opacity-50');
+
+        try {
+            const init = await callFn('initiateMomoPayment')({
+                tier, billing,
+                amount:   price,
+                currency: PAYMENT_GATEWAY.currency,
+                phone,
+                network:  subMomoSelectedNetwork,
+                description: `${cfg.name} · ${billingLabel}`
+            });
+            const { txRef, status } = init.data || {};
+            if (!txRef) throw new Error('Gateway did not return a transaction reference');
+
+            // Show waiting step
+            setText('sub-momo-waiting-phone', `${phone} (${subMomoSelectedNetwork})`);
+            setText('sub-momo-waiting-status', 'Waiting for confirmation…');
+            pendingPayment.txRef   = txRef;
+            pendingPayment.phone   = phone;
+            pendingPayment.network = subMomoSelectedNetwork;
+            showSubMomoStep('waiting');
+
+            // Begin polling
+            startSubMomoPolling(txRef);
+        } catch (e) {
+            console.warn('[MoMo] init failed:', e);
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+            const code = e.code || '';
+            const msg  = (e.message || '').toLowerCase();
+            if (code === 'unauthenticated' || msg.includes('cloud functions not available')) {
+                return showErr('Payment system unavailable. Make sure the SafeSpend backend is deployed (see PAYMENT-GATEWAY-SETUP.md).');
+            }
+            showErr(e.message || 'Could not start payment. Try again.');
+        }
+    }
+
+    function startSubMomoPolling(txRef) {
+        if (!pendingPayment) return;
+        const { intervalMs, timeoutMs } = PAYMENT_GATEWAY.polling;
+        let attempts = 0;
+
+        pendingPayment.pollHandle = setInterval(async () => {
+            attempts++;
+            try {
+                const res = await callFn('verifySubscriptionPayment')({ txRef });
+                const status = res.data?.status;
+                setText('sub-momo-waiting-status',
+                    status === 'pending'  ? 'Waiting for you to enter your PIN…'
+                  : status === 'verifying' ? 'Verifying with provider…'
+                  : 'Waiting for confirmation…'
+                );
+                if (status === 'successful') {
+                    stopSubMomoPolling();
+                    setText('sub-momo-success-ref', `Ref: ${txRef}`);
+                    showSubMomoStep('success');
+                    // Activate locally so UI updates while server settles
+                    await activateSubscriptionLocally({
+                        tier:          pendingPayment.tier,
+                        billing:       pendingPayment.billing,
+                        paymentMethod: 'momo',
+                        providerRef:   txRef
+                    });
+                    closePremiumModal();
+                    showPayToast(`${pendingPayment.cfg.badgeEmoji} Welcome to ${pendingPayment.cfg.name}!`);
+                    updateUI();
+                    updateProfilePhoto();
+                    return;
+                }
+                if (status === 'failed' || status === 'cancelled') {
+                    stopSubMomoPolling();
+                    showSubMomoError(
+                        status === 'cancelled' ? 'Payment Cancelled' : 'Payment Failed',
+                        res.data?.message || 'The payment did not go through. No charge was made.'
+                    );
+                }
+            } catch (e) {
+                console.warn('[MoMo] poll error:', e);
+                // Don't kill polling on transient errors — let timeout handle persistent ones
+            }
+        }, intervalMs);
+
+        pendingPayment.timeoutHandle = setTimeout(() => {
+            stopSubMomoPolling();
+            showSubMomoError('Payment Timed Out',
+                'We didn\'t receive a confirmation in time. If your phone was charged, your subscription will activate automatically once we hear back from the provider.');
+        }, timeoutMs);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  FLOW 3: CARD / BANK (Flutterwave inline checkout)
+    // ─────────────────────────────────────────────────────────────
+    async function purchaseWithCard() {
+        if (!pendingPayment) return;
+        const user = firebase.auth().currentUser;
+        const err  = document.getElementById('premium-error');
+        const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
+        const { tier, billing, price, cfg, billingLabel } = pendingPayment;
+
+        if (!user) return showErr('Sign in to subscribe');
+        if (PAYMENT_GATEWAY.publicKey.includes('SANDBOXDEMOKEY')) {
+            // Soft-warn the developer in console; let them proceed in test mode
+            console.warn('[Payments] Using sandbox key — set PAYMENT_GATEWAY.publicKey to your live FLWPUBK_ key in production.');
+        }
+
+        try {
+            await loadFlutterwaveSDK();
+
+            // Reserve a tx_ref server-side first so the webhook can match it
+            const init = await callFn('initiateCardPayment')({
+                tier, billing,
+                amount:   price,
+                currency: PAYMENT_GATEWAY.cardCurrency,
+                description: `${cfg.name} · ${billingLabel}`
+            });
+            const { txRef } = init.data || {};
+            if (!txRef) throw new Error('Could not initialize card payment');
+
+            pendingPayment.txRef = txRef;
+
+            window.FlutterwaveCheckout({
+                public_key: PAYMENT_GATEWAY.publicKey,
+                tx_ref:     txRef,
+                amount:     price,
+                currency:   PAYMENT_GATEWAY.cardCurrency,
+                payment_options: 'card,banktransfer,ussd',
+                customer: {
+                    email:       user.email || profile.email || 'guest@safespend.app',
+                    phone_number: profile.phone || '',
+                    name:        user.displayName || profile.name || 'SafeSpend User'
+                },
+                customizations: {
+                    title:       `${cfg.name} Subscription`,
+                    description: `${billingLabel} plan · ${fmtCcy(price, PAYMENT_GATEWAY.cardCurrency)}`,
+                    logo:        location.origin + '/logo.png'
+                },
+                meta: { uid: user.uid, tier, billing },
+                callback: async (response) => {
+                    // Inline modal closes after this callback returns
+                    if (response.status === 'successful' || response.status === 'completed') {
+                        try {
+                            const v = await callFn('verifySubscriptionPayment')({ txRef });
+                            if (v.data?.status === 'successful') {
+                                await activateSubscriptionLocally({
+                                    tier, billing,
+                                    paymentMethod: 'card',
+                                    providerRef:   txRef
+                                });
+                                closePremiumModal();
+                                showPayToast(`${cfg.badgeEmoji} Welcome to ${cfg.name}!`);
+                                updateUI();
+                                updateProfilePhoto();
+                            } else {
+                                showErr('Payment received but verification failed. We\'ll retry automatically.');
+                            }
+                        } catch (e) {
+                            console.warn('[Card] Verify failed:', e);
+                            showErr('Payment received but verification failed. We\'ll retry automatically.');
+                        }
+                    } else {
+                        showErr('Payment was not completed. No charge was made.');
+                    }
+                    pendingPayment = null;
+                },
+                onclose: () => { /* user dismissed — keep silent */ }
+            });
+        } catch (e) {
+            console.warn('[Card] init failed:', e);
+            const msg = (e.message || '').toLowerCase();
+            if (msg.includes('cloud functions not available')) {
+                return showErr('Payment system unavailable. Deploy the SafeSpend backend (see PAYMENT-GATEWAY-SETUP.md).');
+            }
+            showErr(e.message || 'Could not open card checkout. Try again.');
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Shared: activate subscription locally + persist to Firestore
+    //  Server-side activation also happens via webhook for safety —
+    //  this just makes the UI snappy. The server doc is the truth.
+    // ─────────────────────────────────────────────────────────────
+    async function activateSubscriptionLocally({ tier, billing, paymentMethod, providerRef }) {
+        const user = firebase.auth().currentUser;
+        if (!user) return;
+        const startedAt = Date.now();
+        const expiresAt = billing === 'yearly'
+            ? startedAt + 365 * 86400000
+            : startedAt + 30  * 86400000;
+        const newSub = {
+            tier, billing, startedAt, expiresAt,
+            grandfathered: false,
+            paymentMethod,                          // 'wallet' | 'momo' | 'card' | 'play'
+            providerRef:   providerRef || null      // tx_ref / purchaseToken / null
+        };
+        profile.subscription = newSub;
+        profile.isPremium    = true;                // back-compat
+        profile.premiumSince = startedAt;
+        saveData();
+        try {
+            await db.collection('users').doc(user.uid).update({
+                subscription: newSub,
+                isPremium:    true,
+                premiumSince: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (e) {
+            // Webhook will reconcile — non-fatal
+            console.warn('[Subscription] Local sync failed (webhook will reconcile):', e);
+        }
+    }
 
     // ═══════════════════════════════════════════════════════════════
     //  BUSINESS / COMPANY ENGINE
@@ -8947,6 +9498,87 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
     // value. Prefer PRICING.pro.monthly going forward.
     const PREMIUM_PRICE  = PRICING.pro.monthly;
     const PREMIUM_LABEL  = PRICING.pro.name;
+
+    // ═══════════════════════════════════════════════════════════════
+    //  v32 PAYMENT GATEWAY CONFIG (Flutterwave)
+    //  Public key only — secrets live in Cloud Functions env.
+    //  Supports: Card, Bank Transfer, Mobile Money (MTN, Vodafone,
+    //  AirtelTigo, M-Pesa). Switch to live mode by replacing the key
+    //  below + setting FLW_SECRET_KEY in Cloud Functions.
+    //  See PAYMENT-GATEWAY-SETUP.md for full instructions.
+    // ═══════════════════════════════════════════════════════════════
+    const PAYMENT_GATEWAY = {
+        // Provider: 'flutterwave' | 'paystack' (currently flutterwave only)
+        provider:  'flutterwave',
+        // Test public key by default — replace with FLWPUBK-XXXX-X (live) for production
+        publicKey: 'FLWPUBK_TEST-SANDBOXDEMOKEY-X',
+        // Currency MUST match what your Flutterwave account is enabled for.
+        // GHS for Ghana mobile money; NGN/KES/UGX/ZAR also supported. USD for cards.
+        currency:        'GHS',
+        cardCurrency:    'USD',     // cards usually billed in USD; mobile money in local
+        // Supported mobile money networks. Flutterwave docs:
+        //   https://developer.flutterwave.com/docs/integration-guides/mobile-money
+        momoNetworks: [
+            { code: 'MTN',        name: 'MTN Mobile Money',  flag: '📱', color: 'bg-yellow-50 border-yellow-300 text-yellow-800', country: 'GH' },
+            { code: 'VODAFONE',   name: 'Vodafone Cash',     flag: '📞', color: 'bg-red-50 border-red-300 text-red-700',          country: 'GH' },
+            { code: 'AIRTELTIGO', name: 'AirtelTigo Money',  flag: '📲', color: 'bg-blue-50 border-blue-300 text-blue-700',       country: 'GH' },
+            { code: 'MPESA',      name: 'M-Pesa',            flag: '💚', color: 'bg-green-50 border-green-300 text-green-700',    country: 'KE' }
+        ],
+        // Polling config for mobile money (push-prompt → wait → verify)
+        polling: {
+            intervalMs: 4000,    // check every 4s
+            timeoutMs:  120000,  // give up after 2 minutes
+        }
+    };
+
+    // Detect if app is running inside a Trusted Web Activity (Play Store install).
+    // When TRUE: Google Play policy requires Play Billing for digital goods, so we
+    // hide the Card / MoMo options and route through the existing Play flow.
+    function isInTWA() {
+        try {
+            // Bubblewrap-built TWAs set referrer to android-app://com.safespend.app
+            if (typeof document !== 'undefined' && document.referrer.startsWith('android-app://')) return true;
+            // Digital Goods API only exists when running as a TWA with Play Billing enabled
+            if (typeof window !== 'undefined' && 'getDigitalGoodsService' in window) return true;
+        } catch (_) { /* ignore */ }
+        return false;
+    }
+
+    // Lazy-load Flutterwave inline checkout SDK (only loads when user picks Card)
+    let _flwSdkPromise = null;
+    function loadFlutterwaveSDK() {
+        if (_flwSdkPromise) return _flwSdkPromise;
+        _flwSdkPromise = new Promise((resolve, reject) => {
+            if (window.FlutterwaveCheckout) return resolve();
+            const s = document.createElement('script');
+            s.src = 'https://checkout.flutterwave.com/v3.js';
+            s.async = true;
+            s.onload  = () => resolve();
+            s.onerror = () => { _flwSdkPromise = null; reject(new Error('Failed to load Flutterwave checkout SDK')); };
+            document.head.appendChild(s);
+        });
+        return _flwSdkPromise;
+    }
+
+    // Get a callable reference to a Cloud Function (lazy — supports environments
+    // where Functions isn't yet enabled in the Firebase project).
+    function callFn(name) {
+        if (!firebaseReady || !firebase.functions) {
+            return Promise.reject(new Error('Cloud Functions not available — deploy SafeSpend backend first (see PAYMENT-GATEWAY-SETUP.md).'));
+        }
+        return firebase.functions().httpsCallable(name);
+    }
+
+    // Format an amount in a SPECIFIC currency code (independent of profile.currency).
+    // Used in payment UI where the gateway currency may differ from the user's display currency.
+    function fmtCcy(amount, code) {
+        try {
+            const sym = (typeof CURRENCIES !== 'undefined' && CURRENCIES[code]) || code + ' ';
+            return `${sym}${parseFloat(amount || 0).toFixed(2)}`;
+        } catch (_) {
+            return `${code} ${parseFloat(amount || 0).toFixed(2)}`;
+        }
+    }
 
     // ── Subscription accessors — use these EVERYWHERE instead of profile.isPremium ──
     // Returns true if user has an active Pro OR Business subscription (Business is a superset).

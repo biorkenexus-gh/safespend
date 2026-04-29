@@ -243,6 +243,19 @@ service cloud.firestore {
                     && resource.data.ownerUid == request.auth.uid;
     }
 
+    // ─── Subscription Transactions (v32) ──────────────────────────
+    // Records of subscription payments via external gateways
+    // (Flutterwave: Card / Mobile Money / Bank). Created and mutated
+    // ONLY by Cloud Functions using the admin SDK — never the client.
+    //
+    // Read: only the owner can see their own subscription receipts.
+    // Write: BLOCKED for all clients. Cloud Functions bypass these rules.
+    match /subscriptionTransactions/{id} {
+      allow read:   if request.auth != null
+                      && resource.data.ownerUid == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+
     // ─── Invoices ─────────────────────────────────────────────────
     // Premium-only invoicing for business owners. Each invoice is
     // owner-isolated. ownerUid is immutable after creation; total/
