@@ -2872,6 +2872,40 @@
                 </div>
             </div>
 
+            <!-- ==================== PAYMENT PROVIDER PICKER (v33) ==================== -->
+            <!-- Shown only when more than one enabled provider supports the chosen
+                 method. If only one provider qualifies, this modal is skipped. -->
+            <div id="pay-provider-modal" class="fixed inset-0 bg-black/60 z-[205] hidden flex items-center justify-center p-3">
+                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl slide-up flex flex-col max-h-[95vh]">
+                    <!-- Header -->
+                    <div class="px-5 pt-5 pb-3 text-center border-b border-gray-100">
+                        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <i class="fas fa-shield-halved text-xl text-purple-600"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-gray-800" id="pay-provider-title">Choose payment provider</h3>
+                        <p class="text-[11px] text-gray-500 mt-1" id="pay-provider-summary">—</p>
+                    </div>
+
+                    <!-- Provider list — populated by renderProviderPicker() -->
+                    <div class="flex-1 overflow-y-auto p-4 space-y-2.5" id="pay-provider-list">
+                        <!-- buttons injected here -->
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="px-5 pb-4 pt-2 border-t border-gray-100">
+                        <p class="text-[10px] text-center text-gray-400 leading-relaxed">
+                            <i class="fas fa-lock mr-1"></i>
+                            Both providers verify payments server-side.<br>
+                            Pricing is identical across providers.
+                        </p>
+                        <button onclick="closePayProviderModal()"
+                                class="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600 transition">
+                            Back
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- ==================== MOBILE MONEY FLOW (v32) ==================== -->
             <!-- IDs are prefixed `sub-momo-*` to avoid collision with the wallet
                  send-money form (which uses `momo-phone`, `momo-network-btn`, etc.). -->
@@ -6827,8 +6861,70 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         closePayMethodModal();
 
         if (method === 'wallet') return purchaseWithWallet();
-        if (method === 'momo')   return openSubMomoFlow();
-        if (method === 'card')   return purchaseWithCard();
+
+        // Provider-aware routing for momo/card/bank.
+        // If multiple enabled providers support this method, ask the user.
+        // Otherwise, auto-pick the only one.
+        const candidates = getProvidersFor(method === 'bank' ? 'bank' : method);
+        if (candidates.length === 0) {
+            const err = document.getElementById('premium-error');
+            err.textContent = `No payment provider configured for ${method}. Add an enabled provider in PAYMENT_GATEWAYS.`;
+            err.classList.remove('hidden');
+            // Re-open plan modal so user has context
+            document.getElementById('premium-modal').classList.remove('hidden');
+            return;
+        }
+        if (candidates.length === 1) {
+            return launchMethodWithProvider(method, candidates[0].id);
+        }
+        // Multiple providers — show picker
+        openPayProviderModal(method, candidates);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  PROVIDER PICKER (v33) — only shown when 2+ providers qualify
+    // ─────────────────────────────────────────────────────────────
+    function openPayProviderModal(method, candidates) {
+        const cfg = pendingPayment.cfg;
+        const billingLabel = pendingPayment.billingLabel;
+        const price = pendingPayment.price;
+        const methodLabel = method === 'momo' ? 'Mobile Money'
+                          : method === 'bank' ? 'Bank Transfer'
+                          : 'Card or Bank';
+        setText('pay-provider-title',  `Pay with ${methodLabel} via…`);
+        setText('pay-provider-summary',`${cfg.badgeEmoji} ${cfg.name} · ${billingLabel} · ${fmt(price)}`);
+        renderProviderPicker(method, candidates);
+        document.getElementById('pay-provider-modal').classList.remove('hidden');
+    }
+    function closePayProviderModal() {
+        document.getElementById('pay-provider-modal').classList.add('hidden');
+    }
+    function renderProviderPicker(method, candidates) {
+        const host = document.getElementById('pay-provider-list');
+        if (!host) return;
+        host.innerHTML = candidates.map(p => `
+            <button onclick="selectProvider('${method}','${p.id}')"
+                    class="pay-provider-btn w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-gray-200 hover:border-primary hover:bg-blue-50/40 transition text-left">
+                <div class="w-11 h-11 bg-gradient-to-br ${p.color} rounded-xl flex items-center justify-center text-white text-lg shrink-0">
+                    ${p.logo}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-sm text-gray-800">${escapeHtml(p.displayName)}</p>
+                    <p class="text-[11px] text-gray-500">${escapeHtml(p.methods.map(m => m === 'momo' ? 'Mobile Money' : m === 'card' ? 'Card' : m === 'bank' ? 'Bank' : m).join(' · '))}</p>
+                </div>
+                <i class="fas fa-chevron-right text-gray-300"></i>
+            </button>
+        `).join('');
+    }
+    function selectProvider(method, providerId) {
+        closePayProviderModal();
+        launchMethodWithProvider(method, providerId);
+    }
+    function launchMethodWithProvider(method, providerId) {
+        if (!pendingPayment) return;
+        pendingPayment.providerId = providerId;
+        if (method === 'momo' || method === 'bank') return openSubMomoFlow();   // Paystack treats bank as part of card flow; momo path used for both bank-transfer-from-momo
+        if (method === 'card')                       return purchaseWithCard();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -6900,14 +6996,21 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
     let subMomoSelectedNetwork = 'MTN';
 
     function openSubMomoFlow() {
-        if (!pendingPayment) return;
-        const { cfg, billingLabel, price } = pendingPayment;
+        if (!pendingPayment || !pendingPayment.providerId) return;
+        const { cfg, billingLabel, price, providerId } = pendingPayment;
+        const provider = getProviderById(providerId);
+        const ccy = provider.momoCurrency;
+
         setText('sub-momo-summary',
-            `${cfg.name} · ${billingLabel} · ${fmtCcy(price, PAYMENT_GATEWAY.currency)}`);
-        setText('sub-momo-pay-btn-label', `Pay ${fmtCcy(price, PAYMENT_GATEWAY.currency)}`);
+            `${cfg.name} · ${billingLabel} · ${fmtCcy(price, ccy)} · via ${provider.displayName}`);
+        setText('sub-momo-pay-btn-label', `Pay ${fmtCcy(price, ccy)}`);
         // Reset state
         document.getElementById('sub-momo-phone').value = '';
         document.getElementById('sub-momo-error').classList.add('hidden');
+        // Default network selection to one this provider supports
+        if (!provider.momoNetworks.some(n => n.code === subMomoSelectedNetwork)) {
+            subMomoSelectedNetwork = provider.momoNetworks[0]?.code || 'MTN';
+        }
         showSubMomoStep('input');
         renderSubMomoNetworks();
         document.getElementById('pay-momo-modal').classList.remove('hidden');
@@ -6915,8 +7018,9 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
 
     function renderSubMomoNetworks() {
         const host = document.getElementById('sub-momo-networks');
-        if (!host) return;
-        host.innerHTML = PAYMENT_GATEWAY.momoNetworks.map(n => {
+        if (!host || !pendingPayment?.providerId) return;
+        const provider = getProviderById(pendingPayment.providerId);
+        host.innerHTML = provider.momoNetworks.map(n => {
             const sel = subMomoSelectedNetwork === n.code;
             return `<button onclick="selectSubMomoNetwork('${n.code}')"
                             class="momo-net-pill p-2.5 rounded-xl border-2 text-left transition ${
@@ -6959,7 +7063,7 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
     }
 
     async function submitSubMomoPayment() {
-        if (!pendingPayment) return;
+        if (!pendingPayment || !pendingPayment.providerId) return;
         const errEl = document.getElementById('sub-momo-error');
         const showErr = msg => { errEl.textContent = msg; errEl.classList.remove('hidden'); };
         errEl.classList.add('hidden');
@@ -6971,7 +7075,8 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         const user = firebase.auth().currentUser;
         if (!user) return showErr('Sign in to subscribe');
 
-        const { tier, billing, price, cfg, billingLabel } = pendingPayment;
+        const { tier, billing, price, cfg, billingLabel, providerId } = pendingPayment;
+        const provider = getProviderById(providerId);
 
         // Lock UI + go to waiting state
         const btn = document.getElementById('sub-momo-pay-btn');
@@ -6979,10 +7084,11 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         btn.classList.add('opacity-50');
 
         try {
-            const init = await callFn('initiateMomoPayment')({
+            const init = await callFn('initiatePayment')({
+                provider: providerId,
+                method:   'momo',
                 tier, billing,
-                amount:   price,
-                currency: PAYMENT_GATEWAY.currency,
+                currency: provider.momoCurrency,
                 phone,
                 network:  subMomoSelectedNetwork,
                 description: `${cfg.name} · ${billingLabel}`
@@ -6991,7 +7097,7 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
             if (!txRef) throw new Error('Gateway did not return a transaction reference');
 
             // Show waiting step
-            setText('sub-momo-waiting-phone', `${phone} (${subMomoSelectedNetwork})`);
+            setText('sub-momo-waiting-phone', `${phone} (${subMomoSelectedNetwork} · ${provider.displayName})`);
             setText('sub-momo-waiting-status', 'Waiting for confirmation…');
             pendingPayment.txRef   = txRef;
             pendingPayment.phone   = phone;
@@ -7015,7 +7121,7 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
 
     function startSubMomoPolling(txRef) {
         if (!pendingPayment) return;
-        const { intervalMs, timeoutMs } = PAYMENT_GATEWAY.polling;
+        const { intervalMs, timeoutMs } = POLLING_CONFIG;
         let attempts = 0;
 
         pendingPayment.pollHandle = setInterval(async () => {
@@ -7069,79 +7175,114 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
     //  FLOW 3: CARD / BANK (Flutterwave inline checkout)
     // ─────────────────────────────────────────────────────────────
     async function purchaseWithCard() {
-        if (!pendingPayment) return;
+        if (!pendingPayment || !pendingPayment.providerId) return;
         const user = firebase.auth().currentUser;
         const err  = document.getElementById('premium-error');
         const showErr = msg => { err.textContent = msg; err.classList.remove('hidden'); };
-        const { tier, billing, price, cfg, billingLabel } = pendingPayment;
+        const { tier, billing, price, cfg, billingLabel, providerId } = pendingPayment;
+        const provider = getProviderById(providerId);
 
         if (!user) return showErr('Sign in to subscribe');
-        if (PAYMENT_GATEWAY.publicKey.includes('SANDBOXDEMOKEY')) {
-            // Soft-warn the developer in console; let them proceed in test mode
-            console.warn('[Payments] Using sandbox key — set PAYMENT_GATEWAY.publicKey to your live FLWPUBK_ key in production.');
+        if (provider.publicKey.includes('PASTE_YOUR_KEY_HERE') || provider.publicKey.includes('SANDBOXDEMOKEY')) {
+            console.warn(`[Payments] Using sandbox/placeholder key for ${provider.displayName} — replace with your real public key for production.`);
         }
 
         try {
-            await loadFlutterwaveSDK();
+            await loadProviderSDK(providerId);
 
             // Reserve a tx_ref server-side first so the webhook can match it
-            const init = await callFn('initiateCardPayment')({
+            const init = await callFn('initiatePayment')({
+                provider: providerId,
+                method:   'card',
                 tier, billing,
-                amount:   price,
-                currency: PAYMENT_GATEWAY.cardCurrency,
+                currency: provider.cardCurrency,
                 description: `${cfg.name} · ${billingLabel}`
             });
             const { txRef } = init.data || {};
             if (!txRef) throw new Error('Could not initialize card payment');
-
             pendingPayment.txRef = txRef;
 
-            window.FlutterwaveCheckout({
-                public_key: PAYMENT_GATEWAY.publicKey,
-                tx_ref:     txRef,
-                amount:     price,
-                currency:   PAYMENT_GATEWAY.cardCurrency,
-                payment_options: 'card,banktransfer,ussd',
-                customer: {
-                    email:       user.email || profile.email || 'guest@safespend.app',
-                    phone_number: profile.phone || '',
-                    name:        user.displayName || profile.name || 'SafeSpend User'
-                },
-                customizations: {
-                    title:       `${cfg.name} Subscription`,
-                    description: `${billingLabel} plan · ${fmtCcy(price, PAYMENT_GATEWAY.cardCurrency)}`,
-                    logo:        location.origin + '/logo.png'
-                },
-                meta: { uid: user.uid, tier, billing },
-                callback: async (response) => {
-                    // Inline modal closes after this callback returns
-                    if (response.status === 'successful' || response.status === 'completed') {
-                        try {
-                            const v = await callFn('verifySubscriptionPayment')({ txRef });
-                            if (v.data?.status === 'successful') {
-                                await activateSubscriptionLocally({
-                                    tier, billing,
-                                    paymentMethod: 'card',
-                                    providerRef:   txRef
-                                });
-                                closePremiumModal();
-                                showPayToast(`${cfg.badgeEmoji} Welcome to ${cfg.name}!`);
-                                updateUI();
-                                updateProfilePhoto();
-                            } else {
-                                showErr('Payment received but verification failed. We\'ll retry automatically.');
-                            }
-                        } catch (e) {
-                            console.warn('[Card] Verify failed:', e);
-                            showErr('Payment received but verification failed. We\'ll retry automatically.');
-                        }
+            // After-payment handler shared across providers
+            const onPaid = async () => {
+                try {
+                    const v = await callFn('verifySubscriptionPayment')({ txRef });
+                    if (v.data?.status === 'successful') {
+                        await activateSubscriptionLocally({
+                            tier, billing,
+                            paymentMethod: 'card',
+                            providerRef:   txRef
+                        });
+                        closePremiumModal();
+                        showPayToast(`${cfg.badgeEmoji} Welcome to ${cfg.name}!`);
+                        updateUI();
+                        updateProfilePhoto();
                     } else {
-                        showErr('Payment was not completed. No charge was made.');
+                        showErr('Payment received but verification failed. We\'ll retry automatically.');
                     }
-                    pendingPayment = null;
-                },
-                onclose: () => { /* user dismissed — keep silent */ }
-            });
+                } catch (ev) {
+                    console.warn('[Card] Verify failed:', ev);
+                    showErr('Payment received but verification failed. We\'ll retry automatically.');
+                }
+                pendingPayment = null;
+            };
+
+            const customerEmail = user.email || profile.email || 'guest@safespend.app';
+            const customerName  = user.displayName || profile.name || 'SafeSpend User';
+
+            // Provider-specific inline-checkout launch
+            if (providerId === 'flutterwave') {
+                window.FlutterwaveCheckout({
+                    public_key: provider.publicKey,
+                    tx_ref:     txRef,
+                    amount:     price,
+                    currency:   provider.cardCurrency,
+                    payment_options: provider.cardOptions,
+                    customer: {
+                        email:        customerEmail,
+                        phone_number: profile.phone || '',
+                        name:         customerName
+                    },
+                    customizations: {
+                        title:       `${cfg.name} Subscription`,
+                        description: `${billingLabel} plan · ${fmtCcy(price, provider.cardCurrency)}`,
+                        logo:        location.origin + '/logo.png'
+                    },
+                    meta: { uid: user.uid, tier, billing },
+                    callback: async (response) => {
+                        if (response.status === 'successful' || response.status === 'completed') {
+                            await onPaid();
+                        } else {
+                            showErr('Payment was not completed. No charge was made.');
+                            pendingPayment = null;
+                        }
+                    },
+                    onclose: () => { /* user dismissed — silent */ }
+                });
+            } else if (providerId === 'paystack') {
+                // Paystack uses subunits (multiply by 100) and PaystackPop.setup() → openIframe()
+                const handler = window.PaystackPop.setup({
+                    key:       provider.publicKey,
+                    email:     customerEmail,
+                    amount:    Math.round(price * 100),
+                    currency:  provider.cardCurrency,
+                    ref:       txRef,
+                    label:     `${cfg.name} Subscription`,
+                    metadata:  {
+                        custom_fields: [{
+                            display_name:  'Plan',
+                            variable_name: 'plan',
+                            value:         `${cfg.name} ${billingLabel}`
+                        }],
+                        uid: user.uid, tier, billing
+                    },
+                    onSuccess: async () => { await onPaid(); },
+                    onCancel:  () => { showErr('Payment was cancelled. No charge was made.'); pendingPayment = null; },
+                    onClose:   () => { /* iframe dismissed — silent */ }
+                });
+                handler.openIframe();
+            } else {
+                throw new Error(`No card-checkout integration for provider: ${providerId}`);
+            }
         } catch (e) {
             console.warn('[Card] init failed:', e);
             const msg = (e.message || '').toLowerCase();
@@ -9507,29 +9648,81 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
     //  below + setting FLW_SECRET_KEY in Cloud Functions.
     //  See PAYMENT-GATEWAY-SETUP.md for full instructions.
     // ═══════════════════════════════════════════════════════════════
-    const PAYMENT_GATEWAY = {
-        // Provider: 'flutterwave' | 'paystack' (currently flutterwave only)
-        provider:  'flutterwave',
-        // Test public key by default — replace with FLWPUBK-XXXX-X (live) for production
-        publicKey: 'FLWPUBK_TEST-SANDBOXDEMOKEY-X',
-        // Currency MUST match what your Flutterwave account is enabled for.
-        // GHS for Ghana mobile money; NGN/KES/UGX/ZAR also supported. USD for cards.
-        currency:        'GHS',
-        cardCurrency:    'USD',     // cards usually billed in USD; mobile money in local
-        // Supported mobile money networks. Flutterwave docs:
-        //   https://developer.flutterwave.com/docs/integration-guides/mobile-money
-        momoNetworks: [
-            { code: 'MTN',        name: 'MTN Mobile Money',  flag: '📱', color: 'bg-yellow-50 border-yellow-300 text-yellow-800', country: 'GH' },
-            { code: 'VODAFONE',   name: 'Vodafone Cash',     flag: '📞', color: 'bg-red-50 border-red-300 text-red-700',          country: 'GH' },
-            { code: 'AIRTELTIGO', name: 'AirtelTigo Money',  flag: '📲', color: 'bg-blue-50 border-blue-300 text-blue-700',       country: 'GH' },
-            { code: 'MPESA',      name: 'M-Pesa',            flag: '💚', color: 'bg-green-50 border-green-300 text-green-700',    country: 'KE' }
-        ],
-        // Polling config for mobile money (push-prompt → wait → verify)
-        polling: {
-            intervalMs: 4000,    // check every 4s
-            timeoutMs:  120000,  // give up after 2 minutes
+    // ─── v33: Multi-provider payment configuration ──────────────────
+    // Add or remove a provider here — UI + backend wire up automatically.
+    // Public keys only — secret keys live in Cloud Functions env.
+    // To disable a provider without removing config, set `enabled: false`.
+    //
+    // To add a new gateway (Stripe, Adyen, etc.):
+    //   1. Append a new object to PAYMENT_GATEWAYS below
+    //   2. Add the matching server-side module in functions/providers/
+    //   3. Register it in functions/index.js → PROVIDERS map
+    //   4. Add a webhook export in functions/index.js
+    //
+    // Polling timing applies to ALL momo flows (push prompt → verify):
+    const POLLING_CONFIG = { intervalMs: 4000, timeoutMs: 120000 };
+
+    const PAYMENT_GATEWAYS = [
+        {
+            id:          'flutterwave',
+            displayName: 'Flutterwave',
+            // Test key by default — swap for FLWPUBK-... live key in production
+            publicKey:   'FLWPUBK_TEST-SANDBOXDEMOKEY-X',
+            methods:     ['card', 'momo'],
+            momoCurrency:'GHS',                       // mobile money settled in
+            cardCurrency:'USD',                       // cards billed in
+            cardOptions: 'card,banktransfer,ussd',    // Flutterwave-specific channel list
+            momoNetworks: [
+                { code: 'MTN',        name: 'MTN Mobile Money', flag: '📱', country: 'GH' },
+                { code: 'VODAFONE',   name: 'Vodafone Cash',    flag: '📞', country: 'GH' },
+                { code: 'AIRTELTIGO', name: 'AirtelTigo Money', flag: '📲', country: 'GH' },
+                { code: 'MPESA',      name: 'M-Pesa',           flag: '💚', country: 'KE' }
+            ],
+            sdk:     { url: 'https://checkout.flutterwave.com/v3.js', global: 'FlutterwaveCheckout' },
+            color:   'from-orange-500 to-amber-600',
+            logo:    '🟠',
+            enabled: true
+        },
+        {
+            id:          'paystack',
+            displayName: 'Paystack',
+            // Test key by default — swap for pk_live_... live key in production
+            publicKey:   'pk_test_PASTE_YOUR_KEY_HERE',
+            methods:     ['card', 'momo', 'bank'],   // Paystack handles bank transfer inline
+            momoCurrency:'GHS',
+            cardCurrency:'GHS',                       // Paystack Ghana bills cards in GHS
+            cardOptions: 'card,bank,bank_transfer,ussd,mobile_money',
+            momoNetworks: [
+                { code: 'MTN',        name: 'MTN Mobile Money', flag: '📱', country: 'GH' },
+                { code: 'VODAFONE',   name: 'Vodafone Cash',    flag: '📞', country: 'GH' },
+                { code: 'AIRTELTIGO', name: 'AirtelTigo Money', flag: '📲', country: 'GH' }
+            ],
+            sdk:     { url: 'https://js.paystack.co/v2/inline.js', global: 'PaystackPop' },
+            color:   'from-cyan-500 to-blue-600',
+            logo:    '🔵',
+            enabled: true
         }
-    };
+    ];
+
+    // Helpers — never touch PAYMENT_GATEWAYS directly outside this block.
+    const enabledGateways  = () => PAYMENT_GATEWAYS.filter(g => g.enabled && !g.publicKey.includes('PASTE_YOUR_KEY_HERE'));
+    const getProviderById  = (id) => PAYMENT_GATEWAYS.find(g => g.id === id);
+    const getProvidersFor  = (method) => enabledGateways().filter(g => g.methods.includes(method));
+
+    // Backward-compat shim: legacy code reading PAYMENT_GATEWAY (singular) gets
+    // the first enabled provider's config. New code should use the helpers above
+    // and pendingPayment.providerId instead.
+    const PAYMENT_GATEWAY = (() => {
+        const p = enabledGateways()[0] || PAYMENT_GATEWAYS[0];
+        return {
+            provider:     p.id,
+            publicKey:    p.publicKey,
+            currency:     p.momoCurrency,
+            cardCurrency: p.cardCurrency,
+            momoNetworks: p.momoNetworks,
+            polling:      POLLING_CONFIG
+        };
+    })();
 
     // Detect if app is running inside a Trusted Web Activity (Play Store install).
     // When TRUE: Google Play policy requires Play Billing for digital goods, so we
@@ -9544,21 +9737,26 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         return false;
     }
 
-    // Lazy-load Flutterwave inline checkout SDK (only loads when user picks Card)
-    let _flwSdkPromise = null;
-    function loadFlutterwaveSDK() {
-        if (_flwSdkPromise) return _flwSdkPromise;
-        _flwSdkPromise = new Promise((resolve, reject) => {
-            if (window.FlutterwaveCheckout) return resolve();
+    // Lazy-load any provider's inline-checkout SDK on demand. One promise
+    // per provider, cached. Reads sdk.url and sdk.global from PAYMENT_GATEWAYS.
+    const _sdkPromises = {};
+    function loadProviderSDK(providerId) {
+        const p = getProviderById(providerId);
+        if (!p || !p.sdk) return Promise.reject(new Error(`Unknown provider: ${providerId}`));
+        if (_sdkPromises[providerId]) return _sdkPromises[providerId];
+        _sdkPromises[providerId] = new Promise((resolve, reject) => {
+            if (window[p.sdk.global]) return resolve();
             const s = document.createElement('script');
-            s.src = 'https://checkout.flutterwave.com/v3.js';
+            s.src = p.sdk.url;
             s.async = true;
             s.onload  = () => resolve();
-            s.onerror = () => { _flwSdkPromise = null; reject(new Error('Failed to load Flutterwave checkout SDK')); };
+            s.onerror = () => { delete _sdkPromises[providerId]; reject(new Error(`Failed to load ${p.displayName} SDK`)); };
             document.head.appendChild(s);
         });
-        return _flwSdkPromise;
+        return _sdkPromises[providerId];
     }
+    // Back-compat alias for any legacy callers
+    const loadFlutterwaveSDK = () => loadProviderSDK('flutterwave');
 
     // Get a callable reference to a Cloud Function (lazy — supports environments
     // where Functions isn't yet enabled in the Firebase project).
