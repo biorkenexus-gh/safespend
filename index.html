@@ -4145,8 +4145,8 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
                             <i class="fas fa-external-link-alt text-xs text-gray-400"></i>
                         </a>
 
-                        <!-- Reset -->
-                        <button class="w-full flex items-center gap-3 p-4 hover:bg-red-50 text-danger transition" onclick="resetData()">
+                        <!-- Reset (v35: opens confirm modal, no native confirm()) -->
+                        <button class="w-full flex items-center gap-3 p-4 hover:bg-red-50 text-danger transition" onclick="openResetConfirm()">
                             <i class="fas fa-trash-alt w-5 text-center"></i>
                             <span>Reset All Data</span>
                         </button>
@@ -4423,6 +4423,59 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
                         </button>
                     </div>
                 </div>
+            </div>
+
+            <!-- ==================== FACTORY RESET CONFIRM MODAL (v35) ==================== -->
+            <div id="reset-confirm-modal" class="fixed inset-0 bg-black/60 z-[210] hidden flex items-center justify-center p-3">
+                <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl slide-up flex flex-col">
+                    <!-- Header -->
+                    <div class="px-5 pt-5 pb-3 text-center border-b border-gray-100">
+                        <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <i class="fas fa-triangle-exclamation text-2xl text-danger"></i>
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-gray-800">Reset all data?</h3>
+                        <p class="text-[11px] text-gray-500 mt-1">This action cannot be undone</p>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="px-5 py-4 space-y-3 text-sm text-gray-700">
+                        <p class="font-semibold text-gray-800">This will permanently delete on this device:</p>
+                        <ul class="space-y-1.5 text-xs text-gray-600 pl-1">
+                            <li><i class="fas fa-circle text-[6px] text-red-400 mr-2 align-middle"></i>All transactions, budgets, and weekly history</li>
+                            <li><i class="fas fa-circle text-[6px] text-red-400 mr-2 align-middle"></i>Recurring bills, savings goals, and quick favorites</li>
+                            <li><i class="fas fa-circle text-[6px] text-red-400 mr-2 align-middle"></i>Income entries and scheduled activities</li>
+                            <li><i class="fas fa-circle text-[6px] text-red-400 mr-2 align-middle"></i>Custom categories, learning data, and streak</li>
+                            <li><i class="fas fa-circle text-[6px] text-red-400 mr-2 align-middle"></i>All settings (theme, reminders, currency)</li>
+                            <li><i class="fas fa-circle text-[6px] text-red-400 mr-2 align-middle"></i>You will be signed out</li>
+                        </ul>
+
+                        <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 mt-3">
+                            <p class="text-[11px] text-blue-700 leading-relaxed">
+                                <i class="fas fa-cloud mr-1"></i>
+                                <strong>Cloud data is preserved.</strong> Your subscription, wallet history, invoices, and business profile stay safe on the server. Sign back in with the same Google account to restore them.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="px-5 pb-5 pt-2 border-t border-gray-100 space-y-2">
+                        <button onclick="factoryReset()"
+                                class="w-full bg-danger text-white font-bold py-3 rounded-xl shadow-md hover:bg-red-600 transition active:scale-95">
+                            <i class="fas fa-trash-alt mr-1"></i> Reset Everything
+                        </button>
+                        <button onclick="closeResetConfirm()"
+                                class="w-full text-gray-500 text-sm py-2 hover:text-gray-700 transition">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== FACTORY RESET LOADING OVERLAY (v35) ==================== -->
+            <div id="reset-loading-overlay" class="fixed inset-0 bg-white/95 z-[400] hidden flex flex-col items-center justify-center backdrop-blur-sm">
+                <div class="w-16 h-16 border-4 border-gray-200 border-t-primary rounded-full animate-spin mb-4"></div>
+                <p class="text-sm font-display font-semibold text-gray-800">Resetting your data…</p>
+                <p class="text-xs text-gray-500 mt-1">This will only take a moment.</p>
             </div>
 
         </main>
@@ -7213,19 +7266,59 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         },
         {
             q: 'How do recurring bills work?',
-            a: 'Settings → Recurring Bills → tap "+". Add the bill name, amount, frequency (weekly/monthly/yearly), and due day. SafeSpend auto-computes the next due date and shows an alert on the home screen when a bill is coming up. Tap "Paid" to log the expense and roll to the next cycle.'
+            a: 'Settings → Recurring Bills → tap "+". Add the bill name, amount, frequency (weekly/monthly/yearly), and due day. SafeSpend auto-computes the next due date and shows an alert on the home screen when a bill is coming up.\n\n• Tap "Paid" to log the expense and roll the next due date forward by one cycle.\n• Tap the pencil icon to edit any bill (name, amount, day, frequency) — the next due date recomputes automatically.\n• Tap "View N payments" on a paid bill to see the full payment history; the most recent entry has an Unmark button if you tapped Paid by mistake.\n• Filter pills above the list show All / Due Soon / Paid This Cycle.'
         },
         {
             q: 'Is SafeSpend free?',
-            a: 'The core app (expense tracking, budgets, analytics, goals, bills) is 100% free forever. Wallet operations charge small industry-standard fees (0% deposit, 1% send, 2% withdraw). Premium is a one-time $9.99 lifetime purchase — no subscriptions, no recurring charges.'
+            a: 'The core app (expense tracking, budgets, analytics, goals, bills, income, schedule) is 100% free forever. Wallet operations charge small industry-standard fees (0% deposit, 1% send, 2% withdraw). SafeSpend Pro is $19.99/mo or $235.08/yr (~2% off); Business Pro is $49.99/mo or $587.88/yr. Existing users with the legacy lifetime purchase keep what they paid for — grandfathered into Pro.'
         },
         {
             q: 'How do I earn from referrals?',
-            a: 'Settings → Refer & Earn → copy your unique code or share directly via WhatsApp/SMS. When someone signs up with your link and logs their first expense, you earn a fixed commission. Withdraw earnings anytime from the Referral Dashboard once you reach the minimum ($20).'
+            a: 'Settings → Refer & Earn → copy your unique code or share directly via WhatsApp/SMS. When someone signs up with your link and logs their first expense, you earn a fixed commission. Track your earnings live on the Referral Dashboard.'
+        },
+        {
+            q: 'How do I withdraw my referral earnings?',
+            a: 'Settings → Refer & Earn → "Withdraw earnings". Pick a destination (Mobile Money or saved bank account), enter the amount (minimum $20), confirm with your wallet PIN. Payouts are processed manually within 1-2 business days; you\'ll see "pending" → "paid" status updates in the dashboard.'
+        },
+        {
+            q: 'How do I mark a transaction as paid?',
+            a: 'On Home or History, every transaction row has a small circle icon next to the amount. Tap it to mark the expense as paid (you\'ll see a green checkmark and the row dims). Tap again to undo. This is purely a personal accountability flag — it does NOT affect your budget total or analytics. Use the "Paid / Unpaid / All" filter pills on the History screen to focus your view.'
+        },
+        {
+            q: 'How do I track income?',
+            a: 'Settings → Income Tracker → tap "+". Enter the amount, source (e.g. "Acme Co. payroll"), and pick a category (Salary, Business, Side Hustle, Investment, Gift, Refund, Other) and a frequency:\n• Daily — fires every day from the start date\n• Weekly — fires every 7 days\n• Monthly — fires on the same day each month\n• One-off — single payment, never repeats\n\nFor recurring entries, tap "Mark received" each time you actually get paid — the entry rolls forward to the next expected date and the receipt is logged. One-off entries are auto-counted on their start date. The totals card shows 30-day / 7-day / today and projected monthly income.'
+        },
+        {
+            q: 'What\'s the difference between "received" and "projected" income?',
+            a: '"Received" is what you\'ve actually marked as received — the audit trail in receivedHistory. It\'s a fact, not a guess. "Projected" estimates what your monthly income WOULD be if every recurring entry fires once per period (daily ×30, weekly ×4.33, monthly ×1). One-off entries don\'t project. Use Received for budgeting against money you have; Projected for planning future months.'
+        },
+        {
+            q: 'I marked income received by mistake — can I undo?',
+            a: 'Yes. On the Income screen, the row has a small circular arrow next to "Edit" — tap it to remove the most recent entry from receivedHistory. The next-expected-date will recompute backward. Or tap Edit → Delete to remove the entire income source (including all past receipts).'
+        },
+        {
+            q: 'How do I schedule activities and reminders?',
+            a: 'Settings → Schedule & Reminders → tap "+". Enter a title (e.g. "Pay rent"), optional description, frequency (Daily / Weekly / Monthly / Once), date + time, and how far in advance to remind you (at the time, 5m / 15m / 30m / 1h / 1d before, or off).\n\nThe list groups by Today / Upcoming / Overdue / Later / Completed. Tap the empty circle to mark complete — recurring tasks roll forward to the next occurrence; one-off tasks stay in Completed. Tap the pencil to edit; tap the row to expand details.'
+        },
+        {
+            q: 'My activity reminders aren\'t firing — what do I check?',
+            a: 'In order:\n1. Settings → Activity Reminders → toggle ON.\n2. Browser must have permission to send notifications. The first time you toggle Activity Reminders ON, your browser asks — click Allow. If you accidentally denied, open browser Site Settings → Notifications → flip SafeSpend to Allow.\n3. On mobile, PWA notifications only fire reliably after you install the app to your home screen.\n4. Reminders only fire within the next 24 hours — beyond that, the SW re-syncs each time you open the app, so make sure the app has been opened at least once in the last day.'
+        },
+        {
+            q: 'What does "Reset All Data" do?',
+            a: 'Settings → Reset All Data wipes everything stored on THIS device:\n• All transactions, budgets, weekly history\n• Recurring bills, savings goals, quick favorites, daily streak\n• Income entries, scheduled activities, reminders\n• Custom categories, learning data, settings, theme\n• Sign-out (you\'ll be returned to the login screen)\n\nWhat\'s preserved: your cloud data on Firebase. Subscription, wallet history, invoices, business profile and referral records all stay safe on the server. Sign back in with the same Google account to restore them.\n\nAfter confirming, you\'ll see a brief loading spinner while everything is cleared, then the app reloads to a fresh welcome screen. The action cannot be undone for the local data.'
+        },
+        {
+            q: 'How do I cancel my SafeSpend Pro subscription?',
+            a: 'Subscriptions are managed by the gateway you paid through:\n• Card / Mobile Money via Flutterwave or Paystack: log into the respective dashboard or contact us via WhatsApp — we cancel and refund (if within the 7-day grace period) on your behalf.\n• Google Play Billing (Android app): Play Store → Account → Subscriptions → SafeSpend Pro → Cancel. Auto-renew stops; access continues until the period ends.\n\nCancellation does not delete your account or any data. You\'ll just be downgraded to the free tier when the current period ends.'
         },
         {
             q: 'Is my data secure?',
-            a: 'Yes. Authentication is handled by Google (we never see your password). Wallet PINs are stored as SHA-256 hashes with per-user salts. Firestore security rules ensure users can only read/write their own data — no cross-user access. All connections use HTTPS. Your expenses and wallet activity are private to you.'
+            a: 'Yes. Authentication is handled by Google (we never see your password). Wallet PINs are stored as SHA-256 hashes with per-user salts. Firestore security rules ensure users can only read/write their own data — no cross-user access. All connections use HTTPS. Your expenses and wallet activity are private to you. Payment secret keys live only on Cloud Functions; the frontend only ever sees public keys.'
+        },
+        {
+            q: 'Why doesn\'t my expense data sync between my phone and laptop?',
+            a: 'SafeSpend is local-first by design. Transactions, budgets, bills, goals, income and activities are all stored on the device that created them — so they\'re available offline and never lost to a network hiccup. What DOES sync across devices: your subscription tier, wallet balance, business profile, invoices, and referral records (anything stored in Firestore).\n\nIf you want full cross-device sync of your expense history, the Reset → re-sign-in flow doesn\'t restore it (it\'s on the OTHER device). A future "Cloud sync" toggle is on the roadmap.'
         }
     ];
 
@@ -9836,6 +9929,21 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
     }
 
     function _boot(user) {
+        // v35: post-reset success toast — sessionStorage flag is set by
+        // factoryReset() right before reload; we consume it here exactly
+        // once, regardless of auth branch (logged-out user lands on the
+        // login overlay and should still see the confirmation).
+        try {
+            if (sessionStorage.getItem('safespend_just_reset') === '1') {
+                sessionStorage.removeItem('safespend_just_reset');
+                setTimeout(() => {
+                    if (typeof showPayToast === 'function') {
+                        showPayToast('✅ All data has been successfully reset to default.');
+                    }
+                }, 800);
+            }
+        } catch (_) {}
+
         if (user) {
             loadData();
             // Merge Google profile (don't overwrite custom name if already saved)
@@ -14327,18 +14435,134 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
     }
 
 
-    function resetData() {
-        if (!confirm('Reset all data? This cannot be undone.')) return;
-        localStorage.removeItem(PROFILE_KEY);
-        localStorage.removeItem(DATA_KEY);
-        localStorage.removeItem(HISTORY_KEY);
-        document.body.classList.remove('dark-mode');
-        profile     = { name: '', currency: 'USD', settings: { darkMode: false, notifications: false, carryOver: true, notifTime: '20:00' } };
-        appState    = { budget: 500, spent: 0, transactions: [], weekId: getWeekId(new Date()) };
-        weekHistory = [];
-        firebase.auth().signOut().catch(() => {});
-        document.getElementById('app-container').classList.add('hidden');
-        document.getElementById('login-overlay').classList.remove('hidden');
+    // ═══════════════════════════════════════════════════════════════
+    //  v35 — FACTORY RESET
+    //
+    //  The old resetData() only cleared 3 of ~18 localStorage keys
+    //  (PROFILE_KEY, DATA_KEY, HISTORY_KEY) — bills, goals, favorites,
+    //  daily streak, income, activities, custom categories, ML data,
+    //  referral state and several caches all leaked. factoryReset()
+    //  wipes EVERYTHING local, signs out, and reloads to a fresh boot.
+    //
+    //  Cloud data (Firestore) is preserved by design. Sign back in on
+    //  the same Google account to restore subscription / wallet /
+    //  invoices / business profile / referrals.
+    // ═══════════════════════════════════════════════════════════════
+
+    // Every localStorage key SafeSpend may write. The defensive prefix
+    // sweep below catches anything missing here — but listing them
+    // explicitly is the source of truth for code review and future
+    // additions. When you add a new persistent key, add it here too.
+    const ALL_LS_KEYS_TO_RESET = [
+        PROFILE_KEY, DATA_KEY, HISTORY_KEY,
+        GOALS_KEY, BILLS_KEY, FAVORITES_KEY, DAILY_STREAK_KEY,
+        INCOME_KEY, ACTIVITIES_KEY,
+        CATEGORIES_KEY, CAT_LEARNING_KEY,
+        SMART_IMPORT_AUTOSAVE_KEY, DAILY_RECAP_KEY,
+        // CONTACT_RATE_KEY is function-scoped at line ~7361 so we use the literal:
+        'safespend_last_contact_submit',
+        REFERRAL_CACHE_KEY,
+        REFERRAL.PENDING_REF_KEY,
+        REFERRAL.DEVICE_FP_KEY,
+        REFERRAL.NOTIFS_SEEN_KEY
+    ];
+
+    function openResetConfirm() {
+        document.getElementById('reset-confirm-modal')?.classList.remove('hidden');
+    }
+    function closeResetConfirm() {
+        document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+    }
+
+    // Old name kept as alias so any stale call sites still work.
+    const resetData = openResetConfirm;
+
+    async function factoryReset() {
+        // 1. Hide the confirm modal, paint the loading overlay BEFORE
+        //    any clearing work so the user sees feedback in the same
+        //    tick the click ran. Two yields ensure the spinner paints.
+        closeResetConfirm();
+        document.getElementById('reset-loading-overlay')?.classList.remove('hidden');
+        await new Promise(r => requestAnimationFrame(r));
+        await new Promise(r => setTimeout(r, 0));
+
+        // 2. Stop in-flight timers / intervals so nothing fires after
+        //    the page state has been cleared.
+        try {
+            if (window._reminderTickInterval) { clearInterval(window._reminderTickInterval); window._reminderTickInterval = null; }
+            if (window._weeklySummaryTimer)   { clearTimeout(window._weeklySummaryTimer);    window._weeklySummaryTimer   = null; }
+            if (window._liveTimeInterval)     { clearInterval(window._liveTimeInterval);     window._liveTimeInterval     = null; }
+        } catch (_) {}
+
+        // 3. Destroy Chart.js instances to release canvas memory.
+        try { if (categoryChartInstance) categoryChartInstance.destroy(); } catch (_) {}
+        try { if (dailyChartInstance)    dailyChartInstance.destroy();    } catch (_) {}
+        try { if (typeof revenueChartInstance !== 'undefined' && revenueChartInstance) revenueChartInstance.destroy(); } catch (_) {}
+        categoryChartInstance = null;
+        dailyChartInstance    = null;
+
+        // 4. Cancel any active payment polling so a late verify-call
+        //    can't activate a subscription on a wiped profile.
+        try {
+            if (typeof pendingPayment === 'object' && pendingPayment) {
+                if (pendingPayment.pollHandle)    clearInterval(pendingPayment.pollHandle);
+                if (pendingPayment.timeoutHandle) clearTimeout(pendingPayment.timeoutHandle);
+            }
+        } catch (_) {}
+
+        // 5. Tell the SW to drop all activity-reminder timeouts.
+        //    Only await SW.ready if there's already a controller — otherwise
+        //    SW.ready can hang forever (e.g. first page load before any SW
+        //    registration completed). 1.5s timeout is a safety net regardless.
+        try {
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                const reg = await Promise.race([
+                    navigator.serviceWorker.ready,
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 1500))
+                ]);
+                reg?.active?.postMessage({ type: 'SCHEDULE_ACTIVITY_REMINDERS', list: [] });
+            }
+        } catch (_) {}
+
+        // 6. Clear every localStorage key. Explicit list first, then a
+        //    defensive prefix sweep for anything we forgot.
+        try {
+            ALL_LS_KEYS_TO_RESET.forEach(k => localStorage.removeItem(k));
+            Object.keys(localStorage).forEach(k => {
+                if (k.startsWith('safespend_')) localStorage.removeItem(k);
+            });
+        } catch (_) {}
+
+        // 7. Sign out of Firebase (best-effort, with timeout). Even if
+        //    this hangs, the reload below still kills the auth session.
+        const withTimeout = (p, ms) => Promise.race([
+            p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))
+        ]);
+        try { await withTimeout(firebase.auth().signOut(), 2000); } catch (_) {}
+
+        // 8. Unregister all service workers + delete browser caches.
+        //    Best-effort; even if one of these fails the reload below
+        //    still gets us to a clean boot.
+        try {
+            if ('serviceWorker' in navigator) {
+                const regs = await withTimeout(navigator.serviceWorker.getRegistrations(), 1500);
+                await withTimeout(Promise.all(regs.map(r => r.unregister())), 1500);
+            }
+        } catch (_) {}
+        try {
+            if ('caches' in window) {
+                const keys = await withTimeout(caches.keys(), 1500);
+                await withTimeout(Promise.all(keys.map(k => caches.delete(k))), 1500);
+            }
+        } catch (_) {}
+
+        // 9. Stash a flag for the post-reload boot so it can show a
+        //    success toast. sessionStorage survives reload but is wiped
+        //    when the tab closes — perfect lifetime for this signal.
+        try { sessionStorage.setItem('safespend_just_reset', '1'); } catch (_) {}
+
+        // 10. Hard reload — clean memory, fresh _boot(null), login overlay.
+        location.reload();
     }
 
     // ── Notifications via service worker ─────────────────────────
