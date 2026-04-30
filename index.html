@@ -5531,7 +5531,10 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
     const SNOOZE_DEFAULT_MINUTES = 10;
     let snoozedUntil = 0;             // epoch ms; 0 means not snoozed
     let lastReminderShownDate = '';   // YYYY-MM-DD — prevents same-day re-pop
-    let appState = { budget: 500, spent: 0, transactions: [], weekId: '' };
+    // v35.1: cycleStartedAt anchors the "Days Left" countdown so it
+    // resets to 7 the moment a fresh cycle begins (after factory reset
+    // or new ISO week archive). 0 = backfill on load.
+    let appState = { budget: 500, spent: 0, transactions: [], weekId: '', cycleStartedAt: 0 };
     let weekHistory = [];
     let selectedCategory = null;
     let tempExpense = null;
@@ -5569,6 +5572,27 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
         const w1 = new Date(d.getFullYear(), 0, 4);
         const wn = 1 + Math.round(((d - w1) / 86400000 - 3 + (w1.getDay() + 6) % 7) / 7);
         return `${d.getFullYear()}-W${String(wn).padStart(2, '0')}`;
+    }
+
+    // v35.1: Cycle-anchored "days left" / "days elapsed" so factory reset
+    // restarts the 7-day budget countdown from today (= 7 days left), and
+    // mid-week archive transitions also reset cleanly.
+    //
+    //   days-since-start = floor((now - cycleStartedAt) / 1 day)
+    //   daysLeft         = max(0, 7 - days-since-start)
+    //   daysElapsed      = clamp(days-since-start + 1, 1..7)
+    //
+    // Existing users (pre-v35.1) get cycleStartedAt back-filled to start of
+    // current ISO week in loadData() so their displayed days-left doesn't jump.
+    function computeDaysLeft() {
+        const start = appState?.cycleStartedAt || Date.now();
+        const elapsed = Math.floor((Date.now() - start) / 86400000);
+        return Math.max(0, 7 - elapsed);
+    }
+    function computeDaysElapsed() {
+        const start = appState?.cycleStartedAt || Date.now();
+        const elapsed = Math.floor((Date.now() - start) / 86400000);
+        return Math.max(1, Math.min(7, elapsed + 1));
     }
 
     function formatWeekLabel(weekId) {
@@ -5676,13 +5700,26 @@ You have received GHS 50.00 from MARY MENSAH. Ref: VC98765."
                         : saved.budget,
                     spent: 0,
                     transactions: [],
-                    weekId: currentWeekId
+                    weekId: currentWeekId,
+                    cycleStartedAt: Date.now()    // v35.1: fresh cycle = days-left starts at 7
                 };
             } else {
                 appState = saved;
             }
         } else {
+            // First boot OR post-reset: brand-new cycle starting NOW
             appState.weekId = getWeekId(new Date());
+            appState.cycleStartedAt = Date.now();
+        }
+
+        // v35.1: Backfill cycleStartedAt for existing users — anchor to start
+        // of the current ISO week (Sunday 00:00) so their displayed days-left
+        // doesn't suddenly jump on first load after this update.
+        if (!appState.cycleStartedAt) {
+            const d = new Date();
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() - d.getDay());   // back to Sunday
+            appState.cycleStartedAt = d.getTime();
         }
 
         // Schema migration: ensure every transaction has tags[], autoCategorized, createdAt
@@ -12713,8 +12750,8 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
             setText('home-activities-sub', sub);
         }
 
-        const dow = new Date().getDay();
-        const daysLeft = dow === 0 ? 0 : 7 - dow;
+        // v35.1: cycle-anchored days-left so reset → fresh 7-day countdown
+        const daysLeft = computeDaysLeft();
         setText('days-left', `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`);
 
         // Progress bar
@@ -12878,10 +12915,11 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
         });
         const catEntries = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
 
-        const dow       = new Date().getDay();                 // 0 = Sun
-        const daysElapsed = dow === 0 ? 7 : dow;                // 1..7
-        const daysLeft  = dow === 0 ? 0 : 7 - dow;
-        const pace      = state.budget > 0 ? (state.spent / state.budget) / (daysElapsed / 7) : 0;
+        const dow         = new Date().getDay();           // 0 = Sun (kept for any callers that read it)
+        // v35.1: cycle-anchored days for accurate pace after reset
+        const daysLeft    = computeDaysLeft();
+        const daysElapsed = computeDaysElapsed();
+        const pace        = state.budget > 0 ? (state.spent / state.budget) / (daysElapsed / 7) : 0;
         const topCat    = catEntries[0] ? catEntries[0][0] : null;
         const topCatPct = state.spent > 0 && topCat ? catTotals[topCat] / state.spent : 0;
 
