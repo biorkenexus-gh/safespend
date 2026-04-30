@@ -10955,7 +10955,7 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
             id:          'paystack',
             displayName: 'Paystack',
             // Test key by default — swap for pk_live_... live key in production
-            publicKey:   'pk_test_PASTE_YOUR_KEY_HERE',
+            publicKey:   'pk_test_389b6228fc74f76757060b163f2a96952437fc26',
             methods:     ['card', 'momo', 'bank'],   // Paystack handles bank transfer inline
             momoCurrency:'GHS',
             cardCurrency:'GHS',                       // Paystack Ghana bills cards in GHS
@@ -10973,7 +10973,11 @@ ${businessProfile?.name || 'SafeSpend Business'}`;
     ];
 
     // Helpers — never touch PAYMENT_GATEWAYS directly outside this block.
-    const enabledGateways  = () => PAYMENT_GATEWAYS.filter(g => g.enabled && !g.publicKey.includes('PASTE_YOUR_KEY_HERE'));
+    // A provider is considered enabled only if its publicKey is real (not a
+    // placeholder). Filtering out placeholders prevents the picker from
+    // routing the user to a gateway that will fail at runtime.
+    const _isPlaceholderKey = k => !k || k.includes('PASTE_YOUR_KEY_HERE') || k.includes('SANDBOXDEMOKEY');
+    const enabledGateways  = () => PAYMENT_GATEWAYS.filter(g => g.enabled && !_isPlaceholderKey(g.publicKey));
     const getProviderById  = (id) => PAYMENT_GATEWAYS.find(g => g.id === id);
     const getProvidersFor  = (method) => enabledGateways().filter(g => g.methods.includes(method));
 
